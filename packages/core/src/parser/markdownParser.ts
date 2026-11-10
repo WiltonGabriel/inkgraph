@@ -1,9 +1,18 @@
 import { parse as parseYaml } from "yaml";
-import { BaseEntitySchema, type BaseEntity, type LoreDocument } from "../domain/entity";
+import { BaseEntitySchema, type LoreDocument } from "../domain/entity";
+import { InkGraphError, type InkGraphErrorCode } from "../domain/errors";
 
-export class FrontmatterParseError extends Error {
-  constructor(message: string, public readonly filePath?: string, public readonly cause?: unknown) {
-    super(filePath ? `[${filePath}] ${message}` : message);
+export class FrontmatterParseError extends InkGraphError {
+  public override readonly code: InkGraphErrorCode = "validation";
+
+  constructor(
+    message: string,
+    public readonly filePath?: string,
+    public override readonly cause?: unknown
+  ) {
+    super("validation", filePath ? `[${filePath}] ${message}` : message, {
+      filePath,
+    });
     this.name = "FrontmatterParseError";
   }
 }

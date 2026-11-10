@@ -1,10 +1,18 @@
 import Database from "better-sqlite3";
 import type { BaseEntity, LoreDocument, Relationship } from "../domain/entity";
+import { InkGraphError } from "../domain/errors";
+import {
+  LORE_DB_SCHEMA_SQL,
+  type EpistemicStateResult,
+  type IndexerOptions,
+  type TimelineEntry,
+} from "./schema";
+import {
+  queryChronologicalTimeline,
+  queryEntityEpistemicState,
+} from "./epistemicQueries";
 
-export interface IndexerOptions {
-  readonly inMemory?: boolean;
-  readonly dbPath?: string;
-}
+export type { EpistemicStateResult, IndexerOptions, TimelineEntry };
 
 export class LoreDatabase {
   private readonly db: Database.Database;
@@ -19,72 +27,7 @@ export class LoreDatabase {
   private initSchema(): void {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
-
-    this.db.exec(`
-      -- Core Entities Table
-      CREATE TABLE IF NOT EXISTS entities (
-        id TEXT PRIMARY KEY,
-        type TEXT NOT NULL,
-        subtype TEXT,
-        name TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'canon',
-        file_path TEXT NOT NULL,
-        body TEXT NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-
-      -- Aliases lookup table (fast title/nickname resolution)
-      CREATE TABLE IF NOT EXISTS entity_aliases (
-        alias TEXT NOT NULL PRIMARY KEY,
-        entity_id TEXT NOT NULL,
-        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
-      );
-
-      -- Tags
-      CREATE TABLE IF NOT EXISTS entity_tags (
-        entity_id TEXT NOT NULL,
-        tag TEXT NOT NULL,
-        PRIMARY KEY (entity_id, tag),
-        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
-      );
-
-      -- Graph Edges (Relationships)
-      CREATE TABLE IF NOT EXISTS relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        source_id TEXT NOT NULL,
-        target_id TEXT NOT NULL,
-        relation TEXT NOT NULL,
-        since_scene TEXT,
-        until_scene TEXT,
-        sentiment REAL DEFAULT 0,
-        notes TEXT,
-        FOREIGN KEY (source_id) REFERENCES entities(id) ON DELETE CASCADE
-      );
-
-      -- Epistemic tracking (Secrets and Awareness)
-      CREATE TABLE IF NOT EXISTS entity_secrets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        entity_id TEXT NOT NULL,
-        secret TEXT NOT NULL,
-        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS entity_known_by (
-        entity_id TEXT NOT NULL,
-        known_by_id TEXT NOT NULL,
-        PRIMARY KEY (entity_id, known_by_id),
-        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
-      );
-
-      -- Full-Text Search FTS5 Virtual Table
-      CREATE VIRTUAL TABLE IF NOT EXISTS lore_fts USING fts5(
-        entity_id UNINDEXED,
-        name,
-        aliases,
-        body,
-        tags
-      );
-    `);
+    this.db.exec(LORE_DB_SCHEMA_SQL);
   }
 
   public upsertEntity(doc: LoreDocument): void {
@@ -92,20 +35,24 @@ export class LoreDatabase {
     const now = Date.now();
 
     const insertEntityStmt = this.db.prepare(`
-      INSERT INTO entities (id, type, subtype, name, status, file_path, body, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO entities (id, type, subtype, name, status, revealed_at_scene, file_path, body, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         type = excluded.type,
         subtype = excluded.subtype,
         name = excluded.name,
         status = excluded.status,
+        revealed_at_scene = excluded.revealed_at_scene,
         file_path = excluded.file_path,
         body = excluded.body,
         updated_at = excluded.updated_at
     `);
 
     const deleteAliasesStmt = this.db.prepare(`DELETE FROM entity_aliases WHERE entity_id = ?`);
-    const insertAliasStmt = this.db.prepare(`INSERT OR REPLACE INTO entity_aliases (alias, entity_id) VALUES (?, ?)`);
+    const insertAliasStmt = this.db.prepare(`
+      INSERT OR REPLACE INTO entity_aliases (alias_norm, alias_original, entity_id)
+      VALUES (?, ?, ?)
+    `);
 
     const deleteTagsStmt = this.db.prepare(`DELETE FROM entity_tags WHERE entity_id = ?`);
     const insertTagStmt = this.db.prepare(`INSERT OR REPLACE INTO entity_tags (entity_id, tag) VALUES (?, ?)`);
@@ -135,25 +82,23 @@ export class LoreDatabase {
         frontmatter.subtype ?? null,
         frontmatter.name,
         frontmatter.status,
+        frontmatter.epistemic.revealed_at_scene ?? null,
         filePath,
         markdownBody,
         now
       );
 
-      // Aliases
       deleteAliasesStmt.run(frontmatter.id);
-      insertAliasStmt.run(frontmatter.name.toLowerCase(), frontmatter.id);
+      insertAliasStmt.run(frontmatter.name.toLowerCase(), frontmatter.name, frontmatter.id);
       for (const alias of frontmatter.aliases) {
-        insertAliasStmt.run(alias.toLowerCase(), frontmatter.id);
+        insertAliasStmt.run(alias.toLowerCase(), alias, frontmatter.id);
       }
 
-      // Tags
       deleteTagsStmt.run(frontmatter.id);
       for (const tag of frontmatter.tags) {
         insertTagStmt.run(frontmatter.id, tag.toLowerCase());
       }
 
-      // Relationships
       deleteRelationshipsStmt.run(frontmatter.id);
       for (const rel of frontmatter.relationships) {
         insertRelationshipStmt.run(
@@ -167,7 +112,6 @@ export class LoreDatabase {
         );
       }
 
-      // Epistemic (secrets and who knows)
       deleteSecretsStmt.run(frontmatter.id);
       for (const secret of frontmatter.epistemic.secrets_kept) {
         insertSecretStmt.run(frontmatter.id, secret);
@@ -178,7 +122,6 @@ export class LoreDatabase {
         insertKnownByStmt.run(frontmatter.id, viewer);
       }
 
-      // FTS5
       deleteFtsStmt.run(frontmatter.id);
       insertFtsStmt.run(
         frontmatter.id,
@@ -192,25 +135,87 @@ export class LoreDatabase {
     transaction();
   }
 
+  public deleteEntity(id: string): boolean {
+    const deleteEntityStmt = this.db.prepare(`DELETE FROM entities WHERE id = ?`);
+    const deleteFtsStmt = this.db.prepare(`DELETE FROM lore_fts WHERE entity_id = ?`);
+
+    const tx = this.db.transaction(() => {
+      deleteFtsStmt.run(id);
+      const info = deleteEntityStmt.run(id);
+      return info.changes > 0;
+    });
+
+    return tx();
+  }
+
   public getEntityByIdOrAlias(query: string): (BaseEntity & { body: string; filePath: string }) | null {
     const trimmed = query.trim();
-    const aliasMatch = this.db.prepare(`
-      SELECT entity_id FROM entity_aliases WHERE alias = ?
-    `).get(trimmed.toLowerCase()) as { entity_id: string } | undefined;
+    if (!trimmed) return null;
 
-    const targetId = aliasMatch ? aliasMatch.entity_id : trimmed;
+    let row = this.db.prepare(`SELECT * FROM entities WHERE id = ?`).get(trimmed) as any;
 
-    const row = this.db.prepare(`
-      SELECT * FROM entities WHERE id = ?
-    `).get(targetId) as any;
+    if (!row) {
+      const aliasMatches = this.db
+        .prepare(`SELECT DISTINCT entity_id FROM entity_aliases WHERE alias_norm = ?`)
+        .all(trimmed.toLowerCase()) as { entity_id: string }[];
+
+      if (aliasMatches.length === 0) {
+        return null;
+      }
+
+      if (aliasMatches.length > 1) {
+        const matchedIds = aliasMatches.map((m) => m.entity_id);
+        throw new InkGraphError(
+          "ambiguous",
+          `Alias '${trimmed}' matches multiple entities: ${matchedIds.join(", ")}`,
+          { query: trimmed, matches: matchedIds }
+        );
+      }
+
+      const targetId = aliasMatches[0]!.entity_id;
+      row = this.db.prepare(`SELECT * FROM entities WHERE id = ?`).get(targetId) as any;
+    }
 
     if (!row) return null;
 
-    const aliases = (this.db.prepare(`SELECT alias FROM entity_aliases WHERE entity_id = ? AND alias != ?`).all(targetId, row.name.toLowerCase()) as { alias: string }[]).map(a => a.alias);
-    const tags = (this.db.prepare(`SELECT tag FROM entity_tags WHERE entity_id = ?`).all(targetId) as { tag: string }[]).map(t => t.tag);
-    const relationships = this.db.prepare(`SELECT target_id as target, relation, since_scene, until_scene, sentiment, notes FROM relationships WHERE source_id = ?`).all(targetId) as Relationship[];
-    const secrets = (this.db.prepare(`SELECT secret FROM entity_secrets WHERE entity_id = ?`).all(targetId) as { secret: string }[]).map(s => s.secret);
-    const known_by = (this.db.prepare(`SELECT known_by_id FROM entity_known_by WHERE entity_id = ?`).all(targetId) as { known_by_id: string }[]).map(k => k.known_by_id);
+    const targetId: string = row.id;
+
+    const aliases = (
+      this.db
+        .prepare(`SELECT alias_original FROM entity_aliases WHERE entity_id = ? AND alias_norm != ?`)
+        .all(targetId, row.name.toLowerCase()) as { alias_original: string }[]
+    ).map((a) => a.alias_original);
+
+    const tags = (
+      this.db.prepare(`SELECT tag FROM entity_tags WHERE entity_id = ?`).all(targetId) as { tag: string }[]
+    ).map((t) => t.tag);
+
+    const rawRelationships = this.db
+      .prepare(
+        `SELECT target_id as target, relation, since_scene, until_scene, sentiment, notes FROM relationships WHERE source_id = ?`
+      )
+      .all(targetId) as any[];
+
+    const relationships: Relationship[] = rawRelationships.map((r) => ({
+      target: r.target,
+      relation: r.relation,
+      ...(r.since_scene ? { since_scene: r.since_scene } : {}),
+      ...(r.until_scene ? { until_scene: r.until_scene } : {}),
+      sentiment: r.sentiment,
+      ...(r.notes ? { notes: r.notes } : {}),
+    }));
+
+    const secrets = (
+      this.db.prepare(`SELECT secret FROM entity_secrets WHERE entity_id = ?`).all(targetId) as {
+        secret: string;
+      }[]
+    ).map((s) => s.secret);
+
+    const known_by = (
+      this.db.prepare(`SELECT known_by_id FROM entity_known_by WHERE entity_id = ?`).all(targetId) as {
+        known_by_id: string;
+      }[]
+    ).map((k) => k.known_by_id);
 
     return {
       id: row.id,
@@ -224,13 +229,19 @@ export class LoreDatabase {
       epistemic: {
         secrets_kept: secrets,
         known_by,
+        ...(row.revealed_at_scene ? { revealed_at_scene: row.revealed_at_scene } : {}),
       },
       body: row.body,
       filePath: row.file_path,
     };
   }
 
-  public listEntities(filter?: { type?: string; tag?: string; status?: string }): { id: string; name: string; type: string; status: string }[] {
+  public listEntities(filter?: { type?: string; tag?: string; status?: string }): {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+  }[] {
     let query = `
       SELECT DISTINCT e.id, e.name, e.type, e.status 
       FROM entities e
@@ -257,24 +268,44 @@ export class LoreDatabase {
   }
 
   public search(query: string, limit = 20): { entity_id: string; name: string; snippet: string }[] {
-    const ftsQuery = query.trim().replace(/['"]/g, "");
-    if (!ftsQuery) return [];
+    const tokens = query.trim().match(/[\p{L}\p{N}_]+/gu) ?? [];
+    if (tokens.length === 0) return [];
 
-    const rows = this.db.prepare(`
-      SELECT entity_id, name, snippet(lore_fts, 3, '<b>', '</b>', '...', 15) as snippet
-      FROM lore_fts
-      WHERE lore_fts MATCH ?
-      LIMIT ?
-    `).all(`${ftsQuery}*`, limit) as any[];
+    const safeFtsQuery = tokens.map((token) => `"${token}"*`).join(" ");
+
+    const rows = this.db
+      .prepare(`
+        SELECT entity_id, name, snippet(lore_fts, 3, '<b>', '</b>', '...', 15) as snippet
+        FROM lore_fts
+        WHERE lore_fts MATCH ?
+        LIMIT ?
+      `)
+      .all(safeFtsQuery, limit) as any[];
 
     return rows;
   }
 
+  public queryEpistemicState(entityIdOrAlias: string, sceneId?: string): EpistemicStateResult {
+    const entity = this.getEntityByIdOrAlias(entityIdOrAlias);
+    if (!entity) {
+      throw new InkGraphError("not_found", `Entity '${entityIdOrAlias}' not found.`, {
+        query: entityIdOrAlias,
+      });
+    }
+    return queryEntityEpistemicState(this.db, entity, sceneId);
+  }
+
+  public getTimeline(fromScene?: string, toScene?: string): TimelineEntry[] {
+    return queryChronologicalTimeline(this.db, fromScene, toScene);
+  }
+
   public getAllRelationships(): { source: string; target: string; relation: string; sentiment: number }[] {
-    return this.db.prepare(`
-      SELECT source_id as source, target_id as target, relation, sentiment 
-      FROM relationships
-    `).all() as any[];
+    return this.db
+      .prepare(`
+        SELECT source_id as source, target_id as target, relation, sentiment 
+        FROM relationships
+      `)
+      .all() as any[];
   }
 
   public close(): void {
