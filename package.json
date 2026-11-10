@@ -1,0 +1,16 @@
+{
+  "name": "inkgraph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source literary writing, worldbuilding, and epistemic lore-management engine with native MCP support",
+  "scripts": {
+    "dev": "pnpm --filter @inkgraph/ui run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "mcp": "pnpm --filter @inkgraph/mcp run start"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

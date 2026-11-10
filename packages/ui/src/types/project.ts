@@ -1,0 +1,511 @@
+export type ViewId =
+  | 'dashboard'
+  | 'manuscript'
+  | 'writer'
+  | 'templates'
+  | 'outline'
+  | 'plotboard'
+  | 'scenario'
+  | 'characters'
+  | 'interviews'
+  | 'worlds'
+  | 'factions'
+  | 'graph'
+  | 'objects'
+  | 'mindmap'
+  | 'consistency'
+  | 'critic'
+  | 'preview'
+  | 'progress'
+  | 'versions'
+  | 'export'
+  | 'settings'
+  | 'help';
+
+export type RelationshipType =
+  | 'family'
+  | 'romantic'
+  | 'friend'
+  | 'enemy'
+  | 'mentor'
+  | 'rival'
+  | 'ally'
+  | 'acquaintance'
+  | 'vassal'
+  | 'sovereign'
+  | 'trade'
+  | 'war'
+  | 'infiltrator'
+  | 'exiled_member';
+
+export interface EntityRelationship {
+  id: string;
+  targetId: string;
+  targetKind: 'character' | 'faction' | 'location' | 'system' | 'object';
+  type: RelationshipType;
+  label: string;
+  strength: number; // 1 to 10
+  sentiment: number; // -1.0 to 1.0
+  sinceScene?: string;
+  notes?: string;
+}
+
+export interface EpistemicSecret {
+  id: string;
+  secret: string;
+  knownByIds: string[];
+  revealedInSceneId?: string;
+}
+
+export type CharacterArchetype =
+  | 'hero'
+  | 'mentor'
+  | 'villain'
+  | 'shadow'
+  | 'trickster'
+  | 'shapeshifter'
+  | 'herald'
+  | 'ally'
+  | 'threshold-guardian';
+
+export interface Character {
+  id: string;
+  name: string;
+  aliases: string[];
+  role: string;
+  archetype: CharacterArchetype;
+  status: 'canon' | 'provisional' | 'draft';
+  factionId?: string;
+  locationId?: string;
+  age?: string;
+  avatarColor: string;
+  appearance: string;
+  backstory: string;
+  motivation: string;
+  personalityTraits: string;
+  flaws: string;
+  want: string;
+  need: string;
+  lieBelieved: string;
+  ghost: string;
+  arcAct1: string;
+  arcAct2: string;
+  arcAct3: string;
+  characterArc: string;
+  notes: string;
+  tags: string[];
+  relationships: EntityRelationship[];
+  epistemicSecrets: EpistemicSecret[];
+}
+
+export interface FactionRank {
+  id: string;
+  title: string;
+  authorityLevel: number;
+  holderIds: string[];
+  responsibilities: string;
+}
+
+export interface Faction {
+  id: string;
+  name: string;
+  aliases: string[];
+  subtype: string; // e.g., Ordem Militar, Império, Sindicato, Culto, Corporação
+  motto: string;
+  color: string;
+  status: 'canon' | 'provisional' | 'draft';
+  headquartersLocationId?: string;
+  leaderCharacterId?: string;
+  publicAgenda: string;
+  secretAgenda: string;
+  doctrine: string;
+  history: string;
+  resourcesAndPower: string;
+  internalConflicts: string;
+  notes: string;
+  ranks: FactionRank[];
+  controlledLocationIds: string[];
+  tags: string[];
+  relationships: EntityRelationship[];
+  epistemicSecrets: EpistemicSecret[];
+}
+
+export interface WorldLocation {
+  id: string;
+  worldId: string;
+  name: string;
+  type: 'city' | 'fortress' | 'village' | 'ruin' | 'temple' | 'region' | 'station' | 'other';
+  controlledByFactionId?: string;
+  population?: string;
+  climateOrAtmosphere: string;
+  description: string;
+  strategicValue: string;
+  coordinates: { x: number; y: number }; // 0-100 % on map canvas
+  connectedLocationIds: string[];
+  notes: string;
+}
+
+export interface WorldTimelineEvent {
+  id: string;
+  worldId: string;
+  era: string;
+  year: string;
+  title: string;
+  description: string;
+  locationId?: string;
+  factionIds: string[];
+  characterIds: string[];
+  impactLevel: 'low' | 'medium' | 'high' | 'cataclysmic';
+}
+
+export interface RuleSystem {
+  id: string;
+  worldId: string;
+  name: string;
+  subtype: string; // e.g., Sistema de Magia, Cyberware, Código Jurídico, Viagem Espacial, Economia
+  coreSource: string;
+  fundamentalRules: string[];
+  costsAndToll: string;
+  hardLimits: string[];
+  socialTaboos: string;
+  knownPractitionerIds: string[];
+  notes: string;
+}
+
+export interface World {
+  id: string;
+  name: string;
+  premise: string;
+  description: string;
+  geography: string;
+  culture: string;
+  history: string;
+  magicOrTechSummary: string;
+  politicsSummary: string;
+  notes: string;
+  locations: WorldLocation[];
+  timeline: WorldTimelineEvent[];
+  systems: RuleSystem[];
+}
+
+export type StoryObjectType =
+  | 'artifact'
+  | 'weapon'
+  | 'document'
+  | 'prop'
+  | 'vehicle'
+  | 'place-item'
+  | 'other';
+
+export interface ObjectGroup {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+}
+
+export interface StoryObject {
+  id: string;
+  name: string;
+  type: StoryObjectType;
+  groupId?: string;
+  ownerCharacterId?: string;
+  factionId?: string;
+  locationId?: string;
+  status: string;
+  description: string;
+  significance: string;
+  rulesOrCapabilities: string;
+  linkedCharacterIds: string[];
+  linkedSceneIds: string[];
+  notes: string;
+}
+
+export interface SceneComment {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+  resolved: boolean;
+  replies: { id: string; author: string; text: string; createdAt: string }[];
+}
+
+export interface SceneRevision {
+  id: string;
+  label: string;
+  content: string;
+  wordCount: number;
+  createdAt: string;
+}
+
+export type SceneStatus = 'outline' | 'draft' | 'first-draft' | 'revised' | 'final';
+
+export interface Scene {
+  id: string;
+  chapterNumber: number;
+  title: string;
+  summary: string;
+  content: string;
+  act: 1 | 2 | 3;
+  status: SceneStatus;
+  povCharacterId?: string;
+  locationId?: string;
+  sceneStart?: string; // ISO-like string or story date
+  sceneDuration?: string; // e.g. PT2H, 3 dias
+  tension: number; // 0-100
+  subplotIds: string[];
+  characterIds: string[];
+  objectIds: string[];
+  secretsRevealed: string[];
+  notes: string;
+  position: { x: number; y: number }; // For 2D Canvas mode in PlotBoard
+  comments: SceneComment[];
+  revisions: SceneRevision[];
+  lastEditedAt: string;
+}
+
+export interface OutlineSection {
+  id: string;
+  title: string;
+  description: string;
+  act: 1 | 2 | 3;
+  isTwist?: boolean;
+  targetWords?: number;
+}
+
+export interface Subplot {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+  sceneIds: string[];
+}
+
+export type PlotConnectionType =
+  | 'cause-effect'
+  | 'character-arc'
+  | 'parallel'
+  | 'subplot'
+  | 'temporal';
+
+export interface PlotConnection {
+  id: string;
+  fromSceneId: string;
+  toSceneId: string;
+  type: PlotConnectionType;
+  label?: string;
+}
+
+export interface BinderItem {
+  id: string;
+  parentId: string | null;
+  type: 'folder' | 'note' | 'link' | 'file';
+  title: string;
+  content: string;
+  url?: string;
+  linkedSceneIds: string[];
+  createdAt: string;
+}
+
+export interface InterviewMessage {
+  id: string;
+  role: 'user' | 'character';
+  text: string;
+  timestamp: string;
+}
+
+export interface CharacterInterview {
+  id: string;
+  characterId: string;
+  title: string;
+  archetype: CharacterArchetype;
+  messages: InterviewMessage[];
+  updatedAt: string;
+}
+
+export type MindMapNodeShape = 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'hexagon';
+
+export interface MindMapNode {
+  id: string;
+  label: string;
+  type: 'free' | 'linked';
+  linkedEntityKind?: 'character' | 'faction' | 'location' | 'object' | 'scene';
+  linkedEntityId?: string;
+  shape: MindMapNodeShape;
+  color: string;
+  x: number;
+  y: number;
+  notes: string;
+}
+
+export interface MindMapEdge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label: string;
+  style: 'solid' | 'dotted';
+  direction: 'uni' | 'bi';
+}
+
+export interface MindMap {
+  id: string;
+  name: string;
+  description: string;
+  nodes: MindMapNode[];
+  edges: MindMapEdge[];
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface Snapshot {
+  id: string;
+  branchId: string;
+  label: string;
+  createdAt: string;
+  wordCount: number;
+  scenesBackup: Scene[];
+}
+
+export interface StagingProposal {
+  id: string;
+  fileName: string;
+  targetPath: string;
+  canonicalPath: string;
+  entityType: 'character' | 'faction' | 'location' | 'system' | 'scene' | 'item';
+  entityName: string;
+  action: 'create' | 'update';
+  rationale: string;
+  createdAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  epistemicImpact: string[];
+  proposedFrontmatter: Record<string, unknown>;
+  proposedMarkdown: string;
+  existingMarkdown?: string;
+}
+
+export interface WritingLogEntry {
+  date: string; // YYYY-MM-DD
+  wordsWritten: number;
+  minutesSpent: number;
+}
+
+export interface CompileProfile {
+  authorName: string;
+  titlePageText: string;
+  dedication: string;
+  acknowledgements: string;
+  imprint: string;
+}
+
+export interface AppSettings {
+  theme: 'dark' | 'light' | 'sepia';
+  highContrast: boolean;
+  largeText: boolean;
+  reducedMotion: boolean;
+  editorFont: 'serif' | 'sans' | 'mono';
+  editorFontSize: number;
+  editorLineHeight: number;
+  zenMode: boolean;
+  focusMode: boolean;
+  typewriterMode: boolean;
+  spellcheck: boolean;
+  aiMode: 'cloud' | 'local' | 'hybrid' | 'eco';
+  aiProvider: 'gemini' | 'ollama' | 'openai' | 'mcp';
+  geminiApiKey: string;
+  ollamaUrl: string;
+  ollamaModel: string;
+  aiTemperature: number;
+  aiMaxTokens: number;
+  copilotEnabled: boolean;
+  copilotHeuristicsOnly: boolean;
+}
+
+export interface ProjectData {
+  id: string;
+  title: string;
+  logline: string;
+  genre: string;
+  wordCountGoal: number;
+  dailyWordGoal: number;
+  weeklyWordGoal: number;
+  deadline?: string; // YYYY-MM-DD
+  characters: Character[];
+  factions: Faction[];
+  worlds: World[];
+  objects: StoryObject[];
+  objectGroups: ObjectGroup[];
+  scenes: Scene[];
+  outline: OutlineSection[];
+  subplots: Subplot[];
+  plotConnections: PlotConnection[];
+  binder: BinderItem[];
+  interviews: CharacterInterview[];
+  mindMaps: MindMap[];
+  branches: Branch[];
+  activeBranchId: string;
+  snapshots: Snapshot[];
+  stagingProposals: StagingProposal[];
+  writingLogs: WritingLogEntry[];
+  compileProfile: CompileProfile;
+  updatedAt: string;
+}
+
+export function calculateCharacterCompleteness(c: Character): number {
+  const checks = [
+    Boolean(c.name?.trim()),
+    Boolean(c.role?.trim()),
+    Boolean(c.appearance?.trim()),
+    Boolean(c.backstory?.trim()),
+    Boolean(c.motivation?.trim()),
+    Boolean(c.personalityTraits?.trim()),
+    Boolean(c.flaws?.trim()),
+    Boolean(c.want?.trim() || c.need?.trim()),
+    Boolean(c.characterArc?.trim() || c.arcAct1?.trim()),
+    c.relationships.length > 0,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+}
+
+export function calculateFactionCompleteness(f: Faction): number {
+  const checks = [
+    Boolean(f.name?.trim()),
+    Boolean(f.subtype?.trim()),
+    Boolean(f.motto?.trim()),
+    Boolean(f.publicAgenda?.trim()),
+    Boolean(f.secretAgenda?.trim()),
+    Boolean(f.doctrine?.trim()),
+    Boolean(f.history?.trim()),
+    Boolean(f.resourcesAndPower?.trim()),
+    f.ranks.length > 0,
+    f.relationships.length > 0,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+}
+
+export function calculateWorldCompleteness(w: World): number {
+  const checks = [
+    Boolean(w.name?.trim()),
+    Boolean(w.description?.trim()),
+    Boolean(w.geography?.trim()),
+    Boolean(w.culture?.trim()),
+    Boolean(w.history?.trim()),
+    Boolean(w.magicOrTechSummary?.trim()),
+    w.locations.length > 0,
+    w.timeline.length > 0,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+}
+
+export function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}

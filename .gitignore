@@ -1,0 +1,80 @@
+# =============================================================================
+# PRIVACY & USER DATA ISOLATION (STRICTLY IGNORED - NEVER COMMIT TO GITHUB)
+# =============================================================================
+/workspace/
+/workspace/**
+workspace/
+workspace/**
+
+# =============================================================================
+# LOCAL DATABASES & INDEXES
+# =============================================================================
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite*
+*.duckdb
+*.duckdb.wal
+*.lancedb/
+.inkgraph-data/
+
+# =============================================================================
+# ENVIRONMENT & SECRETS
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
+
+# =============================================================================
+# LOCAL AGENT SKILLS & RUNTIME INSTRUCTIONS (PRIVATE / LOCAL ONLY)
+# =============================================================================
+.agents/
+.agents/**
+SKILL.md
+**/SKILL.md
+
+
+# =============================================================================
+# DEPENDENCIES & BUILD ARTIFACTS (Node / Bun / Python / Rust / Tauri)
+# =============================================================================
+.npm-global/
+node_modules/
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.turbo/
+target/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
+*.tsbuildinfo
+
+# =============================================================================
+# OS & IDE FILES
+# =============================================================================
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
