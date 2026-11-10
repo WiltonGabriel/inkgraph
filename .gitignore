@@ -44,6 +44,7 @@ SKILL.md
 # DEPENDENCIES & BUILD ARTIFACTS (Node / Bun / Python / Rust / Tauri)
 # =============================================================================
 .npm-global/
+.worktrees/
 node_modules/
 dist/
 build/
