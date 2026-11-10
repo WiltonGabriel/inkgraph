@@ -222,7 +222,8 @@ export function CopilotPanel() {
       style={{
         width: 340,
         backgroundColor: '#0e1118',
-        borderLeft: '1px solid #1f2533',
+        borderLeft: settings.copilotPosition === 'left' ? 'none' : '1px solid #1f2533',
+        borderRight: settings.copilotPosition === 'left' ? '1px solid #1f2533' : 'none',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,

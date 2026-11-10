@@ -216,8 +216,8 @@ export function EditorSettingsTab() {
         >
           <p style={{ margin: 0, textIndent: settings.paragraphIndent ? '2em' : 0 }}>
             {isEn
-              ? 'The mist rose slowly above the basalt bastions of Vael. Elias Vance rested his gloved hand upon the cold parapet, listening to the distant bells of the lower citadel before the dawn.'
-              : 'A névoa erguia-se lentamente sobre os bastiões de basalto de Vael. Elias Vance apoiou a mão enluvada no parapeito frio, escutando os sinos distantes da cidadela baixa antes da alvorada.'}
+              ? 'The mist rose slowly above the stone bastions at daybreak. The watchman rested his gloved hand upon the cold parapet, listening to the distant bells before the gates opened.'
+              : 'A névoa erguia-se lentamente sobre os bastiões de pedra ao amanhecer. O vigia apoiou a mão enluvada no parapeito frio, escutando os sinos distantes antes da abertura dos portões.'}
           </p>
         </div>
       </div>

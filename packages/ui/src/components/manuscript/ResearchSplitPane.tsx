@@ -1,5 +1,6 @@
 import { X, ExternalLink, FileText, Link2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { sanitizeExternalUrl } from '../../domain/workspaceNormalizer';
 
 interface ResearchSplitPaneProps {
   binderItemId: string;
@@ -11,6 +12,8 @@ export function ResearchSplitPane({ binderItemId, onClose }: ResearchSplitPanePr
   const item = project.binder.find((b) => b.id === binderItemId);
 
   if (!item) return null;
+
+  const safeHref = sanitizeExternalUrl(item.url);
 
   return (
     <div
@@ -94,11 +97,11 @@ export function ResearchSplitPane({ binderItemId, onClose }: ResearchSplitPanePr
                   fontSize: 12,
                 }}
               />
-              {item.url && (
+              {safeHref && (
                 <a
-                  href={item.url}
+                  href={safeHref}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   style={{
                     padding: '6px 8px',
                     backgroundColor: '#19202e',

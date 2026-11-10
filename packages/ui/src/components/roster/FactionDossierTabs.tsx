@@ -18,6 +18,7 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
   >('doctrine');
   const [newRankTitle, setNewRankTitle] = useState('');
   const [newRankResp, setNewRankResp] = useState('');
+  const [newSecretText, setNewSecretText] = useState('');
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -295,7 +296,10 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
         )}
 
         {activeTab === 'secrets' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontSize: 12.5, color: '#9ca3af' }}>
+              Controle segredos institucionais mantidos por esta facção e quem os conhece.
+            </div>
             {selected.epistemicSecrets.map((s) => (
               <div
                 key={s.id}
@@ -304,16 +308,79 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                   backgroundColor: '#131824',
                   border: '1px solid rgba(245,158,11,0.35)',
                   borderRadius: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
-                  <Lock size={14} /> {s.secret}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
+                    <Lock size={14} /> {s.secret}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                    Conhecido por: {s.knownByIds.join(', ')}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-                  Conhecido por: {s.knownByIds.join(', ')}
-                </div>
+                <button
+                  onClick={() =>
+                    upsertFaction({
+                      ...selected,
+                      epistemicSecrets: selected.epistemicSecrets.filter((sec) => sec.id !== s.id),
+                    })
+                  }
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    color: '#f87171',
+                    borderRadius: 5,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remover
+                </button>
               </div>
             ))}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={newSecretText}
+                onChange={(e) => setNewSecretText(e.target.value)}
+                placeholder="Novo segredo de estado ou agenda oculta..."
+                style={inputStyle}
+              />
+              <button
+                onClick={() => {
+                  if (!newSecretText.trim()) return;
+                  upsertFaction({
+                    ...selected,
+                    epistemicSecrets: [
+                      ...selected.epistemicSecrets,
+                      {
+                        id: `sec_fac_${Date.now()}`,
+                        secret: newSecretText.trim(),
+                        knownByIds: [selected.id],
+                      },
+                    ],
+                  });
+                  setNewSecretText('');
+                }}
+                style={{
+                  padding: '8px 14px',
+                  backgroundColor: '#f59e0b',
+                  color: '#111827',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                + Segredo
+              </button>
+            </div>
           </div>
         )}
       </div>

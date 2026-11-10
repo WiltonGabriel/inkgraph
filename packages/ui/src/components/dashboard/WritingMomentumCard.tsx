@@ -8,6 +8,7 @@ export function WritingMomentumCard() {
   const weekWords = recentLogs
     .slice(-7)
     .reduce((acc, l) => acc + l.wordsWritten, 0);
+  const activeDaysStreak = project.writingLogs.filter((l) => l.wordsWritten > 0).length;
 
   return (
     <div
@@ -39,7 +40,7 @@ export function WritingMomentumCard() {
           <Flame size={15} color="#f59e0b" /> Momento de Escrita
         </span>
         <span style={{ fontSize: 11.5, color: '#fbbf24', fontWeight: 600 }}>
-          7 dias de sequência
+          {activeDaysStreak} {activeDaysStreak === 1 ? 'dia de sequência' : 'dias de sequência'}
         </span>
       </div>
 

@@ -6,10 +6,15 @@ export function StoryDetailsCard() {
   const { project, updateProject } = useProject();
   const [showLoglineIdeas, setShowLoglineIdeas] = useState(false);
 
+  const leadName = project.characters[0]?.name ?? 'o protagonista';
+  const secondName = project.characters[1]?.name ?? 'um aliado improvável';
+  const worldName = project.worlds[0]?.name ?? 'seu mundo';
+  const facName = project.factions[0]?.name ?? 'a instituição dominante';
+
   const loglineSuggestions = [
-    `Quando o segredo que sustenta ${project.worlds[0]?.name ?? 'o reino'} ameaça destruir os distritos baixos, ${project.characters[0]?.name ?? 'um comandante exilado'} precisa escolher entre a lealdade institucional e a sobrevivência de seu povo.`,
-    `Traído pela própria ${project.factions[0]?.name ?? 'ordem militar'}, um veterano cego une forças com uma arquivista clandestina para expor o crime fundador da Coroa antes que a capital congele.`,
-    `Em uma cidade movida pela queima de memórias humanas, duas mentes opostas descobrem a gravação capaz de derrubar o trono — ou apagar o último refúgio da humanidade.`,
+    `Em "${project.title}" (${project.genre}), quando o equilíbrio de ${worldName} entra em colapso, ${leadName} precisa escolher entre a lealdade institucional e a sobrevivência daqueles que protege.`,
+    `Confrontado por ${facName}, ${leadName} une forças com ${secondName} para revelar a verdade oculta nos arquivos de ${worldName} antes que o conflito se torne irreversível.`,
+    `No território de ${worldName}, duas perspectivas opostas descobrem o segredo capaz de transformar a ordem vigente — ou destruir o último refúgio seguro.`,
   ];
 
   return (

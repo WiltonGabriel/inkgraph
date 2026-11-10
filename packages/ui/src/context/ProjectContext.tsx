@@ -32,6 +32,7 @@ import {
   DEFAULT_SETTINGS,
   type NarrativeTemplate,
 } from '../data/initialProjectData';
+import { normalizeWorkspaceData } from '../domain/workspaceNormalizer';
 import { getDictionary, type AppDictionary } from '../i18n/translations';
 
 interface ProjectContextValue {
@@ -138,16 +139,21 @@ function loadInitialWorkspaces(): ProjectData[] {
   try {
     const savedCatalog = localStorage.getItem(STORAGE_KEY_CATALOG);
     if (savedCatalog) {
-      const parsed = JSON.parse(savedCatalog) as ProjectData[];
+      const parsed = JSON.parse(savedCatalog);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const normalized = parsed
+          .map((item) => normalizeWorkspaceData(item))
+          .filter((item): item is ProjectData => item !== null);
+        if (normalized.length > 0) {
+          return normalized;
+        }
       }
     }
     const legacySingle = localStorage.getItem(STORAGE_KEY_LEGACY_PROJECT);
     if (legacySingle) {
-      const parsedSingle = JSON.parse(legacySingle) as ProjectData;
-      if (parsedSingle && parsedSingle.id) {
-        return [{ ...parsedSingle, isFavorite: true, folderOrTag: 'Principal' }];
+      const normalizedSingle = normalizeWorkspaceData(JSON.parse(legacySingle));
+      if (normalizedSingle) {
+        return [{ ...normalizedSingle, isFavorite: true, folderOrTag: 'Principal' }];
       }
     }
   } catch {
@@ -336,6 +342,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteWorkspace = (workspaceId: string) => {
+    if (
+      settings.confirmDestructiveActions &&
+      typeof window !== 'undefined' &&
+      !window.confirm('Tem certeza que deseja excluir este workspace?')
+    ) {
+      return;
+    }
     setWorkspaces((prev) => {
       const remaining = prev.filter((w) => w.id !== workspaceId);
       if (remaining.length === 0) {
@@ -374,9 +387,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     try {
       const parsed = JSON.parse(jsonString);
       if (parsed && Array.isArray(parsed.workspaces) && parsed.workspaces.length > 0) {
-        setWorkspaces(parsed.workspaces);
-        setActiveWorkspaceId(parsed.workspaces[0].id);
-        if (parsed.settings) {
+        const normalized = parsed.workspaces
+          .map((item: unknown) => normalizeWorkspaceData(item))
+          .filter((item: ProjectData | null): item is ProjectData => item !== null);
+        if (normalized.length === 0) return false;
+        setWorkspaces(normalized);
+        setActiveWorkspaceId(normalized[0].id);
+        if (parsed.settings && typeof parsed.settings === 'object') {
           setSettings((prev) => ({ ...prev, ...parsed.settings }));
         }
         return true;
@@ -465,11 +482,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (parsed && Array.isArray(parsed.workspaces)) {
         return importAllWorkspacesJson(jsonString);
       }
-      const single = parsed as ProjectData;
-      if (single && typeof single.title === 'string' && Array.isArray(single.scenes)) {
+      const normalized = normalizeWorkspaceData(parsed);
+      if (normalized) {
         const imported: ProjectData = {
-          ...single,
-          id: single.id || `ws_imp_${Date.now()}`,
+          ...normalized,
+          id: normalized.id || `ws_imp_${Date.now()}`,
           lastOpenedAt: new Date().toISOString(),
         };
         setWorkspaces((prev) => [imported, ...prev.filter((w) => w.id !== imported.id)]);
@@ -501,6 +518,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCharacter = (id: string) => {
+    if (
+      settings.confirmDestructiveActions &&
+      typeof window !== 'undefined' &&
+      !window.confirm('Tem certeza que deseja excluir este personagem?')
+    ) {
+      return;
+    }
     updateProject((prev) => ({
       ...prev,
       characters: prev.characters.filter((c) => c.id !== id),
@@ -520,6 +544,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteFaction = (id: string) => {
+    if (
+      settings.confirmDestructiveActions &&
+      typeof window !== 'undefined' &&
+      !window.confirm('Tem certeza que deseja excluir esta facção?')
+    ) {
+      return;
+    }
     updateProject((prev) => ({
       ...prev,
       factions: prev.factions.filter((f) => f.id !== id),
@@ -592,6 +623,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteScene = (id: string) => {
+    if (
+      settings.confirmDestructiveActions &&
+      typeof window !== 'undefined' &&
+      !window.confirm('Tem certeza que deseja excluir esta cena?')
+    ) {
+      return;
+    }
     updateProject((prev) => ({
       ...prev,
       scenes: prev.scenes.filter((s) => s.id !== id),
@@ -764,22 +802,48 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const createBranch = (name: string, description: string) => {
     updateProject((prev) => {
+      const clonedScenes = JSON.parse(JSON.stringify(prev.scenes)) as Scene[];
+      const updatedBranches = prev.branches.map((b) =>
+        b.id === prev.activeBranchId
+          ? { ...b, scenesBackup: JSON.parse(JSON.stringify(prev.scenes)) as Scene[] }
+          : b
+      );
       const newBranch: Branch = {
         id: `branch_${Date.now()}`,
         name: name.trim() || 'Nova Ramificação',
         description,
         createdAt: new Date().toISOString().slice(0, 10),
+        scenesBackup: clonedScenes,
       };
       return {
         ...prev,
-        branches: [...prev.branches, newBranch],
+        branches: [...updatedBranches, newBranch],
         activeBranchId: newBranch.id,
       };
     });
   };
 
   const switchBranch = (branchId: string) => {
-    updateProject((prev) => ({ ...prev, activeBranchId: branchId }));
+    updateProject((prev) => {
+      if (branchId === prev.activeBranchId) return prev;
+      const targetBranch = prev.branches.find((b) => b.id === branchId);
+      if (!targetBranch) return prev;
+      const updatedBranches = prev.branches.map((b) =>
+        b.id === prev.activeBranchId
+          ? { ...b, scenesBackup: JSON.parse(JSON.stringify(prev.scenes)) as Scene[] }
+          : b
+      );
+      const nextScenes =
+        targetBranch.scenesBackup && targetBranch.scenesBackup.length > 0
+          ? (JSON.parse(JSON.stringify(targetBranch.scenesBackup)) as Scene[])
+          : prev.scenes;
+      return {
+        ...prev,
+        branches: updatedBranches,
+        activeBranchId: branchId,
+        scenes: nextScenes,
+      };
+    });
   };
 
   const resolveStagingProposal = (
@@ -788,46 +852,252 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   ) => {
     updateProject((prev) => {
       const target = prev.stagingProposals.find((p) => p.id === id);
+      if (!target) return prev;
+
       let nextCharacters = prev.characters;
-      if (
-        target &&
-        decision === 'approved' &&
-        target.entityType === 'character' &&
-        target.action === 'create'
-      ) {
-        const newChar: Character = {
-          id: String(target.proposedFrontmatter.id || `char_${Date.now()}`),
-          name: target.entityName,
-          aliases: [],
-          role: 'Personagem Canonizado via Staging',
-          archetype: 'ally',
-          status: 'canon',
-          avatarColor: '#a855f7',
-          appearance: '',
-          backstory: target.rationale,
-          motivation: '',
-          personalityTraits: '',
-          flaws: '',
-          want: '',
-          need: '',
-          lieBelieved: '',
-          ghost: '',
-          arcAct1: '',
-          arcAct2: '',
-          arcAct3: '',
-          characterArc: '',
-          notes: target.proposedMarkdown,
-          tags: ['canonizado'],
-          relationships: [],
-          epistemicSecrets: [],
-        };
-        if (!prev.characters.some((c) => c.id === newChar.id)) {
-          nextCharacters = [...prev.characters, newChar];
+      let nextFactions = prev.factions;
+      let nextWorlds = prev.worlds;
+      let nextObjects = prev.objects;
+      let nextScenes = prev.scenes;
+
+      if (decision === 'approved') {
+        const fm = target.proposedFrontmatter ?? {};
+        const proposedId = String(fm.id || `${target.entityType}_${Date.now()}`);
+        const proposedTags = Array.isArray(fm.tags)
+          ? fm.tags.map(String)
+          : ['canonizado'];
+        const proposedAliases = Array.isArray(fm.aliases)
+          ? fm.aliases.map(String)
+          : [];
+
+        if (target.entityType === 'character') {
+          const existing = prev.characters.find(
+            (c) => c.id === proposedId || c.name.toLowerCase() === target.entityName.toLowerCase()
+          );
+          if (target.action === 'update' && existing) {
+            nextCharacters = prev.characters.map((c) =>
+              c.id === existing.id
+                ? {
+                    ...c,
+                    status: 'canon',
+                    backstory: target.rationale || c.backstory,
+                    notes: target.proposedMarkdown || c.notes,
+                    tags: Array.from(new Set([...c.tags, ...proposedTags])),
+                  }
+                : c
+            );
+          } else if (!existing) {
+            const newChar: Character = {
+              id: proposedId,
+              name: target.entityName,
+              aliases: proposedAliases,
+              role: String(fm.subtype || 'Personagem Canonizado'),
+              archetype: 'ally',
+              status: 'canon',
+              avatarColor: '#a855f7',
+              appearance: '',
+              backstory: target.rationale,
+              motivation: '',
+              personalityTraits: '',
+              flaws: '',
+              want: '',
+              need: '',
+              lieBelieved: '',
+              ghost: '',
+              arcAct1: '',
+              arcAct2: '',
+              arcAct3: '',
+              characterArc: '',
+              notes: target.proposedMarkdown,
+              tags: proposedTags,
+              relationships: [],
+              epistemicSecrets: [],
+            };
+            nextCharacters = [...prev.characters, newChar];
+          }
+        } else if (target.entityType === 'faction') {
+          const existing = prev.factions.find(
+            (f) => f.id === proposedId || f.name.toLowerCase() === target.entityName.toLowerCase()
+          );
+          if (target.action === 'update' && existing) {
+            nextFactions = prev.factions.map((f) =>
+              f.id === existing.id
+                ? {
+                    ...f,
+                    status: 'canon',
+                    doctrine: target.proposedMarkdown || f.doctrine,
+                    notes: target.rationale || f.notes,
+                    tags: Array.from(new Set([...f.tags, ...proposedTags])),
+                  }
+                : f
+            );
+          } else if (!existing) {
+            const newFac: Faction = {
+              id: proposedId,
+              name: target.entityName,
+              aliases: proposedAliases,
+              subtype: String(fm.subtype || 'Organização'),
+              motto: '',
+              color: '#a855f7',
+              status: 'canon',
+              publicAgenda: target.rationale,
+              secretAgenda: '',
+              doctrine: target.proposedMarkdown,
+              history: '',
+              resourcesAndPower: '',
+              internalConflicts: '',
+              notes: '',
+              ranks: [],
+              controlledLocationIds: [],
+              tags: proposedTags,
+              relationships: [],
+              epistemicSecrets: [],
+            };
+            nextFactions = [...prev.factions, newFac];
+          }
+        } else if (target.entityType === 'location' && prev.worlds.length > 0) {
+          const firstWorld = prev.worlds[0];
+          const existing = firstWorld.locations.find(
+            (l) => l.id === proposedId || l.name.toLowerCase() === target.entityName.toLowerCase()
+          );
+          const updatedLocations =
+            target.action === 'update' && existing
+              ? firstWorld.locations.map((l) =>
+                  l.id === existing.id
+                    ? { ...l, description: target.proposedMarkdown || l.description, notes: target.rationale || l.notes }
+                    : l
+                )
+              : existing
+                ? firstWorld.locations
+                : [
+                    ...firstWorld.locations,
+                    {
+                      id: proposedId,
+                      worldId: firstWorld.id,
+                      name: target.entityName,
+                      type: 'city' as const,
+                      climateOrAtmosphere: 'Padrão',
+                      description: target.proposedMarkdown,
+                      strategicValue: target.rationale,
+                      coordinates: { x: 50, y: 50 },
+                      connectedLocationIds: [],
+                      notes: '',
+                    },
+                  ];
+          nextWorlds = [
+            { ...firstWorld, locations: updatedLocations },
+            ...prev.worlds.slice(1),
+          ];
+        } else if (target.entityType === 'system' && prev.worlds.length > 0) {
+          const firstWorld = prev.worlds[0];
+          const existing = firstWorld.systems.find(
+            (s) => s.id === proposedId || s.name.toLowerCase() === target.entityName.toLowerCase()
+          );
+          const updatedSystems =
+            target.action === 'update' && existing
+              ? firstWorld.systems.map((s) =>
+                  s.id === existing.id
+                    ? { ...s, notes: target.proposedMarkdown || s.notes, costsAndToll: target.rationale || s.costsAndToll }
+                    : s
+                )
+              : existing
+                ? firstWorld.systems
+                : [
+                    ...firstWorld.systems,
+                    {
+                      id: proposedId,
+                      worldId: firstWorld.id,
+                      name: target.entityName,
+                      subtype: String(fm.subtype || 'Sistema de Regras'),
+                      coreSource: target.rationale,
+                      fundamentalRules: [target.proposedMarkdown],
+                      costsAndToll: '',
+                      hardLimits: [],
+                      socialTaboos: '',
+                      knownPractitionerIds: [],
+                      notes: target.proposedMarkdown,
+                    },
+                  ];
+          nextWorlds = [
+            { ...firstWorld, systems: updatedSystems },
+            ...prev.worlds.slice(1),
+          ];
+        } else if (target.entityType === 'item') {
+          const existing = prev.objects.find(
+            (o) => o.id === proposedId || o.name.toLowerCase() === target.entityName.toLowerCase()
+          );
+          if (target.action === 'update' && existing) {
+            nextObjects = prev.objects.map((o) =>
+              o.id === existing.id
+                ? { ...o, description: target.proposedMarkdown || o.description, notes: target.rationale || o.notes }
+                : o
+            );
+          } else if (!existing) {
+            nextObjects = [
+              ...prev.objects,
+              {
+                id: proposedId,
+                name: target.entityName,
+                type: 'artifact',
+                status: 'Ativo',
+                description: target.proposedMarkdown,
+                significance: target.rationale,
+                rulesOrCapabilities: '',
+                linkedCharacterIds: [],
+                linkedSceneIds: [],
+                notes: '',
+              },
+            ];
+          }
+        } else if (target.entityType === 'scene') {
+          const existing = prev.scenes.find(
+            (s) => s.id === proposedId || s.title.toLowerCase() === target.entityName.toLowerCase()
+          );
+          if (target.action === 'update' && existing) {
+            nextScenes = prev.scenes.map((s) =>
+              s.id === existing.id
+                ? {
+                    ...s,
+                    content: target.proposedMarkdown || s.content,
+                    notes: target.rationale || s.notes,
+                    lastEditedAt: new Date().toISOString(),
+                  }
+                : s
+            );
+          } else if (!existing) {
+            nextScenes = [
+              ...prev.scenes,
+              {
+                id: proposedId,
+                chapterNumber: prev.scenes.length + 1,
+                title: target.entityName,
+                summary: target.rationale,
+                content: target.proposedMarkdown,
+                act: 2,
+                status: 'draft',
+                tension: 60,
+                subplotIds: [],
+                characterIds: [],
+                objectIds: [],
+                secretsRevealed: [],
+                notes: target.rationale,
+                position: { x: 140 + prev.scenes.length * 220, y: 140 },
+                comments: [],
+                revisions: [],
+                lastEditedAt: new Date().toISOString(),
+              },
+            ];
+          }
         }
       }
+
       return {
         ...prev,
         characters: nextCharacters,
+        factions: nextFactions,
+        worlds: nextWorlds,
+        objects: nextObjects,
+        scenes: nextScenes,
         stagingProposals: prev.stagingProposals.map((p) =>
           p.id === id ? { ...p, status: decision } : p
         ),

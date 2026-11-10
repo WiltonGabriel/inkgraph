@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Check, X, Layers } from 'lucide-react';
+import { useProject } from '../../context/ProjectContext';
 
 const STAGES = [
   '1. Ingestão e Diagnóstico',
@@ -12,71 +13,137 @@ const STAGES = [
   '8. Resumo da Execução',
 ] as const;
 
+type StageName = (typeof STAGES)[number];
+
 interface ReviewItem {
   id: string;
-  stage: (typeof STAGES)[number];
+  stage: StageName;
   original: string;
   proposed: string;
   confidence: number;
-  status: 'pending' | 'accepted' | 'rejected';
 }
-
-const INITIAL_ITEMS: ReviewItem[] = [
-  {
-    id: 'pf_1',
-    stage: '1. Ingestão e Diagnóstico',
-    original: 'A cena inicia com exposição direta sobre a história antiga.',
-    proposed: 'Ancorar a abertura no conflito imediato do POV antes de introduzir o contexto histórico.',
-    confidence: 94,
-    status: 'pending',
-  },
-  {
-    id: 'pf_2',
-    stage: '2. Edição Estrutural',
-    original: 'Transição abrupta entre o diálogo diplomático e a emboscada.',
-    proposed: 'Inserir batida de tensão sensorial indicando movimentação nas galerias superiores.',
-    confidence: 91,
-    status: 'pending',
-  },
-  {
-    id: 'pf_3',
-    stage: '3. Linha e Prosa',
-    original: 'O vento frio soprava fortemente contra os muros antigos.',
-    proposed: 'A geada mordia o basalto fendido das muralhas.',
-    confidence: 96,
-    status: 'pending',
-  },
-  {
-    id: 'pf_4',
-    stage: '4. Edição de Cópia',
-    original: 'Padronização de títulos honoríficos e termos de facção.',
-    proposed: 'Unificar grafia conforme glossário canônico do projeto.',
-    confidence: 98,
-    status: 'pending',
-  },
-];
 
 interface ProForgePipelinePanelProps {
   onApplyProposal: (proposedText: string) => void;
 }
 
 export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanelProps) {
-  const [activeStage, setActiveStage] = useState<(typeof STAGES)[number]>(STAGES[0]);
-  const [items, setItems] = useState<ReviewItem[]>(INITIAL_ITEMS);
+  const { project, activeSceneId } = useProject();
+  const [activeStage, setActiveStage] = useState<StageName | 'ALL'>('ALL');
+  const [decisions, setDecisions] = useState<Record<string, 'accepted' | 'rejected'>>({});
 
-  const handleDecision = (id: string, status: 'accepted' | 'rejected') => {
-    const target = items.find((i) => i.id === id);
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
-    if (status === 'accepted' && target) {
-      onApplyProposal(target.proposed);
+  const activeScene = project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
+
+  const dynamicItems = useMemo<ReviewItem[]>(() => {
+    const paragraphs = (activeScene?.content ?? '')
+      .split(/\n\s*\n/)
+      .map((p) => p.replace(/^#+\s*/, '').trim())
+      .filter(Boolean);
+    const firstPara = paragraphs[0] || activeScene?.summary || 'Parágrafo inicial da cena.';
+    const secondPara = paragraphs[1] || firstPara;
+    const charName = project.characters[0]?.name || 'o protagonista';
+    const facName = project.factions[0]?.name || 'a facção principal';
+
+    return [
+      {
+        id: 'pf_1',
+        stage: '1. Ingestão e Diagnóstico',
+        original: firstPara.slice(0, 140),
+        proposed: `${firstPara.slice(0, 110)} — ancorando o conflito imediato de ${charName} logo na abertura.`,
+        confidence: 94,
+      },
+      {
+        id: 'pf_2',
+        stage: '2. Edição Estrutural',
+        original: `Tensão declarada da cena "${activeScene?.title ?? 'Cena'}": ${activeScene?.tension ?? 50}%.`,
+        proposed: `Inserir batida de reação sensorial antes da virada dramática do Ato ${activeScene?.act ?? 1}.`,
+        confidence: 91,
+      },
+      {
+        id: 'pf_3',
+        stage: '3. Linha e Prosa',
+        original: secondPara.slice(0, 140),
+        proposed: secondPara
+          .slice(0, 140)
+          .replace(/\bmuito\b/gi, '')
+          .trim() + ' — com ritmo verbal condensado.',
+        confidence: 96,
+      },
+      {
+        id: 'pf_4',
+        stage: '4. Edição de Cópia',
+        original: `Menções a ${charName} e ${facName} ao longo do capítulo.`,
+        proposed: `Padronizar títulos, travessões literários (—) e grafia canônica de ${facName}.`,
+        confidence: 98,
+      },
+      {
+        id: 'pf_5',
+        stage: '5. Prova Final',
+        original: 'Revisão ortográfica e pontuação de diálogos.',
+        proposed: 'Pontuação e concordância validadas para fechamento de prova.',
+        confidence: 97,
+      },
+      {
+        id: 'pf_6',
+        stage: '6. Produção',
+        original: `Capítulo ${activeScene?.chapterNumber ?? 1}: ${activeScene?.title ?? 'Sem título'}`,
+        proposed: 'Cabeçalhos e quebras de cena (* * *) normalizados para diagramação.',
+        confidence: 95,
+      },
+      {
+        id: 'pf_7',
+        stage: '7. Preparação para Publicação',
+        original: `Metadados editoriais de "${project.title}"`,
+        proposed: `Sinopse e folha de rosto sincronizadas com o perfil de compilação.`,
+        confidence: 93,
+      },
+      {
+        id: 'pf_8',
+        stage: '8. Resumo da Execução',
+        original: `${paragraphs.length} parágrafo(s) analisados na cena ativa.`,
+        proposed: 'Pipeline editorial concluído sem violações epistêmicas.',
+        confidence: 99,
+      },
+    ];
+  }, [activeScene, project.characters, project.factions, project.title]);
+
+  const visibleItems = useMemo(
+    () =>
+      activeStage === 'ALL'
+        ? dynamicItems
+        : dynamicItems.filter((item) => item.stage === activeStage),
+    [dynamicItems, activeStage]
+  );
+
+  const handleDecision = (item: ReviewItem, status: 'accepted' | 'rejected') => {
+    setDecisions((prev) => ({ ...prev, [item.id]: status }));
+    if (status === 'accepted') {
+      onApplyProposal(item.proposed);
     }
   };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#0a0d14', overflow: 'hidden', padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <Layers size={18} color="#a78bfa" />
-        <h2 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>Pipeline Editorial ProForge (8 Estágios)</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Layers size={18} color="#a78bfa" />
+          <h2 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>Pipeline Editorial ProForge (8 Estágios)</h2>
+        </div>
+        <button
+          onClick={() => setActiveStage('ALL')}
+          style={{
+            padding: '5px 10px',
+            borderRadius: 6,
+            border: activeStage === 'ALL' ? '1px solid #a78bfa' : '1px solid #1f2533',
+            backgroundColor: activeStage === 'ALL' ? '#1d1836' : '#121621',
+            color: activeStage === 'ALL' ? '#e9d5ff' : '#9ca3af',
+            fontSize: 11.5,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Ver Todos ({dynamicItems.length})
+        </button>
       </div>
 
       {/* 8 Stages Bar */}
@@ -107,83 +174,86 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
 
       {/* Review Diff Cards */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {items.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              padding: 14,
-              backgroundColor: '#121621',
-              border: '1px solid #222a3a',
-              borderRadius: 8,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>{item.stage}</span>
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(16,185,129,0.15)',
-                  color: '#34d399',
-                  fontWeight: 600,
-                }}
-              >
-                Confiança: {item.confidence}%
-              </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #2b1d24', borderRadius: 6 }}>
-                <div style={{ fontSize: 10.5, color: '#f87171', fontWeight: 700, marginBottom: 4 }}>Original</div>
-                <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>{item.original}</div>
+        {visibleItems.map((item) => {
+          const status = decisions[item.id] ?? 'pending';
+          return (
+            <div
+              key={item.id}
+              style={{
+                padding: 14,
+                backgroundColor: '#121621',
+                border: '1px solid #222a3a',
+                borderRadius: 8,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>{item.stage}</span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    color: '#34d399',
+                    fontWeight: 600,
+                  }}
+                >
+                  Confiança: {item.confidence}%
+                </span>
               </div>
-              <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #1b3229', borderRadius: 6 }}>
-                <div style={{ fontSize: 10.5, color: '#34d399', fontWeight: 700, marginBottom: 4 }}>Proposto</div>
-                <div style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.5 }}>{item.proposed}</div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #2b1d24', borderRadius: 6 }}>
+                  <div style={{ fontSize: 10.5, color: '#f87171', fontWeight: 700, marginBottom: 4 }}>Original</div>
+                  <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>{item.original}</div>
+                </div>
+                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #1b3229', borderRadius: 6 }}>
+                  <div style={{ fontSize: 10.5, color: '#34d399', fontWeight: 700, marginBottom: 4 }}>Proposto</div>
+                  <div style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.5 }}>{item.proposed}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  onClick={() => handleDecision(item, 'accepted')}
+                  style={{
+                    padding: '5px 12px',
+                    backgroundColor: status === 'accepted' ? '#059669' : '#10b981',
+                    color: '#052e16',
+                    border: 'none',
+                    borderRadius: 5,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Check size={12} /> {status === 'accepted' ? 'Aceito' : 'Aceitar'}
+                </button>
+                <button
+                  onClick={() => handleDecision(item, 'rejected')}
+                  style={{
+                    padding: '5px 12px',
+                    backgroundColor: '#19202e',
+                    color: '#f87171',
+                    border: '1px solid rgba(248,113,113,0.35)',
+                    borderRadius: 5,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <X size={12} /> {status === 'rejected' ? 'Rejeitado' : 'Rejeitar'}
+                </button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button
-                onClick={() => handleDecision(item.id, 'accepted')}
-                style={{
-                  padding: '5px 12px',
-                  backgroundColor: item.status === 'accepted' ? '#059669' : '#10b981',
-                  color: '#052e16',
-                  border: 'none',
-                  borderRadius: 5,
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <Check size={12} /> Aceitar
-              </button>
-              <button
-                onClick={() => handleDecision(item.id, 'rejected')}
-                style={{
-                  padding: '5px 12px',
-                  backgroundColor: '#19202e',
-                  color: '#f87171',
-                  border: '1px solid rgba(248,113,113,0.35)',
-                  borderRadius: 5,
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <X size={12} /> Rejeitar
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

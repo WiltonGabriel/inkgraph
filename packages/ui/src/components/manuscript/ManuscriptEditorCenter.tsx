@@ -184,11 +184,12 @@ export function ManuscriptEditorCenter() {
         onChange={(e) =>
           upsertScene({ ...activeScene, content: e.target.value, lastEditedAt: new Date().toISOString() })
         }
+        spellCheck={settings.spellcheck}
         placeholder="Escreva a prosa da cena... Use @Personagem, #Local ou &Facção para vincular entidades do cânone."
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: settings.zenMode ? 760 : '100%',
+          maxWidth: settings.zenMode ? 760 : `${settings.editorMaxWidthCh || 72}ch`,
           margin: '0 auto',
           padding: settings.typewriterMode ? '18vh 36px' : '28px 36px',
           backgroundColor: 'transparent',
@@ -198,25 +199,31 @@ export function ManuscriptEditorCenter() {
           color: '#e5e7eb',
           fontSize: settings.editorFontSize || 16,
           lineHeight: settings.editorLineHeight || 1.75,
+          textIndent: settings.paragraphIndent ? '2em' : 0,
           fontFamily: settings.editorFont === 'mono' ? 'monospace' : settings.editorFont === 'sans' ? 'sans-serif' : 'Georgia, serif',
         }}
       />
 
       {/* Bottom Status Bar */}
-      <div
-        style={{
-          padding: '6px 16px',
-          borderTop: '1px solid #1b202c',
-          backgroundColor: '#0e1118',
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 11.5,
-          color: '#9ca3af',
-        }}
-      >
-        <span>Capítulo {activeScene.chapterNumber} · Ato {activeScene.act}</span>
-        <span>{words.toLocaleString('pt-BR')} palavras · ~{readingMinutes} min de leitura</span>
-      </div>
+      {settings.showWordCountFooter && (
+        <div
+          style={{
+            padding: '6px 16px',
+            borderTop: '1px solid #1b202c',
+            backgroundColor: '#0e1118',
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 11.5,
+            color: '#9ca3af',
+          }}
+        >
+          <span>Capítulo {activeScene.chapterNumber} · Ato {activeScene.act}</span>
+          <span>
+            {words.toLocaleString('pt-BR')} palavras
+            {settings.showReadingTimeEstimate ? ` · ~${readingMinutes} min de leitura` : ''}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

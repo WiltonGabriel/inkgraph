@@ -1,94 +1,79 @@
-import { useState } from 'react';
-import {
-  Globe,
-  MapPin,
-  Cpu,
-  Clock,
-  Plus,
-} from 'lucide-react';
+import { useState, type CSSProperties } from 'react';
+import { Globe, MapPin, Cpu, Clock, Plus } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
-import { calculateWorldCompleteness } from '../types/project';
+import { calculateWorldCompleteness, type World } from '../types/project';
 import { CompletenessRing } from '../components/ui/CompletenessRing';
+import { WorldSystemsTab } from '../components/world/WorldSystemsTab';
+import {
+  WorldLocationsTab,
+  WorldTimelineTab,
+} from '../components/world/WorldLocationsAndTimelineTabs';
 
 export function WorldbuildingStudioView() {
   const { project, upsertWorld } = useProject();
-  const world = project.worlds[0];
-
-  const [tab, setTab] = useState<'overview' | 'locations' | 'systems' | 'timeline'>('overview');
-  const [selectedLocId, setSelectedLocId] = useState<string>(
-    world?.locations[0]?.id ?? ''
+  const [selectedWorldId, setSelectedWorldId] = useState<string>(
+    project.worlds[0]?.id ?? ''
   );
+  const [tab, setTab] = useState<'overview' | 'locations' | 'systems' | 'timeline'>('overview');
 
-  // Add Location Form
-  const [newLocName, setNewLocName] = useState('');
-  const [newLocDesc, setNewLocDesc] = useState('');
+  const world =
+    project.worlds.find((w) => w.id === selectedWorldId) ?? project.worlds[0];
 
-  // Add Timeline Event Form
-  const [newEvtEra, setNewEvtEra] = useState('');
-  const [newEvtYear, setNewEvtYear] = useState('');
-  const [newEvtTitle, setNewEvtTitle] = useState('');
-  const [newEvtDesc, setNewEvtDesc] = useState('');
-
-  if (!world) return null;
-
-  const selectedLoc =
-    world.locations.find((l) => l.id === selectedLocId) ?? world.locations[0];
-
-  const handleAddLocation = () => {
-    if (!newLocName.trim()) return;
-    const loc = {
-      id: `loc_${Date.now()}`,
-      worldId: world.id,
-      name: newLocName.trim(),
-      type: 'city' as const,
-      population: 'Desconhecida',
-      climateOrAtmosphere: 'Temperado',
-      description: newLocDesc.trim() || 'Novo local adicionado ao atlas.',
-      strategicValue: 'Ponto estratégico regional.',
-      coordinates: {
-        x: Math.round(20 + Math.random() * 60),
-        y: Math.round(20 + Math.random() * 60),
-      },
-      connectedLocationIds: [],
+  const handleCreateWorld = () => {
+    const newWorld: World = {
+      id: `world_${Date.now()}`,
+      name: `Novo Mundo ${project.worlds.length + 1}`,
+      premise: '',
+      description: '',
+      geography: '',
+      culture: '',
+      history: '',
+      magicOrTechSummary: '',
+      politicsSummary: '',
       notes: '',
+      locations: [],
+      timeline: [],
+      systems: [],
     };
-    upsertWorld({
-      ...world,
-      locations: [...world.locations, loc],
-    });
-    setSelectedLocId(loc.id);
-    setNewLocName('');
-    setNewLocDesc('');
+    upsertWorld(newWorld);
+    setSelectedWorldId(newWorld.id);
   };
 
-  const handleAddEvent = () => {
-    if (!newEvtTitle.trim()) return;
-    upsertWorld({
-      ...world,
-      timeline: [
-        ...world.timeline,
-        {
-          id: `evt_${Date.now()}`,
-          worldId: world.id,
-          era: newEvtEra.trim() || 'Era Atual',
-          year: newEvtYear.trim() || 'Ano ?',
-          title: newEvtTitle.trim(),
-          description: newEvtDesc.trim(),
-          factionIds: [],
-          characterIds: [],
-          impactLevel: 'high',
-        },
-      ],
-    });
-    setNewEvtEra('');
-    setNewEvtYear('');
-    setNewEvtTitle('');
-    setNewEvtDesc('');
-  };
+  if (!world) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 'calc(100vh - 46px)',
+          gap: 12,
+          color: '#9ca3af',
+        }}
+      >
+        <div>Nenhum mundo cadastrado neste projeto.</div>
+        <button
+          onClick={handleCreateWorld}
+          style={{
+            padding: '8px 14px',
+            backgroundColor: '#10b981',
+            color: '#052e16',
+            border: 'none',
+            borderRadius: 6,
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          + Criar Mundo
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 46px)', overflow: 'hidden' }}>
-      {/* Top Atlas Header */}
       <div
         style={{
           padding: '16px 24px',
@@ -97,6 +82,7 @@ export function WorldbuildingStudioView() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 12,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -110,9 +96,42 @@ export function WorldbuildingStudioView() {
             </div>
           </div>
         </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {project.worlds.length > 1 && (
+            <select
+              value={world.id}
+              onChange={(e) => setSelectedWorldId(e.target.value)}
+              style={{ ...inputStyle, width: 200 }}
+            >
+              {project.worlds.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={handleCreateWorld}
+            style={{
+              padding: '7px 12px',
+              backgroundColor: '#161f30',
+              border: '1px solid #262f42',
+              borderRadius: 6,
+              color: '#34d399',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Plus size={13} /> Novo Mundo
+          </button>
+        </div>
       </div>
 
-      {/* Sub-navigation Tabs */}
       <div
         style={{
           display: 'flex',
@@ -154,7 +173,6 @@ export function WorldbuildingStudioView() {
         })}
       </div>
 
-      {/* Content Area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
         {tab === 'overview' && (
           <div style={{ maxWidth: 940, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -211,9 +229,7 @@ export function WorldbuildingStudioView() {
                 <textarea
                   rows={3}
                   value={world.magicOrTechSummary}
-                  onChange={(e) =>
-                    upsertWorld({ ...world, magicOrTechSummary: e.target.value })
-                  }
+                  onChange={(e) => upsertWorld({ ...world, magicOrTechSummary: e.target.value })}
                   style={textareaStyle}
                 />
               </div>
@@ -222,9 +238,7 @@ export function WorldbuildingStudioView() {
                 <textarea
                   rows={3}
                   value={world.politicsSummary}
-                  onChange={(e) =>
-                    upsertWorld({ ...world, politicsSummary: e.target.value })
-                  }
+                  onChange={(e) => upsertWorld({ ...world, politicsSummary: e.target.value })}
                   style={textareaStyle}
                 />
               </div>
@@ -233,362 +247,22 @@ export function WorldbuildingStudioView() {
         )}
 
         {tab === 'locations' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }}>
-            {/* Interactive 2D Tactical Map */}
-            <div>
-              <div
-                style={{
-                  height: 360,
-                  backgroundColor: '#0a0e17',
-                  border: '1px solid #22293a',
-                  borderRadius: 10,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  marginBottom: 16,
-                }}
-              >
-                <svg width="100%" height="100%">
-                  {/* Routes between connected locations */}
-                  {world.locations.map((loc) =>
-                    loc.connectedLocationIds.map((targetId) => {
-                      const target = world.locations.find((l) => l.id === targetId);
-                      if (!target || loc.id > target.id) return null;
-                      return (
-                        <line
-                          key={`${loc.id}-${target.id}`}
-                          x1={`${loc.coordinates.x}%`}
-                          y1={`${loc.coordinates.y}%`}
-                          x2={`${target.coordinates.x}%`}
-                          y2={`${target.coordinates.y}%`}
-                          stroke="#374151"
-                          strokeWidth={2}
-                          strokeDasharray="5,5"
-                        />
-                      );
-                    })
-                  )}
-                </svg>
-
-                {world.locations.map((loc) => {
-                  const isSel = selectedLoc?.id === loc.id;
-                  const fac = project.factions.find(
-                    (f) => f.id === loc.controlledByFactionId
-                  );
-                  return (
-                    <button
-                      key={loc.id}
-                      onClick={() => setSelectedLocId(loc.id)}
-                      style={{
-                        position: 'absolute',
-                        left: `${loc.coordinates.x}%`,
-                        top: `${loc.coordinates.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        background: isSel ? '#10b981' : '#161f30',
-                        border: `2px solid ${fac?.color ?? '#60a5fa'}`,
-                        color: isSel ? '#052e16' : '#f3f4f6',
-                        padding: '5px 10px',
-                        borderRadius: 999,
-                        fontSize: 11.5,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: '0 6px 16px rgba(0,0,0,0.6)',
-                      }}
-                    >
-                      {loc.name}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Add Location Box */}
-              <div
-                style={{
-                  padding: 14,
-                  backgroundColor: '#121621',
-                  border: '1px solid #22293a',
-                  borderRadius: 8,
-                  display: 'flex',
-                  gap: 8,
-                }}
-              >
-                <input
-                  value={newLocName}
-                  onChange={(e) => setNewLocName(e.target.value)}
-                  placeholder="Nome do novo local..."
-                  style={inputStyle}
-                />
-                <input
-                  value={newLocDesc}
-                  onChange={(e) => setNewLocDesc(e.target.value)}
-                  placeholder="Descrição rápida..."
-                  style={inputStyle}
-                />
-                <button
-                  onClick={handleAddLocation}
-                  style={{
-                    padding: '8px 14px',
-                    backgroundColor: '#10b981',
-                    color: '#052e16',
-                    border: 'none',
-                    borderRadius: 6,
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <Plus size={14} /> Adicionar Local
-                </button>
-              </div>
-            </div>
-
-            {/* Selected Location Inspector */}
-            {selectedLoc && (
-              <div
-                style={{
-                  padding: 18,
-                  backgroundColor: '#121621',
-                  border: '1px solid #22293a',
-                  borderRadius: 10,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                }}
-              >
-                <h3 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>
-                  {selectedLoc.name}
-                </h3>
-                <div>
-                  <label style={labelStyle}>População</label>
-                  <input
-                    value={selectedLoc.population ?? ''}
-                    onChange={(e) =>
-                      upsertWorld({
-                        ...world,
-                        locations: world.locations.map((l) =>
-                          l.id === selectedLoc.id
-                            ? { ...l, population: e.target.value }
-                            : l
-                        ),
-                      })
-                    }
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Clima & Atmosfera Sensorial</label>
-                  <textarea
-                    rows={2}
-                    value={selectedLoc.climateOrAtmosphere}
-                    onChange={(e) =>
-                      upsertWorld({
-                        ...world,
-                        locations: world.locations.map((l) =>
-                          l.id === selectedLoc.id
-                            ? { ...l, climateOrAtmosphere: e.target.value }
-                            : l
-                        ),
-                      })
-                    }
-                    style={textareaStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Descrição Geográfica & Arquitetônica</label>
-                  <textarea
-                    rows={3}
-                    value={selectedLoc.description}
-                    onChange={(e) =>
-                      upsertWorld({
-                        ...world,
-                        locations: world.locations.map((l) =>
-                          l.id === selectedLoc.id
-                            ? { ...l, description: e.target.value }
-                            : l
-                        ),
-                      })
-                    }
-                    style={textareaStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Valor Estratégico & Facção Controladora</label>
-                  <textarea
-                    rows={2}
-                    value={selectedLoc.strategicValue}
-                    onChange={(e) =>
-                      upsertWorld({
-                        ...world,
-                        locations: world.locations.map((l) =>
-                          l.id === selectedLoc.id
-                            ? { ...l, strategicValue: e.target.value }
-                            : l
-                        ),
-                      })
-                    }
-                    style={textareaStyle}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          <WorldLocationsTab world={world} factions={project.factions} onUpdateWorld={upsertWorld} />
         )}
 
         {tab === 'systems' && (
-          <div style={{ maxWidth: 920, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {world.systems.map((sys) => (
-              <div
-                key={sys.id}
-                style={{
-                  padding: 20,
-                  backgroundColor: '#121621',
-                  border: '1px solid #242c3e',
-                  borderRadius: 10,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <h3 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>{sys.name}</h3>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      padding: '2px 8px',
-                      backgroundColor: 'rgba(168,85,247,0.15)',
-                      color: '#c084fc',
-                      borderRadius: 999,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {sys.subtype}
-                  </span>
-                </div>
-                <p style={{ fontSize: 13, color: '#d1d5db', margin: '0 0 12px' }}>
-                  <strong>Fonte Primária:</strong> {sys.coreSource}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div style={{ padding: 12, backgroundColor: '#0c0f17', borderRadius: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#60a5fa', marginBottom: 6 }}>
-                      Leis Fundamentais
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>
-                      {sys.fundamentalRules.map((r, i) => (
-                        <li key={i}>{r}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div style={{ padding: 12, backgroundColor: '#0c0f17', borderRadius: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#f87171', marginBottom: 6 }}>
-                      Limites Absolutos & Custos
-                    </div>
-                    <div style={{ fontSize: 12, color: '#fca5a5', marginBottom: 6 }}>
-                      <strong>Pedágio:</strong> {sys.costsAndToll}
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>
-                      {sys.hardLimits.map((l, i) => (
-                        <li key={i}>{l}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <WorldSystemsTab world={world} onUpdateWorld={upsertWorld} />
         )}
 
         {tab === 'timeline' && (
-          <div style={{ maxWidth: 920 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-              {world.timeline.map((evt) => (
-                <div
-                  key={evt.id}
-                  style={{
-                    padding: 16,
-                    backgroundColor: '#121621',
-                    borderLeft: '4px solid #10b981',
-                    borderRadius: 8,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: '#34d399', fontWeight: 700 }}>
-                    {evt.era} · {evt.year}
-                  </div>
-                  <h4 style={{ margin: '4px 0', fontSize: 15, color: '#f3f4f6' }}>
-                    {evt.title}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: 12.5, color: '#d1d5db', lineHeight: 1.5 }}>
-                    {evt.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                padding: 16,
-                backgroundColor: '#121621',
-                border: '1px solid #242b3d',
-                borderRadius: 10,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>
-                + Adicionar Evento Histórico na Linha do Tempo
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 8 }}>
-                <input
-                  value={newEvtEra}
-                  onChange={(e) => setNewEvtEra(e.target.value)}
-                  placeholder="Era (ex.: Era da Forja)"
-                  style={inputStyle}
-                />
-                <input
-                  value={newEvtYear}
-                  onChange={(e) => setNewEvtYear(e.target.value)}
-                  placeholder="Ano / Data"
-                  style={inputStyle}
-                />
-                <input
-                  value={newEvtTitle}
-                  onChange={(e) => setNewEvtTitle(e.target.value)}
-                  placeholder="Título do marco histórico..."
-                  style={inputStyle}
-                />
-              </div>
-              <textarea
-                rows={2}
-                value={newEvtDesc}
-                onChange={(e) => setNewEvtDesc(e.target.value)}
-                placeholder="Descrição e consequências geopolíticas do evento..."
-                style={textareaStyle}
-              />
-              <button
-                onClick={handleAddEvent}
-                style={{
-                  alignSelf: 'flex-start',
-                  padding: '8px 14px',
-                  backgroundColor: '#10b981',
-                  color: '#052e16',
-                  border: 'none',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Registrar Evento
-              </button>
-            </div>
-          </div>
+          <WorldTimelineTab world={world} onUpdateWorld={upsertWorld} />
         )}
       </div>
     </div>
   );
 }
 
-const labelStyle: React.CSSProperties = {
+const labelStyle: CSSProperties = {
   display: 'block',
   fontSize: 11.5,
   fontWeight: 600,
@@ -596,7 +270,7 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 4,
 };
 
-const inputStyle: React.CSSProperties = {
+const inputStyle: CSSProperties = {
   width: '100%',
   backgroundColor: '#141926',
   border: '1px solid #262f42',
@@ -606,7 +280,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
 };
 
-const textareaStyle: React.CSSProperties = {
+const textareaStyle: CSSProperties = {
   width: '100%',
   backgroundColor: '#141926',
   border: '1px solid #262f42',

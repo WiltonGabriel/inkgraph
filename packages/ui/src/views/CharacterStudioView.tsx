@@ -118,7 +118,38 @@ export function CharacterStudioView() {
         onOpenAiModal={() => setShowAiModal(true)}
       />
 
-      {selected ? <CharacterDossierTabs selected={selected} /> : null}
+      {selected ? (
+        <CharacterDossierTabs selected={selected} />
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            color: '#9ca3af',
+          }}
+        >
+          <div style={{ fontSize: 14 }}>Nenhum personagem cadastrado neste projeto.</div>
+          <button
+            onClick={handleCreateManual}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            + Criar Primeiro Personagem
+          </button>
+        </div>
+      )}
 
       {showAiModal && (
         <div

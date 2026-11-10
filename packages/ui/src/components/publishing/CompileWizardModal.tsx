@@ -65,20 +65,89 @@ export function CompileWizardModal({ isOpen, onClose }: CompileWizardModalProps)
 
   const handleDownload = () => {
     const preset = PRESETS.find((p) => p.id === selectedPreset) ?? PRESETS[0];
+    const profile = project.compileProfile;
+
+    const frontmatterMd = checks.frontmatter
+      ? [
+          profile.titlePageText ? `## Página de Título\n${profile.titlePageText}` : '',
+          profile.dedication ? `## Dedicatória\n_${profile.dedication}_` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      : '';
+
+    const backmatterMd = checks.frontmatter
+      ? [
+          profile.acknowledgements ? `## Agradecimentos\n${profile.acknowledgements}` : '',
+          profile.imprint ? `## Colofão\n${profile.imprint}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      : '';
+
     const scenesText = project.scenes
-      .map((s) => `# Capítulo ${s.chapterNumber}: ${s.title}\n\n${s.content}`)
+      .map((s) => {
+        const noteBlock =
+          !checks.epistemicClean && s.notes
+            ? `\n\n> [Nota do Autor]: ${s.notes}`
+            : '';
+        return `# Capítulo ${s.chapterNumber}: ${s.title}\n\n${s.content}${noteBlock}`;
+      })
       .join(checks.sceneBreaks ? '\n\n* * *\n\n' : '\n\n');
 
     let output = '';
     if (selectedPreset === 'html_pdf') {
-      output = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${project.title}</title></head><body><h1>${project.title}</h1><p><em>${project.compileProfile.authorName}</em></p><hr/>${project.scenes.map((s) => `<h2>Capítulo ${s.chapterNumber}: ${s.title}</h2><div>${s.content.replace(/\n/g, '<br/>')}</div>`).join('<hr/>')}</body></html>`;
+      const fmHtml = checks.frontmatter
+        ? `${profile.titlePageText ? `<p>${profile.titlePageText}</p>` : ''}${profile.dedication ? `<p><em>${profile.dedication}</em></p>` : ''}<hr/>`
+        : '';
+      const bmHtml = checks.frontmatter
+        ? `<hr/>${profile.acknowledgements ? `<p>${profile.acknowledgements}</p>` : ''}${profile.imprint ? `<p><small>${profile.imprint}</small></p>` : ''}`
+        : '';
+      output = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${project.title}</title></head><body><h1>${project.title}</h1><p><em>${profile.authorName}</em></p>${fmHtml}${project.scenes.map((s) => `<h2>Capítulo ${s.chapterNumber}: ${s.title}</h2><div>${s.content.replace(/\n/g, '<br/>')}</div>`).join(checks.sceneBreaks ? '<hr/>' : '')}${bmHtml}</body></html>`;
     } else if (selectedPreset === 'norm_txt') {
-      output = `${project.title.toUpperCase()}\nAutor: ${project.compileProfile.authorName}\n\n` + formatNormLine(scenesText);
+      output =
+        `${project.title.toUpperCase()}\nAutor: ${profile.authorName}\n\n` +
+        (frontmatterMd ? `${frontmatterMd}\n\n` : '') +
+        formatNormLine(scenesText) +
+        (backmatterMd ? `\n\n${backmatterMd}` : '');
     } else if (selectedPreset === 'full_md') {
-      const chars = project.characters.map((c) => `### ${c.name} (${c.role})\n${c.backstory}`).join('\n\n');
-      output = `# ${project.title}\n\n> ${project.logline}\n\n${scenesText}\n\n## Dossiê de Personagens\n\n${chars}`;
+      const chars = project.characters
+        .map((c) => {
+          const secrets =
+            !checks.epistemicClean && c.epistemicSecrets.length > 0
+              ? `\nSegredos: ${c.epistemicSecrets.map((sec) => sec.secret).join('; ')}`
+              : '';
+          return `### ${c.name} (${c.role})\n${c.backstory}${secrets}`;
+        })
+        .join('\n\n');
+      const factions = project.factions
+        .map((f) => {
+          const secrets =
+            !checks.epistemicClean && f.epistemicSecrets.length > 0
+              ? `\nAgenda Oculta: ${f.secretAgenda}`
+              : '';
+          return `### ${f.name} (${f.subtype})\n${f.publicAgenda}${secrets}`;
+        })
+        .join('\n\n');
+      const worlds = project.worlds
+        .map((w) => `### ${w.name}\n${w.premise}\n\n${w.description}`)
+        .join('\n\n');
+      output = [
+        `# ${project.title}`,
+        `> ${project.logline}`,
+        frontmatterMd,
+        scenesText,
+        chars ? `## Dossiê de Personagens\n\n${chars}` : '',
+        factions ? `## Facções\n\n${factions}` : '',
+        worlds ? `## Atlas do Mundo\n\n${worlds}` : '',
+        backmatterMd,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     } else {
-      output = `# ${project.title}\n\n${scenesText}`;
+      output = [`# ${project.title}`, frontmatterMd, scenesText, backmatterMd]
+        .filter(Boolean)
+        .join('\n\n');
     }
 
     const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });

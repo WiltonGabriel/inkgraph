@@ -26,42 +26,43 @@ export function FactionsStudioView() {
     project.factions.find((f) => f.id === selectedId) ?? filteredFactions[0];
 
   const handleCreateFaction = (withAi = false) => {
+    const worldLabel = project.worlds[0]?.name || 'o território';
     const newFaction: Faction = {
       id: `faction_${Date.now()}`,
-      name: withAi ? 'Círculo dos Artífices Cinzentos' : 'Nova Facção',
-      aliases: withAi ? ['A Guilda das Válvulas'] : [],
-      subtype: withAi ? 'Guilda Tecnocrática & Sindicato' : 'Ordem / Organização',
-      motto: withAi ? 'Nenhuma engrenagem gira sem tributo.' : '',
+      name: withAi ? `Coalizão de ${project.title}` : 'Nova Facção',
+      aliases: withAi ? ['O Conselho Interno'] : [],
+      subtype: withAi ? 'Coalizão Institucional' : 'Ordem / Organização',
+      motto: withAi ? 'Ordem através da vigilância mútua.' : '',
       color: '#a855f7',
       status: 'provisional',
       publicAgenda: withAi
-        ? 'Manutenção da infraestrutura térmica dos anéis médios.'
+        ? `Manter a estabilidade política e logística em ${worldLabel}.`
         : '',
       secretAgenda: withAi
-        ? 'Acumular reservas clandestinas de piro-cristal para chantagear o Conselho.'
+        ? 'Expandir influência estratégica sobre as rotas e arquivos centrais.'
         : '',
       doctrine: withAi
-        ? 'O conhecimento técnico deve permanecer restrito aos iniciados.'
+        ? 'A preservação da estrutura coletiva precede interesses individuais.'
         : '',
       history: withAi
-        ? 'Formada pelos engenheiros sobreviventes da Segunda Reforma.'
+        ? `Fundada durante o período de transição de ${worldLabel}.`
         : '',
       resourcesAndPower: withAi
-        ? 'Controle das oficinas de fundição e mapas das tubulações primárias.'
+        ? 'Rede de informantes, controle de entrepostos e reservas financeiras.'
         : '',
       internalConflicts: withAi
-        ? 'Disputa entre os mestres conservadores e os jovens sabotadores.'
+        ? 'Divergência entre a ala tradicionalista e os reformistas.'
         : '',
       notes: '',
       ranks: withAi
         ? [
             {
               id: `rk_${Date.now()}`,
-              title: 'Grão-Artífice',
+              title: 'Regente Geral',
               authorityLevel: 10,
               holderIds: [],
               responsibilities:
-                'Controle do cofre de diagramas e negociação com a Coroa.',
+                'Coordenação estratégica e representação diplomática.',
             },
           ]
         : [],
@@ -86,7 +87,38 @@ export function FactionsStudioView() {
         onCreateFaction={handleCreateFaction}
       />
 
-      {selected ? <FactionDossierTabs selected={selected} /> : null}
+      {selected ? (
+        <FactionDossierTabs selected={selected} />
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            color: '#9ca3af',
+          }}
+        >
+          <div style={{ fontSize: 14 }}>Nenhuma facção cadastrada neste projeto.</div>
+          <button
+            onClick={() => handleCreateFaction(false)}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            + Criar Primeira Facção
+          </button>
+        </div>
+      )}
     </div>
   );
 }
