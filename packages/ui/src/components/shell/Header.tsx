@@ -2,14 +2,17 @@ import {
   Search,
   Sparkles,
   GitBranch,
-  FolderOpen,
+  LayoutGrid,
   CheckCircle2,
+  Settings,
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 
 export function Header() {
   const {
     project,
+    workspaces,
+    switchWorkspace,
     updateProject,
     totalWordCount,
     setShowPortal,
@@ -17,6 +20,8 @@ export function Header() {
     showCopilot,
     setShowCopilot,
     setActiveView,
+    settings,
+    t,
   } = useProject();
 
   const activeBranch =
@@ -38,42 +43,70 @@ export function Header() {
         flexShrink: 0,
       }}
     >
-      {/* Left: Project Title & Branch */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Left: My Space Button, Quick Workspace Switcher & Editable Title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           onClick={() => setShowPortal(true)}
-          title="Abrir Portal de Projetos"
+          title={t.common.mySpace}
           style={{
             background: '#141822',
             border: '1px solid #252b3b',
-            color: '#9ca3af',
+            color: '#e5e7eb',
             borderRadius: 6,
-            padding: '4px 8px',
+            padding: '4px 9px',
             fontSize: 11.5,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 5,
           }}
         >
-          <FolderOpen size={13} /> Projetos
+          <LayoutGrid size={13} color={settings.accentColor || '#3b82f6'} />
+          {t.common.mySpace}
         </button>
+
+        {workspaces.length > 1 && (
+          <select
+            value={project.id}
+            onChange={(e) => switchWorkspace(e.target.value)}
+            aria-label={t.common.workspaces}
+            style={{
+              background: '#131722',
+              border: '1px solid #242a38',
+              color: '#9ca3af',
+              borderRadius: 6,
+              padding: '3px 6px',
+              fontSize: 11,
+              cursor: 'pointer',
+              maxWidth: 145,
+            }}
+          >
+            {workspaces
+              .filter((w) => !w.isArchived || w.id === project.id)
+              .map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.title}
+                </option>
+              ))}
+          </select>
+        )}
 
         <input
           value={project.title}
           onChange={(e) =>
             updateProject((prev) => ({ ...prev, title: e.target.value }))
           }
-          aria-label="Título do projeto"
+          aria-label="Título do workspace"
           style={{
             background: 'transparent',
             border: '1px solid transparent',
             borderRadius: 4,
             color: '#f3f4f6',
             fontWeight: 600,
-            fontSize: 13.5,
+            fontSize: 13,
             padding: '3px 6px',
-            width: 220,
+            width: 195,
           }}
         />
 
@@ -85,20 +118,19 @@ export function Header() {
             fontSize: 11,
             color: '#10b981',
           }}
-          title="Todas as alterações salvas localmente"
         >
-          <CheckCircle2 size={12} /> Salvo
+          <CheckCircle2 size={12} /> {t.common.saved}
         </span>
       </div>
 
-      {/* Center: Command Palette Trigger (Ctrl+K) */}
+      {/* Center: Command Palette Trigger */}
       <button
         onClick={() => setShowCommandPalette(true)}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          width: 320,
+          width: 310,
           padding: '5px 10px',
           backgroundColor: '#131722',
           border: '1px solid #242a38',
@@ -109,7 +141,7 @@ export function Header() {
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <Search size={13} /> Pesquisar comandos, cenas ou lore...
+          <Search size={13} /> {t.common.searchPlaceholder}
         </span>
         <kbd
           style={{
@@ -121,12 +153,12 @@ export function Header() {
             color: '#d1d5db',
           }}
         >
-          Ctrl+K
+          {settings.shortcuts.commandPalette}
         </kbd>
       </button>
 
-      {/* Right: Metrics, Version Control & Copilot */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Right: Metrics, Version Control, Program Settings & Copilot */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div
           style={{
             fontSize: 11.5,
@@ -140,12 +172,12 @@ export function Header() {
           <strong style={{ color: '#e5e7eb' }}>
             {totalWordCount.toLocaleString('pt-BR')}
           </strong>{' '}
-          / {project.wordCountGoal.toLocaleString('pt-BR')} palavras
+          / {project.wordCountGoal.toLocaleString('pt-BR')} {t.common.words}
         </div>
 
         <button
           onClick={() => setActiveView('versions')}
-          title="Controle de Versão, Ramificações e Staging"
+          title={t.views.versions}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -178,24 +210,44 @@ export function Header() {
         </button>
 
         <button
-          onClick={() => setShowCopilot(!showCopilot)}
-          title="Alternar Copiloto / Assistente Lateral"
+          onClick={() => setActiveView('settings')}
+          title={t.common.programSettings}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '5px 11px',
-            backgroundColor: showCopilot ? '#2563eb' : '#171f30',
-            border: '1px solid #2563eb',
+            justifyContent: 'center',
+            padding: '5px 7px',
+            backgroundColor: '#131722',
+            border: '1px solid #242a38',
             borderRadius: 6,
-            color: '#ffffff',
-            fontSize: 12,
-            fontWeight: 600,
+            color: '#9ca3af',
             cursor: 'pointer',
           }}
         >
-          <Sparkles size={13} /> Copiloto
+          <Settings size={14} />
         </button>
+
+        {settings.copilotEnabled && (
+          <button
+            onClick={() => setShowCopilot(!showCopilot)}
+            title={t.common.copilot}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 11px',
+              backgroundColor: showCopilot ? settings.accentColor || '#2563eb' : '#171f30',
+              border: `1px solid ${settings.accentColor || '#2563eb'}`,
+              borderRadius: 6,
+              color: '#ffffff',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <Sparkles size={13} /> {t.common.copilot}
+          </button>
+        )}
       </div>
     </header>
   );

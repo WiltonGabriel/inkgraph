@@ -34,8 +34,8 @@ interface NavGroup {
 }
 
 export function Sidebar() {
-  const { activeView, setActiveView, project } = useProject();
-  const [collapsed, setCollapsed] = useState(false);
+  const { activeView, setActiveView, project, settings, t } = useProject();
+  const [collapsed, setCollapsed] = useState(() => settings.sidebarDefaultCollapsed);
 
   const pendingProposals = project.stagingProposals.filter(
     (p) => p.status === 'pending'
@@ -43,43 +43,43 @@ export function Sidebar() {
 
   const groups: NavGroup[] = [
     {
-      label: 'Escrita',
+      label: t.sidebarGroups.writing,
       items: [
-        { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
-        { id: 'manuscript', label: 'Manuscrito', icon: BookOpen, badge: project.scenes.length },
-        { id: 'writer', label: 'Estúdio de Redação', icon: Sparkles },
+        { id: 'dashboard', label: t.views.dashboard, icon: LayoutDashboard },
+        { id: 'manuscript', label: t.views.manuscript, icon: BookOpen, badge: project.scenes.length },
+        { id: 'writer', label: t.views.writer, icon: Sparkles },
       ],
     },
     {
-      label: 'Planejamento',
+      label: t.sidebarGroups.planning,
       items: [
-        { id: 'templates', label: 'Modelos', icon: LayoutTemplate },
-        { id: 'outline', label: 'Gerador de Contorno', icon: ListTree },
-        { id: 'plotboard', label: 'Quadro de Cenas', icon: Kanban },
-        { id: 'scenario', label: 'Cenário / Roteiro', icon: FileText },
+        { id: 'templates', label: t.views.templates, icon: LayoutTemplate },
+        { id: 'outline', label: t.views.outline, icon: ListTree },
+        { id: 'plotboard', label: t.views.plotboard, icon: Kanban },
+        { id: 'scenario', label: t.views.scenario, icon: FileText },
       ],
     },
     {
-      label: 'Universo & Lore',
+      label: t.sidebarGroups.universe,
       items: [
-        { id: 'characters', label: 'Personagens', icon: Users, badge: project.characters.length },
-        { id: 'interviews', label: 'Entrevistas', icon: MessageSquare },
-        { id: 'factions', label: 'Facções', icon: Shield, badge: project.factions.length },
-        { id: 'worlds', label: 'Construção Mundial', icon: Globe },
-        { id: 'graph', label: 'Grafo de Relações', icon: Network },
-        { id: 'objects', label: 'Objetos de História', icon: Package, badge: project.objects.length },
-        { id: 'mindmap', label: 'Mapas Mentais', icon: Share2 },
+        { id: 'characters', label: t.views.characters, icon: Users, badge: project.characters.length },
+        { id: 'interviews', label: t.views.interviews, icon: MessageSquare },
+        { id: 'factions', label: t.views.factions, icon: Shield, badge: project.factions.length },
+        { id: 'worlds', label: t.views.worlds, icon: Globe },
+        { id: 'graph', label: t.views.graph, icon: Network },
+        { id: 'objects', label: t.views.objects, icon: Package, badge: project.objects.length },
+        { id: 'mindmap', label: t.views.mindmap, icon: Share2 },
       ],
     },
     {
-      label: 'Revisão & Saída',
+      label: t.sidebarGroups.review,
       items: [
-        { id: 'consistency', label: 'Consistência', icon: ShieldAlert },
-        { id: 'critic', label: 'Crítico Literário', icon: Feather },
-        { id: 'preview', label: 'Visualização do Livro', icon: Eye },
-        { id: 'progress', label: 'Progresso', icon: TrendingUp },
-        { id: 'versions', label: 'Versões & Staging', icon: GitBranch, badge: pendingProposals || undefined },
-        { id: 'export', label: 'Exportar', icon: Download },
+        { id: 'consistency', label: t.views.consistency, icon: ShieldAlert },
+        { id: 'critic', label: t.views.critic, icon: Feather },
+        { id: 'preview', label: t.views.preview, icon: Eye },
+        { id: 'progress', label: t.views.progress, icon: TrendingUp },
+        { id: 'versions', label: t.views.versions, icon: GitBranch, badge: pendingProposals || undefined },
+        { id: 'export', label: t.views.export, icon: Download },
       ],
     },
   ];
@@ -94,7 +94,7 @@ export function Sidebar() {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        transition: 'width 0.15s ease',
+        transition: settings.reducedMotion ? 'none' : 'width 0.15s ease',
         flexShrink: 0,
         userSelect: 'none',
       }}
@@ -117,8 +117,8 @@ export function Sidebar() {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: '#10b981',
-                boxShadow: '0 0 8px #10b981',
+                backgroundColor: settings.accentColor || '#10b981',
+                boxShadow: `0 0 8px ${settings.accentColor || '#10b981'}`,
               }}
             />
             <span
@@ -239,7 +239,7 @@ export function Sidebar() {
       >
         <button
           onClick={() => setActiveView('settings')}
-          title="Configurações"
+          title={t.views.settings}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -255,11 +255,11 @@ export function Sidebar() {
           }}
         >
           <Settings size={15} />
-          {!collapsed && <span>Configurações</span>}
+          {!collapsed && <span>{t.views.settings}</span>}
         </button>
         <button
           onClick={() => setActiveView('help')}
-          title="Ajuda"
+          title={t.views.help}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -275,7 +275,7 @@ export function Sidebar() {
           }}
         >
           <HelpCircle size={15} />
-          {!collapsed && <span>Ajuda</span>}
+          {!collapsed && <span>{t.views.help}</span>}
         </button>
       </div>
     </aside>
