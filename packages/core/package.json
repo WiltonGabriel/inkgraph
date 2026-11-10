@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Core domain logic, markdown frontmatter parser, sqlite indexer, and graph resolver for InkGraph",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
