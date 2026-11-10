@@ -105,7 +105,8 @@ Comandante exilado após o Cerco de Vael.
     const retrieved = db.getEntityByIdOrAlias("O Corvo Cego");
     expect(retrieved).not.toBeNull();
     expect(retrieved?.epistemic.secrets_kept).toEqual(["Portador da Lâmina de Valdor"]);
-    expect(retrieved?.epistemic.known_by).toEqual(["self", "char_morrigan"]);
+    expect(retrieved?.epistemic.known_by).toEqual(expect.arrayContaining(["self", "char_morrigan"]));
+    expect(retrieved?.epistemic.known_by).toHaveLength(2);
 
     const ftsHits = db.search("Cerco");
     expect(ftsHits).toHaveLength(1);
