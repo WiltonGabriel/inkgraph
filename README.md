@@ -121,7 +121,7 @@ Para conectar assistentes externos (como Google Antigravity ou Claude Desktop), 
       "command": "node",
       "args": ["/caminho/para/inkgraph/packages/mcp/dist/index.js"],
       "env": {
-        "WORKSPACE_PATH": "/caminho/para/inkgraph/workspace"
+        "INKGRAPH_WORKSPACE": "/caminho/para/inkgraph/workspace"
       }
     }
   }

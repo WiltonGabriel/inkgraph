@@ -1,46 +1,41 @@
 # Decisões Arquiteturais: InkGraph (ADR 001)
 
-Este documento estabelece formalmente a arquitetura definitiva do **InkGraph**, sintetizando as melhores soluções encontradas nos projetos de referência (**Codex Suite** e **WorldScript Studio**) e adaptando-as às nossas metas de desempenho, privacidade absoluta e integração nativa com o Google Antigravity e Google AI Studio.
+Este documento estabelece a arquitetura do **InkGraph**, voltada para desempenho local, privacidade do cofre do autor e integração nativa via protocolo MCP.
 
 ---
 
-## 1. Visão Geral Comparativa
+## 1. Diretrizes Arquiteturais
 
-| Critério / Capacidade | Codex Suite (`codexsuite/codex`) | WorldScript Studio (`qnbs/WorldScript-Studio`) | **InkGraph (Nossa Solução)** |
-| :--- | :--- | :--- | :--- |
-| **Arquitetura Base** | Monólito C# (.NET 10) + React SPA + PostgreSQL | PWA (React) + Tauri v2 (Rust) + IndexedDB | **Tauri v2 (Rust) + TypeScript/Bun Core + SQLite Indexado** |
-| **Single Source of Truth** | Banco de dados relacional PostgreSQL | IndexedDB local do navegador | **Markdown puro + YAML Frontmatter em `./workspace/`** |
-| **Integração com IA** | Servidor MCP nativo completo (`stdio` e HTTP `/mcp`) | Prompts locais + RAG no frontend + BYOK API | **Híbrido: Servidor MCP Nativo (Antigravity) + Google AI Studio Inline (Gemini SDK)** |
-| **Worldbuilding & Dossiers** | Knowledge Base com aliases e links | Dossiês psicológicos profundos, entrevistas com IA | **Dossiês Vivos + Sistema de Aliases Automáticos** |
-| **Narrativa & Linha do Tempo** | Linha do tempo por entidade e atos | Grafo causal de cenas, curva de tensão e subplots | **Grafo Causal de Cenas + Curva de Tensão + Ledger Epistêmico ("Quem Sabe o Quê")** |
-| **Proteção de Cânone** | Staging / rascunhos pendentes antes de aprovação | Salva diretamente no projeto | **Staging Gatekeeper: IA só propõe em `./workspace/staging/`; autor aprova na UI** |
-| **Multiplataforma** | Web SPA / Docker / Expo Mobile | Tauri v2 Desktop + PWA | **Tauri v2 Nativo (Linux/Wayland) + PWA Responsivo para Celular (Sync local/Tailscale)** |
-| **Mapas e Mídias** | Gestão de blobs simples | Referências visuais | **Mapas Interativos Vetoriais (SVG/Leaflet) gerados/marcados via IA + Portfólio de Ativos** |
+| Critério / Capacidade | Decisão Técnica no InkGraph |
+| :--- | :--- |
+| **Arquitetura Base** | Monorepo TypeScript (`pnpm`) + Core SQLite/FTS5 + React/Vite UI + Wrapper Tauri v2 |
+| **Fonte Única da Verdade** | Arquivos Markdown puros com YAML Frontmatter em `./workspace/` |
+| **Integração com Agentes** | Servidor MCP nativo (`@inkgraph/mcp`) via `stdio` + suporte a provedores locais (Ollama) e nuvem |
+| **Universo & Dossiês** | Dossiês completos para Personagens, Facções, Locais, Sistemas de Regras e Objetos com aliases indexados |
+| **Narrativa & Linha do Tempo** | Quadro de cenas (Atos, Tela 2D e Linha do Tempo), curva de tensão e rastreamento epistêmico |
+| **Proteção de Cânone** | Propostas provisórias gravadas exclusivamente em `./workspace/staging/` até aprovação humana |
 
 ---
 
-## 2. A Arquitetura do InkGraph em Detalhes
+## 2. Camadas do Sistema
 
-### A. Camada de Persistência (Markdown-First + SQLite Reativo)
-- **Cofre `./workspace/`:** Todo conteúdo do autor vive em texto puro legível por humanos.
-  - Se qualquer banco de dados for corrompido ou apagado, o banco SQLite é 100% reconstruído a frio em menos de 1 segundo a partir dos arquivos `.md`.
-  - Zero lock-in de software: se você abrir o VSCode, Neovim ou Obsidian, os arquivos estão perfeitamente formatados.
-- **SQLite + FTS5 em Tempo Real:**
-  - O motor observa (`fs watcher`) as pastas de `./workspace/`. Quando um arquivo é alterado, o SQLite atualiza as tabelas de entidades, arestas de relacionamento e termos de busca textual rápida (FTS5).
+### A. Persistência (Markdown-First + Projeção SQLite Reativa)
+- **Cofre `./workspace/`:** Todo conteúdo do autor permanece em texto puro legível por humanos e ignorado pelo Git.
+- **SQLite + FTS5 Derivado (`@inkgraph/core`):**
+  - Se o banco SQLite for apagado, ele é reconstruído integralmente a partir dos arquivos `.md` de `./workspace/`.
+  - Suporta resolução de apelidos/títulos com detecção de ambiguidade (`ambiguous`), busca textual FTS5 sanitizada e consultas de estado epistêmico.
 
-### B. O Motor MCP e IA Dupla
-1. **Google Antigravity (Nível Arquiteto e Mestre de Lore):**
-   - Conectado via protocolo oficial MCP (`packages/mcp`).
-   - O Antigravity ganha ferramentas cirúrgicas para investigar seu mundo sem alucinar:
-     - `get_entity(alias_ou_id)`: Resolve títulos, apelidos e variações.
-     - `query_epistemic_state(cena_id, personagem_id)`: Impede que o personagem use conhecimento que ele só vai descobrir no futuro.
-     - `propose_scene(...)`: Escreve rascunhos diretamente na pasta `./workspace/staging/`.
-2. **Google AI Studio / Gemini API (Nível Operacional Inline):**
-   - Embutido direto na interface visual para comandos rápidos sem sair do aplicativo.
-   - Suporte a modelos de janela ultra-longa (Gemini Flash com 1 milhão de tokens) para auditar coerência de manuscritos inteiros.
+### B. Servidor MCP e Ferramentas de Contexto (`@inkgraph/mcp`)
+O pacote `@inkgraph/mcp` expõe 7 ferramentas fundamentais com códigos de erro padronizados (`not_found`, `conflict`, `validation`, `ambiguous`, `canon_violation`, `unauthorized`):
+1. `list_entities(filter)`: Lista e filtra entidades por categoria, status ou tag.
+2. `get_entity(id_or_alias)`: Resolve qualquer ID ou alias para o dossiê completo.
+3. `search_lore(query, mode)`: Executa busca textual FTS5 ou exata no cânone.
+4. `query_epistemic_state(entity_id, scene_id)`: Inspeciona segredos guardados e conhecimentos compartilhados até determinado ponto.
+5. `get_timeline(from_scene, to_scene)`: Retorna eventos cronológicos e transições de vínculos.
+6. `propose_lore(...)`: Grava propostas de entidades em `./workspace/staging/` com proteção contra *path traversal*.
+7. `propose_scene(...)`: Grava rascunhos de cenas em `./workspace/staging/`.
 
-### C. Visualizações Conectadas aos Dados (Zero Diagramas Estáticos)
-- **Árvores Genealógicas e Hierarquias:** Calculadas via layout DAG a partir dos campos `parent_of` / `member_of` dos arquivos `.md`.
-- **Matriz de Alianças e Fricção:** Grafo dinâmico de nós e arestas com cores por sentimento (aliança verde, hostilidade vermelha, segredo roxo).
-- **Curva de Tensão Narrativa:** Gráfico de linha temporal acompanhando os picos de ação, revelações e respiros entre cenas e subplots.
-- **Mapas do Mundo:** Suporte a arquivos SVG ou mapas base Leaflet com marcadores ancorados nas entidades de localização do lore.
+### C. Estúdio Visual Modular (`@inkgraph/ui`)
+- **Meu Espaço (Home):** Gerenciador de catálogo multi-workspace com filtros, busca, favoritos, métricas globais e criação rápida.
+- **Configurações do Programa:** Preferências globais da aplicação (idioma `pt-BR`/`en`, temas, densidade de interface, tipografia do editor, atalhos de teclado, IA/MCP e backup do catálogo) desacopladas de cada workspace.
+- **Princípio da Responsabilidade Única (SRP):** Calculadores de domínio puros em `src/domain/`, sementes isoladas em `src/data/`, componentes granulares por contexto em `src/components/` e orquestradores enxutos em `src/views/`.
