@@ -1,11 +1,48 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
+import { InkGraphError } from "../domain/errors";
 import { parseLoreMarkdown } from "../parser/markdownParser";
 import type { LoreDatabase } from "../indexer/database";
 
 export interface SyncStats {
   readonly processed: number;
   readonly errors: { file: string; error: string }[];
+}
+
+/**
+ * Validates and resolves a target filename strictly inside the staging directory.
+ * Rejects path traversal ('..') or directory separators ('/', '\\') with 'canon_violation'.
+ */
+export function resolveSafeStagingPath(stagingDir: string, rawFilename: string): string {
+  const trimmed = rawFilename.trim();
+  if (
+    !trimmed ||
+    trimmed.includes("..") ||
+    trimmed.includes("/") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("\0")
+  ) {
+    throw new InkGraphError(
+      "canon_violation",
+      "Path traversal or directory separator in staging filename is forbidden.",
+      { filename: rawFilename }
+    );
+  }
+
+  const base = basename(trimmed);
+  const safeFilename = base.endsWith(".md") ? base : `${base}.md`;
+  const resolvedStaging = resolve(stagingDir);
+  const resolvedTarget = resolve(resolvedStaging, safeFilename);
+
+  if (!resolvedTarget.startsWith(resolvedStaging + sep)) {
+    throw new InkGraphError(
+      "canon_violation",
+      "Target path escapes the staging directory boundary.",
+      { filename: rawFilename, resolvedTarget }
+    );
+  }
+
+  return resolvedTarget;
 }
 
 /**
