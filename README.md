@@ -89,7 +89,7 @@ inkgraph/
 Clone o repositório e instale as dependências:
 
 ```bash
-git clone https://github.com/seu-usuario/inkgraph.git
+git clone https://github.com/WiltonGabriel/inkgraph.git
 cd inkgraph
 pnpm install
 ```
