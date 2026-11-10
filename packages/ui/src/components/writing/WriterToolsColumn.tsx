@@ -39,7 +39,7 @@ export function WriterToolsColumn({ onGenerateToScratchpad }: WriterToolsColumnP
   const world = project.worlds[0];
 
   const handleRunTool = (tool: (typeof TOOLS)[number]) => {
-    const charName = povChar?.name ?? 'Elias Vance';
+    const charName = povChar?.name ?? project.characters[0]?.name ?? 'Protagonista';
     const facName = faction?.name ?? 'Ordem de Ferro';
     const worldName = world?.name ?? 'Vael';
     const sceneTitle = activeScene?.title ?? 'Cena Atual';

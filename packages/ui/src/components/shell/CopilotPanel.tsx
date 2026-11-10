@@ -137,16 +137,25 @@ export function CopilotPanel() {
               project.scenes.reduce((a, b) => a + b.tension, 0) / project.scenes.length
             )
           : 0;
+      const secretsWithReveal = project.characters.flatMap((c) =>
+        c.epistemicSecrets.filter((s) => s.revealedInSceneId)
+      );
+      const secretNote =
+        secretsWithReveal.length > 0
+          ? `• Ponto de atenção epistêmico: Existem segredos marcados para revelação. Verifique se nenhuma cena anterior trata os personagens como cientes antes do tempo.`
+          : `• Elenco e cenas sincronizados.`;
+
       return {
         id: `turn_${Date.now()}`,
         role: 'assistant',
-        text: `Diagnóstico concluído — pontuação geral de estrutura: 88/100.\n• Cenas mapeadas: ${project.scenes.length} (Tensão média: ${avgTension}%)\n• Elenco: ${project.characters.length} personagens e ${project.factions.length} facções ativas.\n• Ponto de atenção: No Capítulo 3, o segredo sobre Julian Vance é revelado a Lyra. Certifique-se de que nenhuma cena anterior trate Lyra como ciente desse evento.`,
+        text: `Diagnóstico concluído — pontuação de estrutura: 88/100.\n• Cenas mapeadas: ${project.scenes.length} (Tensão média: ${avgTension}%)\n• Elenco: ${project.characters.length} personagens e ${project.factions.length} facções ativas.\n${secretNote}`,
       };
     }
 
     if (q.includes('abertura') || q.includes('melhorar')) {
+      const leadChar = project.characters[0]?.name ?? 'personagem';
       const snippet = activeScene
-        ? `\n\nO silêncio que se seguiu não era de paz, mas de ferro represado — como se as próprias galerias sob os pés de ${project.characters[0]?.name ?? 'Elias'} aguardassem a primeira faísca.`
+        ? `\n\nO silêncio que se seguiu não era de paz, mas de ferro represado — como se as próprias sombras sob os pés de ${leadChar} aguardassem a primeira faísca.`
         : undefined;
       return {
         id: `turn_${Date.now()}`,
@@ -157,10 +166,12 @@ export function CopilotPanel() {
     }
 
     if (q.includes('tensão')) {
+      const firstTension = project.scenes[0]?.tension ?? 60;
+      const lastTension = project.scenes[project.scenes.length - 1]?.tension ?? 90;
       return {
         id: `turn_${Date.now()}`,
         role: 'assistant',
-        text: `Sua curva de tensão sobe de ${project.scenes[0]?.tension ?? 65}% no Ato I até ${project.scenes[project.scenes.length - 1]?.tension ?? 96}% no Clímax. Para evitar fadiga do leitor entre o Capítulo 2 e o Capítulo 3, adicione um momento de dilema silencioso entre Elias e Lyra antes da emboscada de Kaelen.`,
+        text: `Sua curva de tensão varia de ${firstTension}% no início até ${lastTension}% nos momentos finais. Para evitar fadiga do leitor entre cenas de pico, intercale momentos de reflexão ou dilema interno antes dos confrontos decisivos.`,
       };
     }
 
