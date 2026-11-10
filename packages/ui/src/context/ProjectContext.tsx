@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useMemo,
   type ReactNode,
 } from 'react';
 import type {
@@ -31,10 +32,14 @@ import {
   DEFAULT_SETTINGS,
   type NarrativeTemplate,
 } from '../data/initialProjectData';
+import { getDictionary, type AppDictionary } from '../i18n/translations';
 
 interface ProjectContextValue {
   project: ProjectData;
+  workspaces: ProjectData[];
+  activeWorkspaceId: string;
   settings: AppSettings;
+  t: AppDictionary;
   activeView: ViewId;
   setActiveView: (v: ViewId) => void;
   showPortal: boolean;
@@ -48,6 +53,23 @@ interface ProjectContextValue {
   totalWordCount: number;
   updateProject: (updater: (prev: ProjectData) => ProjectData) => void;
   updateSettings: (updater: (prev: AppSettings) => AppSettings) => void;
+  resetSettingsToDefault: () => void;
+  // Multi-Workspace Catalog Operations
+  switchWorkspace: (workspaceId: string, targetView?: ViewId) => void;
+  createNewWorkspace: (options: {
+    title: string;
+    genre?: string;
+    folderOrTag?: string;
+    accentColor?: string;
+    template?: NarrativeTemplate;
+  }) => void;
+  duplicateWorkspace: (workspaceId: string) => void;
+  deleteWorkspace: (workspaceId: string) => void;
+  toggleFavoriteWorkspace: (workspaceId: string) => void;
+  toggleArchiveWorkspace: (workspaceId: string) => void;
+  exportAllWorkspacesJson: () => string;
+  importAllWorkspacesJson: (jsonString: string) => boolean;
+  // Legacy / Single-workspace shortcuts
   loadDemoProject: () => void;
   startBlankProject: (title?: string) => void;
   applyTemplateToProject: (template: NarrativeTemplate, replaceManuscript?: boolean) => void;
@@ -85,51 +107,113 @@ interface ProjectContextValue {
   recordWritingSession: (wordsDelta: number, minutesDelta: number) => void;
 }
 
-const STORAGE_KEY_PROJECT = 'inkgraph_project_v2';
+const STORAGE_KEY_CATALOG = 'inkgraph_workspaces_catalog_v3';
+const STORAGE_KEY_ACTIVE_ID = 'inkgraph_active_workspace_id_v3';
+const STORAGE_KEY_LEGACY_PROJECT = 'inkgraph_project_v2';
 const STORAGE_KEY_SETTINGS = 'inkgraph_settings_v2';
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
+function loadInitialSettings(): AppSettings {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Partial<AppSettings>;
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        shortcuts: {
+          ...DEFAULT_SETTINGS.shortcuts,
+          ...(parsed.shortcuts ?? {}),
+        },
+      };
+    }
+  } catch {
+    // Fallback
+  }
+  return DEFAULT_SETTINGS;
+}
+
+function loadInitialWorkspaces(): ProjectData[] {
+  try {
+    const savedCatalog = localStorage.getItem(STORAGE_KEY_CATALOG);
+    if (savedCatalog) {
+      const parsed = JSON.parse(savedCatalog) as ProjectData[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+    const legacySingle = localStorage.getItem(STORAGE_KEY_LEGACY_PROJECT);
+    if (legacySingle) {
+      const parsedSingle = JSON.parse(legacySingle) as ProjectData;
+      if (parsedSingle && parsedSingle.id) {
+        return [{ ...parsedSingle, isFavorite: true, folderOrTag: 'Principal' }];
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  const demo = createDemoProjectData();
+  return [
+    {
+      ...demo,
+      isFavorite: true,
+      folderOrTag: 'Série Principal',
+      accentColor: '#3b82f6',
+      lastOpenedAt: new Date().toISOString(),
+    },
+  ];
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [project, setProject] = useState<ProjectData>(() => {
+  const [settings, setSettings] = useState<AppSettings>(loadInitialSettings);
+  const [workspaces, setWorkspaces] = useState<ProjectData[]>(loadInitialWorkspaces);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_PROJECT);
-      if (saved) {
-        return JSON.parse(saved) as ProjectData;
-      }
+      const savedId = localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
+      if (savedId) return savedId;
     } catch {
-      // Fallback to demo data
+      // ignore
     }
-    return createDemoProjectData();
+    return '';
   });
 
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      if (saved) {
-        return { ...DEFAULT_SETTINGS, ...(JSON.parse(saved) as Partial<AppSettings>) };
-      }
-    } catch {
-      // Fallback
-    }
-    return DEFAULT_SETTINGS;
-  });
+  const project = useMemo<ProjectData>(() => {
+    return (
+      workspaces.find((w) => w.id === activeWorkspaceId) ??
+      workspaces[0] ??
+      createDemoProjectData()
+    );
+  }, [workspaces, activeWorkspaceId]);
 
-  const [activeView, setActiveView] = useState<ViewId>('dashboard');
-  const [showPortal, setShowPortal] = useState<boolean>(false);
+  const [activeView, setActiveView] = useState<ViewId>(
+    () => settings.defaultOpeningView || 'dashboard'
+  );
+  const [showPortal, setShowPortal] = useState<boolean>(
+    () => settings.startupBehavior === 'home'
+  );
   const [showCommandPalette, setShowCommandPalette] = useState<boolean>(false);
   const [showCopilot, setShowCopilot] = useState<boolean>(false);
   const [activeSceneId, setActiveSceneId] = useState<string>(
     () => project.scenes[0]?.id ?? ''
   );
 
+  // Sync activeSceneId when switching workspaces
+  useEffect(() => {
+    if (!project.scenes.some((s) => s.id === activeSceneId)) {
+      setActiveSceneId(project.scenes[0]?.id ?? '');
+    }
+  }, [project, activeSceneId]);
+
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_PROJECT, JSON.stringify(project));
+      localStorage.setItem(STORAGE_KEY_CATALOG, JSON.stringify(workspaces));
+      localStorage.setItem(STORAGE_KEY_LEGACY_PROJECT, JSON.stringify(project));
+      localStorage.setItem(STORAGE_KEY_ACTIVE_ID, project.id);
     } catch {
       // Ignore storage quota errors
     }
-  }, [project]);
+  }, [workspaces, project]);
 
   useEffect(() => {
     try {
@@ -139,48 +223,194 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [settings]);
 
-  // Global keyboard shortcuts (Ctrl+K for Command Palette, Ctrl+Shift+P for Portal)
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setShowCommandPalette((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
+  const t = useMemo(() => getDictionary(settings.language), [settings.language]);
 
-  const totalWordCount = project.scenes.reduce(
-    (sum, s) => sum + countWords(s.content),
-    0
+  const totalWordCount = useMemo(
+    () => project.scenes.reduce((sum, s) => sum + countWords(s.content), 0),
+    [project.scenes]
   );
 
   const updateProject = (updater: (prev: ProjectData) => ProjectData) => {
-    setProject((prev) => {
-      const next = updater(prev);
-      return { ...next, updatedAt: new Date().toISOString() };
-    });
+    const now = new Date().toISOString();
+    setWorkspaces((prevCatalog) =>
+      prevCatalog.map((w) => {
+        if (w.id !== project.id) return w;
+        const next = updater(w);
+        return { ...next, updatedAt: now, lastOpenedAt: now };
+      })
+    );
   };
 
   const updateSettings = (updater: (prev: AppSettings) => AppSettings) => {
     setSettings((prev) => updater(prev));
   };
 
+  const resetSettingsToDefault = () => {
+    setSettings(DEFAULT_SETTINGS);
+  };
+
+  const switchWorkspace = (workspaceId: string, targetView?: ViewId) => {
+    const target = workspaces.find((w) => w.id === workspaceId);
+    if (!target) return;
+    const now = new Date().toISOString();
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === workspaceId ? { ...w, lastOpenedAt: now } : w))
+    );
+    setActiveWorkspaceId(workspaceId);
+    setActiveSceneId(target.scenes[0]?.id ?? '');
+    setShowPortal(false);
+    setActiveView(targetView ?? settings.defaultOpeningView ?? 'dashboard');
+  };
+
+  const createNewWorkspace = (options: {
+    title: string;
+    genre?: string;
+    folderOrTag?: string;
+    accentColor?: string;
+    template?: NarrativeTemplate;
+  }) => {
+    const now = new Date().toISOString();
+    const blank = createBlankProjectData(options.title.trim() || 'Novo Workspace');
+    const newWs: ProjectData = {
+      ...blank,
+      id: `ws_${Date.now()}`,
+      genre: options.genre?.trim() || blank.genre,
+      folderOrTag: options.folderOrTag?.trim() || 'Geral',
+      accentColor: options.accentColor || '#3b82f6',
+      isFavorite: false,
+      isArchived: false,
+      updatedAt: now,
+      lastOpenedAt: now,
+    };
+
+    if (options.template) {
+      const tplSections: OutlineSection[] = options.template.sections.map((sec, idx) => ({
+        id: `out_${Date.now()}_${idx}`,
+        title: sec.title,
+        description: sec.description,
+        act: sec.act,
+        isTwist: sec.isTwist,
+        targetWords: 2500,
+      }));
+      newWs.outline = tplSections;
+      newWs.scenes = tplSections.map((sec, idx) => ({
+        id: `scene_tpl_${Date.now()}_${idx}`,
+        chapterNumber: idx + 1,
+        title: sec.title,
+        summary: sec.description,
+        content: `# ${sec.title}\n\n${sec.description}\n`,
+        act: sec.act,
+        status: 'outline',
+        tension: Math.min(95, 25 + idx * 8),
+        subplotIds: [],
+        characterIds: [],
+        objectIds: [],
+        secretsRevealed: [],
+        notes: sec.isTwist ? 'Ponto de reviravolta (Twist) estrutural.' : '',
+        position: { x: 80 + (idx % 4) * 280, y: 100 + Math.floor(idx / 4) * 180 },
+        comments: [],
+        revisions: [],
+        lastEditedAt: now,
+      }));
+    }
+
+    setWorkspaces((prev) => [newWs, ...prev]);
+    setActiveWorkspaceId(newWs.id);
+    setActiveSceneId(newWs.scenes[0]?.id ?? '');
+    setShowPortal(false);
+    setActiveView('dashboard');
+  };
+
+  const duplicateWorkspace = (workspaceId: string) => {
+    const source = workspaces.find((w) => w.id === workspaceId);
+    if (!source) return;
+    const now = new Date().toISOString();
+    const copy: ProjectData = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: `ws_copy_${Date.now()}`,
+      title: `${source.title} (Cópia)`,
+      updatedAt: now,
+      lastOpenedAt: now,
+    };
+    setWorkspaces((prev) => [copy, ...prev]);
+  };
+
+  const deleteWorkspace = (workspaceId: string) => {
+    setWorkspaces((prev) => {
+      const remaining = prev.filter((w) => w.id !== workspaceId);
+      if (remaining.length === 0) {
+        const fallback = createBlankProjectData('Workspace Inicial');
+        setActiveWorkspaceId(fallback.id);
+        return [fallback];
+      }
+      if (activeWorkspaceId === workspaceId) {
+        setActiveWorkspaceId(remaining[0].id);
+      }
+      return remaining;
+    });
+  };
+
+  const toggleFavoriteWorkspace = (workspaceId: string) => {
+    setWorkspaces((prev) =>
+      prev.map((w) =>
+        w.id === workspaceId ? { ...w, isFavorite: !w.isFavorite } : w
+      )
+    );
+  };
+
+  const toggleArchiveWorkspace = (workspaceId: string) => {
+    setWorkspaces((prev) =>
+      prev.map((w) =>
+        w.id === workspaceId ? { ...w, isArchived: !w.isArchived } : w
+      )
+    );
+  };
+
+  const exportAllWorkspacesJson = (): string => {
+    return JSON.stringify({ version: 3, workspaces, settings }, null, 2);
+  };
+
+  const importAllWorkspacesJson = (jsonString: string): boolean => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (parsed && Array.isArray(parsed.workspaces) && parsed.workspaces.length > 0) {
+        setWorkspaces(parsed.workspaces);
+        setActiveWorkspaceId(parsed.workspaces[0].id);
+        if (parsed.settings) {
+          setSettings((prev) => ({ ...prev, ...parsed.settings }));
+        }
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const loadDemoProject = () => {
     const demo = createDemoProjectData();
-    setProject(demo);
-    setActiveSceneId(demo.scenes[0]?.id ?? '');
+    const now = new Date().toISOString();
+    const enrichedDemo: ProjectData = {
+      ...demo,
+      id: `proj_demo_${Date.now()}`,
+      isFavorite: true,
+      folderOrTag: 'Demonstração',
+      accentColor: '#10b981',
+      updatedAt: now,
+      lastOpenedAt: now,
+    };
+    setWorkspaces((prev) => {
+      const filtered = prev.filter((w) => w.title !== demo.title);
+      return [enrichedDemo, ...filtered];
+    });
+    setActiveWorkspaceId(enrichedDemo.id);
+    setActiveSceneId(enrichedDemo.scenes[0]?.id ?? '');
     setShowPortal(false);
     setActiveView('dashboard');
   };
 
   const startBlankProject = (title?: string) => {
-    const blank = createBlankProjectData(title);
-    setProject(blank);
-    setActiveSceneId(blank.scenes[0]?.id ?? '');
-    setShowPortal(false);
-    setActiveView('manuscript');
+    createNewWorkspace({ title: title || 'Novo Workspace' });
   };
 
   const applyTemplateToProject = (
@@ -231,10 +461,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const importProjectJson = (jsonString: string): boolean => {
     try {
-      const parsed = JSON.parse(jsonString) as ProjectData;
-      if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.scenes)) {
-        setProject(parsed);
-        setActiveSceneId(parsed.scenes[0]?.id ?? '');
+      const parsed = JSON.parse(jsonString);
+      if (parsed && Array.isArray(parsed.workspaces)) {
+        return importAllWorkspacesJson(jsonString);
+      }
+      const single = parsed as ProjectData;
+      if (single && typeof single.title === 'string' && Array.isArray(single.scenes)) {
+        const imported: ProjectData = {
+          ...single,
+          id: single.id || `ws_imp_${Date.now()}`,
+          lastOpenedAt: new Date().toISOString(),
+        };
+        setWorkspaces((prev) => [imported, ...prev.filter((w) => w.id !== imported.id)]);
+        setActiveWorkspaceId(imported.id);
+        setActiveSceneId(imported.scenes[0]?.id ?? '');
         setShowPortal(false);
         return true;
       }
@@ -506,7 +746,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         wordCount: words,
         scenesBackup: JSON.parse(JSON.stringify(prev.scenes)) as Scene[],
       };
-      return { ...prev, snapshots: [snap, ...prev.snapshots] };
+      const maxSnaps = settings.maxSnapshotsPerWorkspace || 25;
+      return { ...prev, snapshots: [snap, ...prev.snapshots].slice(0, maxSnaps) };
     });
   };
 
@@ -624,7 +865,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     <ProjectContext.Provider
       value={{
         project,
+        workspaces,
+        activeWorkspaceId: project.id,
         settings,
+        t,
         activeView,
         setActiveView,
         showPortal,
@@ -638,6 +882,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         totalWordCount,
         updateProject,
         updateSettings,
+        resetSettingsToDefault,
+        switchWorkspace,
+        createNewWorkspace,
+        duplicateWorkspace,
+        deleteWorkspace,
+        toggleFavoriteWorkspace,
+        toggleArchiveWorkspace,
+        exportAllWorkspacesJson,
+        importAllWorkspacesJson,
         loadDemoProject,
         startBlankProject,
         applyTemplateToProject,

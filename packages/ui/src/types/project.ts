@@ -402,27 +402,72 @@ export interface CompileProfile {
   imprint: string;
 }
 
+export interface KeyboardShortcutMap {
+  commandPalette: string;
+  openHome: string;
+  openSettings: string;
+  toggleCopilot: string;
+  toggleZenMode: string;
+  quickSnapshot: string;
+  focusManuscript: string;
+  focusGraph: string;
+}
+
 export interface AppSettings {
+  // 1. Geral & Inicialização
+  language: 'pt-BR' | 'en';
+  startupBehavior: 'home' | 'last-workspace';
+  defaultOpeningView: ViewId;
+  autosaveIntervalSeconds: number;
+  confirmDestructiveActions: boolean;
+
+  // 2. Aparência & Interface
   theme: 'dark' | 'light' | 'sepia';
+  uiDensity: 'compact' | 'standard' | 'comfortable';
+  accentColor: string;
+  sidebarDefaultCollapsed: boolean;
+  copilotPosition: 'right' | 'left';
   highContrast: boolean;
   largeText: boolean;
   reducedMotion: boolean;
+
+  // 3. Editor Padrão
   editorFont: 'serif' | 'sans' | 'mono';
   editorFontSize: number;
   editorLineHeight: number;
+  editorMaxWidthCh: number;
+  paragraphIndent: boolean;
   zenMode: boolean;
   focusMode: boolean;
   typewriterMode: boolean;
   spellcheck: boolean;
+  showWordCountFooter: boolean;
+  showReadingTimeEstimate: boolean;
+
+  // 4. Inteligência Artificial & MCP
   aiMode: 'cloud' | 'local' | 'hybrid' | 'eco';
   aiProvider: 'gemini' | 'ollama' | 'openai' | 'mcp';
   geminiApiKey: string;
   ollamaUrl: string;
   ollamaModel: string;
+  mcpServerPort: number;
+  mcpAutoSyncVault: boolean;
   aiTemperature: number;
   aiMaxTokens: number;
   copilotEnabled: boolean;
   copilotHeuristicsOnly: boolean;
+
+  // 5. Atalhos de Teclado
+  shortcuts: KeyboardShortcutMap;
+
+  // 6. Notificações & Avisos Silenciosos
+  quietNotifications: boolean;
+  epistemicAlertsInEditor: boolean;
+  dailyGoalReminder: boolean;
+
+  // 7. Armazenamento & Backup
+  autoSnapshotOnClose: boolean;
+  maxSnapshotsPerWorkspace: number;
 }
 
 export interface ProjectData {
@@ -430,6 +475,11 @@ export interface ProjectData {
   title: string;
   logline: string;
   genre: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
+  folderOrTag?: string;
+  accentColor?: string;
+  lastOpenedAt?: string;
   wordCountGoal: number;
   dailyWordGoal: number;
   weeklyWordGoal: number;

@@ -105,23 +105,6 @@ export function WelcomePortal() {
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '4px 10px',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
-              borderRadius: 999,
-              fontSize: 11,
-              color: '#34d399',
-              marginBottom: 12,
-            }}
-          >
-            <ShieldCheck size={13} />
-            100% offline e local — sua história permanece no cofre privado deste dispositivo
-          </div>
           <h1
             style={{
               margin: 0,
@@ -131,10 +114,10 @@ export function WelcomePortal() {
               letterSpacing: '-0.02em',
             }}
           >
-            Estúdio Literário & Arquitetura de Universo
+            Meu Espaço
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: 14, color: '#9ca3af' }}>
-            Escolha como deseja iniciar ou retomar seu manuscrito, dossiês e linha do tempo.
+            Selecione ou inicie um projeto para continuar escrevendo.
           </p>
         </div>
 
