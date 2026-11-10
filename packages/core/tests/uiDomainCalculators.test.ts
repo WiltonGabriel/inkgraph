@@ -10,6 +10,10 @@ import { createDemoProjectData } from '../../ui/src/data/demoProjectFactory';
 import { createBlankProjectData } from '../../ui/src/data/blankProjectFactory';
 import { DEFAULT_SETTINGS } from '../../ui/src/data/defaultSettings';
 import { getDictionary } from '../../ui/src/i18n/translations';
+import {
+  normalizeWorkspaceData,
+  sanitizeExternalUrl,
+} from '../../ui/src/domain/workspaceNormalizer';
 
 describe('UI Domain Calculators, Settings & i18n (SRP Verification)', () => {
   it('accurately counts words and estimates reading time', () => {
@@ -55,5 +59,38 @@ describe('UI Domain Calculators, Settings & i18n (SRP Verification)', () => {
     expect(DEFAULT_SETTINGS.startupBehavior).toBe('home');
     expect(DEFAULT_SETTINGS.shortcuts.commandPalette).toBe('Ctrl+K');
     expect(DEFAULT_SETTINGS.mcpServerPort).toBe(3333);
+  });
+
+  it('normalizes partial or malformed workspace JSON and sanitizes external URLs (C-04 & C-05)', () => {
+    expect(normalizeWorkspaceData(null)).toBeNull();
+    expect(normalizeWorkspaceData({})).toBeNull();
+
+    const partial = normalizeWorkspaceData({
+      title: '  Projeto Parcial  ',
+      scenes: [],
+      binder: [
+        {
+          id: 'b1',
+          parentId: null,
+          type: 'link',
+          title: 'Malicious',
+          content: '',
+          url: 'javascript:alert(1)',
+          linkedSceneIds: [],
+          createdAt: '2026-01-01',
+        },
+      ],
+    });
+    expect(partial).not.toBeNull();
+    expect(partial?.title).toBe('Projeto Parcial');
+    expect(Array.isArray(partial?.characters)).toBe(true);
+    expect(Array.isArray(partial?.factions)).toBe(true);
+    expect(Array.isArray(partial?.worlds)).toBe(true);
+    expect(Array.isArray(partial?.branches)).toBe(true);
+    expect(partial?.binder[0]?.url).toBeUndefined();
+
+    expect(sanitizeExternalUrl('javascript:alert(1)')).toBeUndefined();
+    expect(sanitizeExternalUrl('data:text/html,<script>alert(1)</script>')).toBeUndefined();
+    expect(sanitizeExternalUrl('https://example.com/docs')).toBe('https://example.com/docs');
   });
 });

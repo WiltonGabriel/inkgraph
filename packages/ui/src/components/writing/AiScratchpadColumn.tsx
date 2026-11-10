@@ -22,7 +22,7 @@ export function AiScratchpadColumn({
   studioMode,
   onChangeStudioMode,
 }: AiScratchpadColumnProps) {
-  const { project, activeSceneId, upsertScene } = useProject();
+  const { project, settings, activeSceneId, upsertScene } = useProject();
   const activeScene = project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
 
   const handleAppendToScene = () => {
@@ -153,11 +153,12 @@ export function AiScratchpadColumn({
       <textarea
         value={scratchpad}
         onChange={(e) => onChangeScratchpad(e.target.value)}
+        spellCheck={settings.spellcheck}
         placeholder="Use as ferramentas de escrita ao lado ou redija rascunhos experimentais aqui antes de incorporá-los à cena..."
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: studioMode === 'foco' ? 720 : '100%',
+          maxWidth: studioMode === 'foco' ? 720 : `${settings.editorMaxWidthCh || 72}ch`,
           margin: '0 auto',
           padding: 24,
           backgroundColor: 'transparent',
@@ -165,9 +166,15 @@ export function AiScratchpadColumn({
           outline: 'none',
           resize: 'none',
           color: '#e5e7eb',
-          fontSize: 15,
-          lineHeight: 1.7,
-          fontFamily: 'Georgia, serif',
+          fontSize: settings.editorFontSize || 15,
+          lineHeight: settings.editorLineHeight || 1.7,
+          textIndent: settings.paragraphIndent ? '2em' : 0,
+          fontFamily:
+            settings.editorFont === 'mono'
+              ? 'monospace'
+              : settings.editorFont === 'sans'
+                ? 'sans-serif'
+                : 'Georgia, serif',
         }}
       />
 

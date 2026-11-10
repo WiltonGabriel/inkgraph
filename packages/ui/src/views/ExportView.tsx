@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileOutput, Copy, Sparkles, Check } from 'lucide-react';
+import { FileOutput, Copy, Sparkles, Check, Download } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import { CompileWizardModal } from '../components/publishing/CompileWizardModal';
 
@@ -67,6 +67,17 @@ export function ExportView() {
     setTimeout(() => setCopied(false), 1800);
   };
 
+  const handleDirectDownload = () => {
+    const ext = format === 'norm_txt' ? 'txt' : format;
+    const blob = new Blob([compiledOutput], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.title.toLowerCase().replace(/\s+/g, '_')}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflowY: 'auto' }}>
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
@@ -78,11 +89,14 @@ export function ExportView() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={handleCopyMarkdown} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.45rem 0.8rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button onClick={handleCopyMarkdown} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.45rem 0.8rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
             {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-            Copiar Markdown para Notion / Google Docs
+            Copiar Markdown
           </button>
-          <button onClick={() => setWizardOpen(true)} style={{ background: 'var(--accent)', color: '#fff', padding: '0.45rem 0.9rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button onClick={handleDirectDownload} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.45rem 0.8rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+            <Download size={14} /> Baixar .MD
+          </button>
+          <button onClick={() => setWizardOpen(true)} style={{ background: 'var(--accent)', color: '#fff', padding: '0.45rem 0.9rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
             <Sparkles size={14} /> Assistente de compilação…
           </button>
         </div>

@@ -6,6 +6,7 @@ import {
   calculateFactionCompleteness,
   calculateWorldCompleteness,
 } from '../../types/project';
+import { calculateFleschReadability } from '../../domain/wordCounter';
 
 export function ProjectHealthCard() {
   const { project, totalWordCount } = useProject();
@@ -31,6 +32,11 @@ export function ProjectHealthCard() {
     if (all.length === 0) return 0;
     return Math.round(all.reduce((a, b) => a + b, 0) / all.length);
   }, [project.worlds, project.factions]);
+
+  const readabilityScore = useMemo(() => {
+    const fullProse = project.scenes.map((s) => s.content).join('\n\n');
+    return calculateFleschReadability(fullProse);
+  }, [project.scenes]);
 
   const healthScore = Math.round(
     wordGoalPercent * 0.3 + castDepth * 0.35 + worldDepth * 0.35
@@ -103,7 +109,7 @@ export function ProjectHealthCard() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, color: '#9ca3af', fontSize: 11.5 }}>
-          <span>Legibilidade (heurística Flesch): <strong style={{ color: '#e5e7eb' }}>68/100</strong></span>
+          <span>Legibilidade (heurística Flesch): <strong style={{ color: '#e5e7eb' }}>{readabilityScore}/100</strong></span>
           <span style={{ color: '#34d399' }}>Linha do tempo: OK</span>
         </div>
       </div>

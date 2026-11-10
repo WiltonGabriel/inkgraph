@@ -40,8 +40,8 @@ export function WriterToolsColumn({ onGenerateToScratchpad }: WriterToolsColumnP
 
   const handleRunTool = (tool: (typeof TOOLS)[number]) => {
     const charName = povChar?.name ?? project.characters[0]?.name ?? 'Protagonista';
-    const facName = faction?.name ?? 'Ordem de Ferro';
-    const worldName = world?.name ?? 'Vael';
+    const facName = faction?.name ?? 'a facção local';
+    const worldName = world?.name ?? 'este território';
     const sceneTitle = activeScene?.title ?? 'Cena Atual';
 
     const outputs: Record<(typeof TOOLS)[number], string> = {

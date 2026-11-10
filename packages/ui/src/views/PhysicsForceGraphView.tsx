@@ -15,7 +15,7 @@ export function PhysicsForceGraphView() {
   const [scope, setScope] = useState<ScopeFilter>('all');
   const [viewMode, setViewMode] = useState<'graph' | 'table'>('graph');
   const [selectedNodeId, setSelectedNodeId] = useState<string>(
-    project.characters[0]?.id ?? 'char_elias_vance'
+    project.characters[0]?.id ?? project.factions[0]?.id ?? project.worlds[0]?.id ?? ''
   );
 
   const { nodes, links, allEntities } = useMemo(
