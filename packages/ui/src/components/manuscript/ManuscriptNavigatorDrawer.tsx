@@ -16,11 +16,13 @@ import { countWords, type BinderItem, type Scene } from '../../types/project';
 interface ManuscriptNavigatorDrawerProps {
   pinnedBinderId: string | null;
   onPinBinderItem: (id: string | null) => void;
+  fullWidth?: boolean;
 }
 
 export function ManuscriptNavigatorDrawer({
   pinnedBinderId,
   onPinBinderItem,
+  fullWidth = false,
 }: ManuscriptNavigatorDrawerProps) {
   const {
     project,
@@ -78,9 +80,10 @@ export function ManuscriptNavigatorDrawer({
   return (
     <aside
       style={{
-        width: 260,
+        width: fullWidth ? '100%' : 260,
+        height: '100%',
         backgroundColor: '#0e1118',
-        borderRight: '1px solid #1b202c',
+        borderRight: fullWidth ? 'none' : '1px solid #1b202c',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,

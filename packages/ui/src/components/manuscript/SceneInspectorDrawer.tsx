@@ -1,20 +1,10 @@
 import { useState } from 'react';
 import { Sliders, MessageSquare, History, Plus, CheckCircle2, Trash2, RotateCcw } from 'lucide-react';
+import { computeWordDiff } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
 import { countWords, type SceneStatus, type SceneComment, type SceneRevision } from '../../types/project';
 
-function computeWordDiff(oldText: string, newText: string) {
-  const oldWords = oldText.trim() ? oldText.trim().split(/\s+/) : [];
-  const newWords = newText.trim() ? newText.trim().split(/\s+/) : [];
-  const oldSet = new Set(oldWords);
-  const newSet = new Set(newWords);
-  return {
-    added: newWords.filter((w) => !oldSet.has(w)).slice(0, 25),
-    removed: oldWords.filter((w) => !newSet.has(w)).slice(0, 25),
-  };
-}
-
-export function SceneInspectorDrawer() {
+export function SceneInspectorDrawer({ fullWidth = false }: { fullWidth?: boolean }) {
   const { project, activeSceneId, upsertScene } = useProject();
   const [tab, setTab] = useState<'meta' | 'comments' | 'revisions'>('meta');
   const [commentDraft, setCommentDraft] = useState('');
@@ -55,9 +45,10 @@ export function SceneInspectorDrawer() {
   return (
     <aside
       style={{
-        width: 310,
+        width: fullWidth ? '100%' : 310,
+        height: '100%',
         backgroundColor: '#0e1118',
-        borderLeft: '1px solid #1b202c',
+        borderLeft: fullWidth ? 'none' : '1px solid #1b202c',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -265,9 +256,32 @@ export function SceneInspectorDrawer() {
                   </button>
                 </div>
                 {diff && (
-                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#0c0f17', borderRadius: 5, fontSize: 11, lineHeight: 1.5 }}>
-                    <div style={{ color: '#34d399' }}>+ Adicionado: {diff.added.join(' ') || 'nenhuma'}</div>
-                    <div style={{ color: '#f87171', marginTop: 4 }}>- Removido: {diff.removed.join(' ') || 'nenhuma'}</div>
+                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#0c0f17', borderRadius: 5, fontSize: 11, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                    <div style={{ color: '#9ca3af', fontSize: 10, marginBottom: 4 }}>
+                      +{diff.addedWords} / -{diff.removedWords} palavras
+                    </div>
+                    {diff.segments.map((seg, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          backgroundColor:
+                            seg.type === 'added'
+                              ? 'rgba(16,185,129,0.22)'
+                              : seg.type === 'removed'
+                                ? 'rgba(239,68,68,0.22)'
+                                : 'transparent',
+                          color:
+                            seg.type === 'added'
+                              ? '#6ee7b7'
+                              : seg.type === 'removed'
+                                ? '#fca5a5'
+                                : '#cbd5e1',
+                          textDecoration: seg.type === 'removed' ? 'line-through' : 'none',
+                        }}
+                      >
+                        {seg.text}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>

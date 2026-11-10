@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Send, BookmarkPlus, Check, User, Bot } from 'lucide-react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
+import { runAiCompletion } from '../../services/aiClient';
 import type { CharacterArchetype, CharacterInterview } from '../../types/project';
 
 const ARCHETYPE_QUESTIONS: Record<CharacterArchetype, string[]> = {
@@ -53,9 +55,13 @@ export function InterviewSessionChat({
   archetype,
   sessionId,
 }: InterviewSessionChatProps) {
-  const { project, upsertInterview, upsertCharacter } = useProject();
+  const { project, settings, upsertInterview, upsertCharacter } = useProject();
   const [question, setQuestion] = useState('');
+  const [replyAsCharacter, setReplyAsCharacter] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
 
   const character =
     project.characters.find((c) => c.id === characterId) ?? project.characters[0];
@@ -68,23 +74,12 @@ export function InterviewSessionChat({
 
   const suggested = ARCHETYPE_QUESTIONS[archetype] ?? ARCHETYPE_QUESTIONS.hero;
 
-  const handleSendQuestion = (textToSend?: string) => {
-    const q = (textToSend ?? question).trim();
-    if (!q) return;
-
-    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const userMsg = { id: `m_${Date.now()}_u`, role: 'user' as const, text: q, timestamp: now };
-    const secretHint = character.epistemicSecrets[0]?.secret
-      ? `Há coisas que mantenho sob sete chaves — como "${character.epistemicSecrets[0].secret}".`
-      : 'Cada palavra minha pesa sobre o destino que escolhi.';
-    const replyText = `[Voz: ${character.name} · Arquétipo: ${archetype}] Minha motivação sempre foi clara (${character.motivation || character.role}). Diante do que você pergunta ("${q}"), respondo sem rodeios: ${secretHint}`;
-    const charMsg = { id: `m_${Date.now()}_c`, role: 'character' as const, text: replyText, timestamp: now };
-
+  const appendMessages = (newMessages: CharacterInterview['messages']) => {
     const targetSession: CharacterInterview = session
       ? {
           ...session,
           archetype,
-          messages: [...session.messages, userMsg, charMsg],
+          messages: [...session.messages, ...newMessages],
           updatedAt: new Date().toLocaleString('pt-BR'),
         }
       : {
@@ -92,12 +87,57 @@ export function InterviewSessionChat({
           characterId: character.id,
           title: `Sabatina (${archetype})`,
           archetype,
-          messages: [userMsg, charMsg],
+          messages: newMessages,
           updatedAt: new Date().toLocaleString('pt-BR'),
         };
-
     upsertInterview(targetSession);
-    setQuestion('');
+  };
+
+  const handleSendQuestion = async (textToSend?: string) => {
+    const q = (textToSend ?? question).trim();
+    if (!q || sending) return;
+
+    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    setAiError(null);
+
+    if (!aiActive || replyAsCharacter) {
+      appendMessages([
+        {
+          id: `m_${Date.now()}_${replyAsCharacter ? 'c' : 'u'}`,
+          role: replyAsCharacter ? 'character' : 'user',
+          text: q,
+          timestamp: now,
+        },
+      ]);
+      if (!textToSend) setQuestion('');
+      return;
+    }
+
+    const userMsg = { id: `m_${Date.now()}_u`, role: 'user' as const, text: q, timestamp: now };
+    appendMessages([userMsg]);
+    if (!textToSend) setQuestion('');
+
+    setSending(true);
+    const res = await runAiCompletion({
+      settings,
+      systemPrompt: `Roleplay strictly in character as ${character.name} (${character.role}, archetype ${archetype}). Motivation: ${character.motivation}. Flaws: ${character.flaws}. Stay concise and consistent with backstory.`,
+      userPrompt: q,
+    });
+    setSending(false);
+
+    if (!res.ok) {
+      setAiError(res.error);
+      return;
+    }
+
+    appendMessages([
+      {
+        id: `m_${Date.now()}_c`,
+        role: 'character',
+        text: res.text,
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
   };
 
   const handleCopyToDossier = (msgId: string, text: string) => {
@@ -204,42 +244,69 @@ export function InterviewSessionChat({
         ))}
       </div>
 
+      {aiError && (
+        <div style={{ padding: '8px 18px', fontSize: 12, color: '#fbbf24', backgroundColor: 'rgba(245,158,11,0.1)', borderTop: '1px solid rgba(245,158,11,0.25)' }}>
+          {aiError}
+        </div>
+      )}
+
       {/* Custom Question Input */}
-      <div style={{ padding: '10px 18px', borderTop: '1px solid #1b202c', backgroundColor: '#111520', display: 'flex', gap: 8 }}>
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSendQuestion()}
-          placeholder={`Faça uma pergunta direta a ${character.name}...`}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            backgroundColor: '#0c0f17',
-            border: '1px solid #262f42',
-            borderRadius: 6,
-            color: '#fff',
-            fontSize: 13,
-            outline: 'none',
-          }}
-        />
-        <button
-          onClick={() => handleSendQuestion()}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 12.5,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Send size={13} /> Perguntar
-        </button>
+      <div style={{ padding: '10px 18px', borderTop: '1px solid #1b202c', backgroundColor: '#111520', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#9ca3af', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={!aiActive || replyAsCharacter}
+            disabled={!aiActive}
+            onChange={(e) => setReplyAsCharacter(e.target.checked)}
+          />
+          <span>
+            {!aiActive
+              ? `Modo Caderno (Sem IA): anote perguntas e falas de ${character.name} diretamente no diário.`
+              : `Registrar diretamente como fala de ${character.name} (sem chamar IA)`}
+          </span>
+        </label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void handleSendQuestion()}
+            placeholder={
+              !aiActive || replyAsCharacter
+                ? `Escreva uma pergunta ou fala em voz de ${character.name}...`
+                : `Faça uma pergunta direta a ${character.name}...`
+            }
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              backgroundColor: '#0c0f17',
+              border: '1px solid #262f42',
+              borderRadius: 6,
+              color: '#fff',
+              fontSize: 13,
+              outline: 'none',
+            }}
+          />
+          <button
+            onClick={() => void handleSendQuestion()}
+            disabled={sending}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: sending ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              opacity: sending ? 0.6 : 1,
+            }}
+          >
+            <Send size={13} /> {sending ? '...' : !aiActive || replyAsCharacter ? 'Registrar' : 'Perguntar'}
+          </button>
+        </div>
       </div>
     </div>
   );

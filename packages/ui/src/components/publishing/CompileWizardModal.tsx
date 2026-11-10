@@ -1,177 +1,150 @@
 import { useState } from 'react';
-import { X, Download, CheckSquare, FileText } from 'lucide-react';
+import { X, Download, CheckSquare, FileText, AlertTriangle } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import {
+  exportNormseiteText,
+  generateDocxBytes,
+  generateEpub3Bytes,
+  generateMarkdownZipBytes,
+  generatePdfBytes,
+  runPublicationPreflight,
+  type PrintTrimFormat,
+} from '../../export/exporters';
 
 interface CompileWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type CompilePreset = 'html_pdf' | 'ebook' | 'norm_txt' | 'full_md';
+type CompilePreset = 'epub' | 'docx' | 'pdf' | 'norm_txt' | 'md_zip' | 'html';
 
-const PRESETS: { id: CompilePreset; title: string; subtitle: string; ext: string }[] = [
+const PRESETS: { id: CompilePreset; title: string; subtitle: string; ext: string; mime: string }[] = [
   {
-    id: 'html_pdf',
-    title: 'Manuscrito do Romance (HTML/PDF)',
-    subtitle: 'Diagramação editorial com folha de rosto, dedicatória e capítulos paginados.',
-    ext: 'html',
+    id: 'epub',
+    title: 'E-book EPUB 3 (.epub)',
+    subtitle: 'Pacote digital padrão com metadados, sumário navegável e capítulos em XHTML.',
+    ext: 'epub',
+    mime: 'application/epub+zip',
   },
   {
-    id: 'ebook',
-    title: 'Capítulos de E-book',
-    subtitle: 'Estrutura limpa sem cabeçalhos fixos, pronta para conversão digital.',
-    ext: 'md',
+    id: 'docx',
+    title: 'Microsoft Word (.docx)',
+    subtitle: 'Documento formatado com folha de rosto, quebras de capítulo e parágrafos.',
+    ext: 'docx',
+    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  },
+  {
+    id: 'pdf',
+    title: 'PDF Editorial (.pdf)',
+    subtitle: 'Diagramação direta offline conforme formato de corte selecionado.',
+    ext: 'pdf',
+    mime: 'application/pdf',
   },
   {
     id: 'norm_txt',
-    title: 'Manuscrito da Norma (.txt 60×30)',
-    subtitle: 'Lauda padrão de 60 caracteres por 30 linhas para submissão editorial.',
+    title: 'Lauda Padrão 60×30 (.txt)',
+    subtitle: 'Paginação clássica com 60 colunas, 30 linhas e quebras \\f reais.',
     ext: 'txt',
+    mime: 'text/plain;charset=utf-8',
   },
   {
-    id: 'full_md',
-    title: 'Arquivo Completo (Markdown)',
-    subtitle: 'Inclui manuscrito, dossiês de personagens, facções e atlas do mundo.',
-    ext: 'md',
+    id: 'md_zip',
+    title: 'Vault Markdown (.zip)',
+    subtitle: 'Todas as cenas, personagens, facções e mundos em Markdown estruturado.',
+    ext: 'zip',
+    mime: 'application/zip',
+  },
+  {
+    id: 'html',
+    title: 'Manuscrito Web (.html)',
+    subtitle: 'Arquivo único HTML autocontido para revisão em navegador ou impressão.',
+    ext: 'html',
+    mime: 'text/html;charset=utf-8',
   },
 ];
 
 export function CompileWizardModal({ isOpen, onClose }: CompileWizardModalProps) {
   const { project } = useProject();
-  const [selectedPreset, setSelectedPreset] = useState<CompilePreset>('html_pdf');
-  const [checks, setChecks] = useState({
-    frontmatter: true,
-    sceneBreaks: true,
-    epistemicClean: true,
-  });
+  const [selectedPreset, setSelectedPreset] = useState<CompilePreset>('epub');
+  const [trim, setTrim] = useState<PrintTrimFormat>('6x9');
+  const [stripEpistemic, setStripEpistemic] = useState(true);
+  const [compiling, setCompiling] = useState(false);
 
   if (!isOpen) return null;
 
-  const formatNormLine = (text: string): string => {
-    const words = text.replace(/\n+/g, ' ').split(/\s+/);
-    const lines: string[] = [];
-    let current = '';
-    for (const w of words) {
-      if ((current + ' ' + w).trim().length > 60) {
-        lines.push(current.trim());
-        current = w;
-      } else {
-        current = (current + ' ' + w).trim();
-      }
-    }
-    if (current) lines.push(current);
-    return lines.join('\n');
-  };
+  const issues = runPublicationPreflight(project);
+  const errorCount = issues.filter((i) => i.severity === 'error').length;
 
-  const handleDownload = () => {
+  const safeFileSlug =
+    project.title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '') || 'inkgraph_obra';
+
+  const handleDownload = async () => {
     const preset = PRESETS.find((p) => p.id === selectedPreset) ?? PRESETS[0];
-    const profile = project.compileProfile;
+    setCompiling(true);
+    try {
+      const targetProject = stripEpistemic
+        ? project
+        : {
+            ...project,
+            scenes: project.scenes.map((s) => ({
+              ...s,
+              content: s.notes ? `${s.content}\n\n> [Nota]: ${s.notes}` : s.content,
+            })),
+          };
 
-    const frontmatterMd = checks.frontmatter
-      ? [
-          profile.titlePageText ? `## Página de Título\n${profile.titlePageText}` : '',
-          profile.dedication ? `## Dedicatória\n_${profile.dedication}_` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n')
-      : '';
+      let blob: Blob;
+      if (selectedPreset === 'epub') {
+        const bytes = await generateEpub3Bytes(targetProject);
+        blob = new Blob([new Uint8Array(bytes)], { type: preset.mime });
+      } else if (selectedPreset === 'docx') {
+        const bytes = await generateDocxBytes(targetProject);
+        blob = new Blob([new Uint8Array(bytes)], { type: preset.mime });
+      } else if (selectedPreset === 'pdf') {
+        const bytes = generatePdfBytes(targetProject, trim);
+        blob = new Blob([new Uint8Array(bytes)], { type: preset.mime });
+      } else if (selectedPreset === 'norm_txt') {
+        blob = new Blob([exportNormseiteText(targetProject)], { type: preset.mime });
+      } else if (selectedPreset === 'md_zip') {
+        const bytes = await generateMarkdownZipBytes(targetProject);
+        blob = new Blob([new Uint8Array(bytes)], { type: preset.mime });
+      } else {
+        const profile = project.compileProfile;
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${project.title}</title></head><body><h1>${project.title}</h1><p><em>${profile.authorName}</em></p>${[...targetProject.scenes]
+          .sort((a, b) => a.chapterNumber - b.chapterNumber)
+          .map((s) => `<h2>Capítulo ${s.chapterNumber}: ${s.title}</h2><div>${s.content.replace(/\n/g, '<br/>')}</div>`)
+          .join('<hr/>')}</body></html>`;
+        blob = new Blob([html], { type: preset.mime });
+      }
 
-    const backmatterMd = checks.frontmatter
-      ? [
-          profile.acknowledgements ? `## Agradecimentos\n${profile.acknowledgements}` : '',
-          profile.imprint ? `## Colofão\n${profile.imprint}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n')
-      : '';
-
-    const scenesText = project.scenes
-      .map((s) => {
-        const noteBlock =
-          !checks.epistemicClean && s.notes
-            ? `\n\n> [Nota do Autor]: ${s.notes}`
-            : '';
-        return `# Capítulo ${s.chapterNumber}: ${s.title}\n\n${s.content}${noteBlock}`;
-      })
-      .join(checks.sceneBreaks ? '\n\n* * *\n\n' : '\n\n');
-
-    let output = '';
-    if (selectedPreset === 'html_pdf') {
-      const fmHtml = checks.frontmatter
-        ? `${profile.titlePageText ? `<p>${profile.titlePageText}</p>` : ''}${profile.dedication ? `<p><em>${profile.dedication}</em></p>` : ''}<hr/>`
-        : '';
-      const bmHtml = checks.frontmatter
-        ? `<hr/>${profile.acknowledgements ? `<p>${profile.acknowledgements}</p>` : ''}${profile.imprint ? `<p><small>${profile.imprint}</small></p>` : ''}`
-        : '';
-      output = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${project.title}</title></head><body><h1>${project.title}</h1><p><em>${profile.authorName}</em></p>${fmHtml}${project.scenes.map((s) => `<h2>Capítulo ${s.chapterNumber}: ${s.title}</h2><div>${s.content.replace(/\n/g, '<br/>')}</div>`).join(checks.sceneBreaks ? '<hr/>' : '')}${bmHtml}</body></html>`;
-    } else if (selectedPreset === 'norm_txt') {
-      output =
-        `${project.title.toUpperCase()}\nAutor: ${profile.authorName}\n\n` +
-        (frontmatterMd ? `${frontmatterMd}\n\n` : '') +
-        formatNormLine(scenesText) +
-        (backmatterMd ? `\n\n${backmatterMd}` : '');
-    } else if (selectedPreset === 'full_md') {
-      const chars = project.characters
-        .map((c) => {
-          const secrets =
-            !checks.epistemicClean && c.epistemicSecrets.length > 0
-              ? `\nSegredos: ${c.epistemicSecrets.map((sec) => sec.secret).join('; ')}`
-              : '';
-          return `### ${c.name} (${c.role})\n${c.backstory}${secrets}`;
-        })
-        .join('\n\n');
-      const factions = project.factions
-        .map((f) => {
-          const secrets =
-            !checks.epistemicClean && f.epistemicSecrets.length > 0
-              ? `\nAgenda Oculta: ${f.secretAgenda}`
-              : '';
-          return `### ${f.name} (${f.subtype})\n${f.publicAgenda}${secrets}`;
-        })
-        .join('\n\n');
-      const worlds = project.worlds
-        .map((w) => `### ${w.name}\n${w.premise}\n\n${w.description}`)
-        .join('\n\n');
-      output = [
-        `# ${project.title}`,
-        `> ${project.logline}`,
-        frontmatterMd,
-        scenesText,
-        chars ? `## Dossiê de Personagens\n\n${chars}` : '',
-        factions ? `## Facções\n\n${factions}` : '',
-        worlds ? `## Atlas do Mundo\n\n${worlds}` : '',
-        backmatterMd,
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-    } else {
-      output = [`# ${project.title}`, frontmatterMd, scenesText, backmatterMd]
-        .filter(Boolean)
-        .join('\n\n');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeFileSlug}.${preset.ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onClose();
+    } finally {
+      setCompiling(false);
     }
-
-    const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${project.title.toLowerCase().replace(/\s+/g, '_')}_compilado.${preset.ext}`;
-    a.click();
-    URL.revokeObjectURL(url);
-    onClose();
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', width: '100%', maxWidth: '580px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', width: '100%', maxWidth: '620px', maxHeight: '90vh', overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <FileText size={18} color="var(--accent)" />
-            <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Assistente de Compilação Editorial</h3>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Assistente de Compilação Editorial</h3>
           </div>
-          <button onClick={onClose} style={{ color: 'var(--text-muted)', padding: '0.2rem' }}><X size={18} /></button>
+          <button onClick={onClose} style={{ color: 'var(--text-muted)', padding: '0.2rem', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
           {PRESETS.map((p) => (
             <button
               key={p.id}
@@ -185,6 +158,7 @@ export function CompileWizardModal({ isOpen, onClose }: CompileWizardModalProps)
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.25rem',
+                cursor: 'pointer',
               }}
             >
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>{p.title}</span>
@@ -193,30 +167,48 @@ export function CompileWizardModal({ isOpen, onClose }: CompileWizardModalProps)
           ))}
         </div>
 
+        {selectedPreset === 'pdf' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.78rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Formato de corte (Trim):</span>
+            <select
+              value={trim}
+              onChange={(e) => setTrim(e.target.value as PrintTrimFormat)}
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '5px', padding: '0.3rem 0.5rem', fontSize: '0.78rem' }}
+            >
+              <option value="6x9">Romance Trade 6×9 pol</option>
+              <option value="5.5x8.5">Digest 5.5×8.5 pol</option>
+              <option value="a5">A5 (148×210 mm)</option>
+              <option value="manuscript">Carta Manuscrito</option>
+            </select>
+          </div>
+        )}
+
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 600 }}>
-            <CheckSquare size={14} color="#10b981" /> Verificação Pré-Compilação
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              {errorCount > 0 ? <AlertTriangle size={14} color="#f59e0b" /> : <CheckSquare size={14} color="#10b981" />}
+              Preflight Editorial
+            </span>
+            <span style={{ fontSize: '0.72rem', color: errorCount > 0 ? '#f59e0b' : '#10b981' }}>
+              {issues.length === 0 ? 'Sem pendências' : `${issues.length} alerta(s) (${errorCount} crítico)`}
+            </span>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            <input type="checkbox" checked={checks.frontmatter} onChange={(e) => setChecks({ ...checks, frontmatter: e.target.checked })} />
-            Incluir elementos pré-textuais (Página de título, Dedicatória e Colofão)
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            <input type="checkbox" checked={checks.sceneBreaks} onChange={(e) => setChecks({ ...checks, sceneBreaks: e.target.checked })} />
-            Inserir separadores tipográficos (* * *) entre cenas
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            <input type="checkbox" checked={checks.epistemicClean} onChange={(e) => setChecks({ ...checks, epistemicClean: e.target.checked })} />
-            Omitir notas privadas do autor e segredos epistêmicos não revelados
+            <input type="checkbox" checked={stripEpistemic} onChange={(e) => setStripEpistemic(e.target.checked)} />
+            Remover blocos privados (::beat / ::epistemic-reveal) e notas de bastidores
           </label>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
-          <button onClick={onClose} style={{ padding: '0.45rem 0.9rem', borderRadius: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+          <button onClick={onClose} style={{ padding: '0.45rem 0.9rem', borderRadius: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8rem', cursor: 'pointer' }}>
             Cancelar
           </button>
-          <button onClick={handleDownload} style={{ padding: '0.45rem 1rem', borderRadius: '6px', background: 'var(--accent)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Download size={14} /> Compilar e Baixar
+          <button
+            disabled={compiling}
+            onClick={() => void handleDownload()}
+            style={{ padding: '0.45rem 1rem', borderRadius: '6px', background: 'var(--accent)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', opacity: compiling ? 0.65 : 1 }}
+          >
+            <Download size={14} /> {compiling ? 'Compilando…' : 'Compilar e Baixar'}
           </button>
         </div>
       </div>

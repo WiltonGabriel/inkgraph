@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Lock } from 'lucide-react';
+import { Trash2, Lock, Share2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import {
   calculateCharacterCompleteness,
@@ -13,11 +13,12 @@ interface CharacterDossierTabsProps {
 }
 
 export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
-  const { project, upsertCharacter, deleteCharacter } = useProject();
+  const { project, upsertCharacter, deleteCharacter, promoteCharacterToSeriesSiblings } = useProject();
   const [activeTab, setActiveTab] = useState<
     'profile' | 'arc' | 'relationships' | 'epistemic' | 'notes'
   >('profile');
   const [newSecretText, setNewSecretText] = useState('');
+  const [seriesNotice, setSeriesNotice] = useState<string | null>(null);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -46,23 +47,51 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => deleteCharacter(selected.id)}
-          style={{
-            padding: '6px 12px',
-            backgroundColor: 'rgba(239,68,68,0.12)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 6,
-            color: '#f87171',
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Trash2 size={13} /> Excluir
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {seriesNotice && <span style={{ fontSize: 11.5, color: '#34d399' }}>{seriesNotice}</span>}
+          <button
+            onClick={() => {
+              const updated = promoteCharacterToSeriesSiblings(selected.id);
+              setSeriesNotice(
+                updated > 0
+                  ? `Compartilhado com ${updated} livro(s) da série.`
+                  : 'Nenhum outro livro compartilha esta Coleção/Série.'
+              );
+              setTimeout(() => setSeriesNotice(null), 2600);
+            }}
+            style={{
+              padding: '6px 11px',
+              backgroundColor: '#161c2a',
+              border: '1px solid #2b3448',
+              borderRadius: 6,
+              color: '#93c5fd',
+              fontSize: 12,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Share2 size={13} /> Série
+          </button>
+          <button
+            onClick={() => deleteCharacter(selected.id)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 6,
+              color: '#f87171',
+              fontSize: 12,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Trash2 size={13} /> Excluir
+          </button>
+        </div>
       </div>
 
       <div

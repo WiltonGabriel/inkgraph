@@ -1,10 +1,15 @@
 import { useEffect, type CSSProperties } from 'react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { WelcomePortal } from './components/shell/WelcomePortal';
 import { CommandPalette } from './components/shell/CommandPalette';
 import { Sidebar } from './components/shell/Sidebar';
 import { Header } from './components/shell/Header';
 import { CopilotPanel } from './components/shell/CopilotPanel';
+import { MobileBottomNav } from './components/shell/MobileBottomNav';
+import { QuickCaptureModal } from './components/shell/QuickCaptureModal';
+import { GuidedOnboardingModal } from './components/onboarding/GuidedOnboardingModal';
+import { useViewport } from './hooks/useViewport';
 import { DashboardView } from './views/DashboardView';
 import { ManuscriptView } from './views/ManuscriptView';
 import { WriterStudioView } from './views/WriterStudioView';
@@ -58,8 +63,12 @@ function StudioWorkspace() {
     setShowCommandPalette,
     showCopilot,
     setShowCopilot,
+    showOnboarding,
     createSnapshot,
   } = useProject();
+  const { isMobile } = useViewport();
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
+  const canShowCopilot = showCopilot && settings.copilotEnabled && aiActive;
 
   useEffect(() => {
     const sc = settings.shortcuts;
@@ -119,7 +128,7 @@ function StudioWorkspace() {
 
   const rootStyle: CSSProperties & Record<string, string | number | undefined> = {
     display: 'flex',
-    height: '100vh',
+    height: '100dvh',
     width: '100vw',
     backgroundColor: themePalette.bg,
     color: themePalette.fg,
@@ -143,6 +152,8 @@ function StudioWorkspace() {
 
   return (
     <div style={rootStyle} data-theme={settings.theme} data-density={settings.uiDensity}>
+      {showOnboarding && <GuidedOnboardingModal />}
+      <QuickCaptureModal />
       {showPortal && <WelcomePortal />}
       {showCommandPalette && <CommandPalette />}
 
@@ -159,8 +170,8 @@ function StudioWorkspace() {
       >
         <Header />
 
-        <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
-          {showCopilot && settings.copilotEnabled && settings.copilotPosition === 'left' && (
+        <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+          {!isMobile && canShowCopilot && settings.copilotPosition === 'left' && (
             <CopilotPanel />
           )}
 
@@ -189,10 +200,34 @@ function StudioWorkspace() {
             {activeView === 'help' && <HelpView />}
           </main>
 
-          {showCopilot && settings.copilotEnabled && settings.copilotPosition !== 'left' && (
+          {!isMobile && canShowCopilot && settings.copilotPosition !== 'left' && (
             <CopilotPanel />
           )}
+
+          {isMobile && canShowCopilot && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 185,
+                backgroundColor: 'rgba(6, 8, 13, 0.78)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
+              }}
+              onClick={() => setShowCopilot(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ height: '78dvh', width: '100%', display: 'flex' }}
+              >
+                <CopilotPanel />
+              </div>
+            </div>
+          )}
         </div>
+
+        {isMobile && !showPortal && <MobileBottomNav />}
       </div>
     </div>
   );

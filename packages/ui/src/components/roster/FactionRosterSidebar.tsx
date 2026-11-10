@@ -14,6 +14,7 @@ interface FactionRosterSidebarProps {
   search: string;
   onSearchChange: (q: string) => void;
   onCreateFaction: (withAi: boolean) => void;
+  showAiAction?: boolean;
 }
 
 export function FactionRosterSidebar({
@@ -24,6 +25,7 @@ export function FactionRosterSidebar({
   search,
   onSearchChange,
   onCreateFaction,
+  showAiAction = true,
 }: FactionRosterSidebarProps) {
   const avgCompleteness = useMemo(() => {
     if (factions.length === 0) return 0;
@@ -84,23 +86,25 @@ export function FactionRosterSidebar({
             >
               <Plus size={13} /> Nova
             </button>
-            <button
-              onClick={() => onCreateFaction(true)}
-              style={{
-                padding: '5px 8px',
-                backgroundColor: 'rgba(167,139,250,0.15)',
-                border: '1px solid rgba(167,139,250,0.35)',
-                borderRadius: 6,
-                color: '#c4b5fd',
-                fontSize: 11.5,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Sparkles size={13} /> IA
-            </button>
+            {showAiAction && (
+              <button
+                onClick={() => onCreateFaction(true)}
+                style={{
+                  padding: '5px 8px',
+                  backgroundColor: 'rgba(167,139,250,0.15)',
+                  border: '1px solid rgba(167,139,250,0.35)',
+                  borderRadius: 6,
+                  color: '#c4b5fd',
+                  fontSize: 11.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Sparkles size={13} /> IA
+              </button>
+            )}
           </div>
         </div>
 

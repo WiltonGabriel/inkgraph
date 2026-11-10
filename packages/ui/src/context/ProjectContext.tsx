@@ -34,6 +34,9 @@ import {
 } from '../data/initialProjectData';
 import { normalizeWorkspaceData } from '../domain/workspaceNormalizer';
 import { getDictionary, type AppDictionary } from '../i18n/translations';
+import { catalogStorage } from '../storage/indexedDbStorageAdapter';
+import { uiIncarnationTracker } from '../services/aiClient';
+import type { SessionCursor } from '../types/project';
 
 interface ProjectContextValue {
   project: ProjectData;
@@ -41,6 +44,8 @@ interface ProjectContextValue {
   activeWorkspaceId: string;
   settings: AppSettings;
   t: AppDictionary;
+  sessionCursor: SessionCursor | null;
+  storageKind: 'opfs-idb' | 'localstorage' | 'host-vault' | 'tauri-ipc';
   activeView: ViewId;
   setActiveView: (v: ViewId) => void;
   showPortal: boolean;
@@ -49,6 +54,19 @@ interface ProjectContextValue {
   setShowCommandPalette: (v: boolean) => void;
   showCopilot: boolean;
   setShowCopilot: (v: boolean) => void;
+  showOnboarding: boolean;
+  openOnboarding: () => void;
+  completeOnboarding: () => void;
+  showQuickCapture: boolean;
+  setShowQuickCapture: (v: boolean) => void;
+  captureToStaging: (input: {
+    title: string;
+    content: string;
+    entityType: 'scene' | 'character' | 'location';
+  }) => void;
+  showMobileSidebar: boolean;
+  setShowMobileSidebar: (v: boolean) => void;
+  resumeLastSession: () => void;
   activeSceneId: string;
   setActiveSceneId: (id: string) => void;
   totalWordCount: number;
@@ -70,6 +88,9 @@ interface ProjectContextValue {
   toggleArchiveWorkspace: (workspaceId: string) => void;
   exportAllWorkspacesJson: () => string;
   importAllWorkspacesJson: (jsonString: string) => boolean;
+  replaceAllWorkspaces: (items: ProjectData[]) => void;
+  importScenesIntoWorkspace: (title: string, scenes: Scene[], characters: Character[]) => void;
+  promoteCharacterToSeriesSiblings: (characterId: string) => number;
   // Legacy / Single-workspace shortcuts
   loadDemoProject: () => void;
   startBlankProject: (title?: string) => void;
@@ -112,6 +133,7 @@ const STORAGE_KEY_CATALOG = 'inkgraph_workspaces_catalog_v3';
 const STORAGE_KEY_ACTIVE_ID = 'inkgraph_active_workspace_id_v3';
 const STORAGE_KEY_LEGACY_PROJECT = 'inkgraph_project_v2';
 const STORAGE_KEY_SETTINGS = 'inkgraph_settings_v2';
+const STORAGE_KEY_SESSION_CURSOR = 'inkgraph_session_cursor_v1';
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
@@ -200,9 +222,79 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   );
   const [showCommandPalette, setShowCommandPalette] = useState<boolean>(false);
   const [showCopilot, setShowCopilot] = useState<boolean>(false);
+  const [showQuickCapture, setShowQuickCapture] = useState<boolean>(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState<boolean>(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !settings.onboardingCompleted);
+  const [storageHydrated, setStorageHydrated] = useState<boolean>(false);
+  const [storageKind, setStorageKind] = useState<'opfs-idb' | 'localstorage' | 'host-vault' | 'tauri-ipc'>(
+    () => catalogStorage.getStatus().kind
+  );
+  const [sessionCursor, setSessionCursor] = useState<SessionCursor | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_SESSION_CURSOR);
+      return raw ? (JSON.parse(raw) as SessionCursor) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeSceneId, setActiveSceneId] = useState<string>(
     () => project.scenes[0]?.id ?? ''
   );
+
+  // Hydrate cleanly from IndexedDB/OPFS storage on startup (with legacy migration)
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [idbSettings, idbCatalog, idbActiveId, idbCursor] = await Promise.all([
+        catalogStorage.readJson<Partial<AppSettings>>(STORAGE_KEY_SETTINGS),
+        catalogStorage.readJson<unknown[]>(STORAGE_KEY_CATALOG),
+        catalogStorage.readJson<string>(STORAGE_KEY_ACTIVE_ID),
+        catalogStorage.readJson<SessionCursor>(STORAGE_KEY_SESSION_CURSOR),
+      ]);
+      if (!active) return;
+
+      if (idbSettings) {
+        const mergedSettings: AppSettings = {
+          ...DEFAULT_SETTINGS,
+          ...idbSettings,
+          shortcuts: {
+            ...DEFAULT_SETTINGS.shortcuts,
+            ...(idbSettings.shortcuts ?? {}),
+          },
+        };
+        setSettings(mergedSettings);
+        setShowOnboarding(!mergedSettings.onboardingCompleted);
+      }
+
+      if (Array.isArray(idbCatalog) && idbCatalog.length > 0) {
+        const normalized = idbCatalog
+          .map((item) => normalizeWorkspaceData(item))
+          .filter((item): item is ProjectData => item !== null);
+        if (normalized.length > 0) {
+          setWorkspaces(normalized);
+        }
+      }
+
+      if (typeof idbActiveId === 'string' && idbActiveId) {
+        setActiveWorkspaceId(idbActiveId);
+      }
+      if (idbCursor) {
+        setSessionCursor(idbCursor);
+      }
+      setStorageHydrated(true);
+      setStorageKind(catalogStorage.getStatus().kind);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Ensure Copilot closes silently when AI is off/eco
+  useEffect(() => {
+    if (settings.aiMode === 'off' || settings.aiMode === 'eco') {
+      setShowCopilot(false);
+    }
+  }, [settings.aiMode]);
 
   // Sync activeSceneId when switching workspaces
   useEffect(() => {
@@ -212,22 +304,48 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [project, activeSceneId]);
 
   useEffect(() => {
+    if (!storageHydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY_CATALOG, JSON.stringify(workspaces));
       localStorage.setItem(STORAGE_KEY_LEGACY_PROJECT, JSON.stringify(project));
       localStorage.setItem(STORAGE_KEY_ACTIVE_ID, project.id);
     } catch {
-      // Ignore storage quota errors
+      // Ignore localStorage quota overflow; IndexedDB persists primary catalog
     }
-  }, [workspaces, project]);
+    void catalogStorage.writeJson(STORAGE_KEY_CATALOG, workspaces);
+    void catalogStorage.writeJson(STORAGE_KEY_ACTIVE_ID, project.id);
+    setStorageKind(catalogStorage.getStatus().kind);
+  }, [workspaces, project, storageHydrated]);
 
   useEffect(() => {
+    if (!storageHydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
     } catch {
       // Ignore
     }
-  }, [settings]);
+    void catalogStorage.writeJson(STORAGE_KEY_SETTINGS, settings);
+  }, [settings, storageHydrated]);
+
+  // Persist "Continuar de onde parou" session cursor cleanly
+  useEffect(() => {
+    if (!storageHydrated || showPortal) return;
+    const nextCursor: SessionCursor = {
+      lastWorkspaceId: project.id,
+      lastView: activeView,
+      lastSceneId: activeSceneId || null,
+      scrollRatio: 0,
+      deviceName: settings.deviceName || 'Desktop',
+      updatedAt: new Date().toISOString(),
+    };
+    setSessionCursor(nextCursor);
+    try {
+      localStorage.setItem(STORAGE_KEY_SESSION_CURSOR, JSON.stringify(nextCursor));
+    } catch {
+      // Ignore
+    }
+    void catalogStorage.writeJson(STORAGE_KEY_SESSION_CURSOR, nextCursor);
+  }, [project.id, activeView, activeSceneId, settings.deviceName, showPortal, storageHydrated]);
 
   const t = useMemo(() => getDictionary(settings.language), [settings.language]);
 
@@ -252,12 +370,90 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const resetSettingsToDefault = () => {
-    setSettings(DEFAULT_SETTINGS);
+    setSettings({ ...DEFAULT_SETTINGS, onboardingCompleted: settings.onboardingCompleted });
+  };
+
+  const openOnboarding = () => {
+    setShowOnboarding(true);
+  };
+
+  const completeOnboarding = () => {
+    setShowOnboarding(false);
+    setSettings((prev) => ({ ...prev, onboardingCompleted: true }));
+  };
+
+  const resumeLastSession = () => {
+    const cursor = sessionCursor;
+    if (!cursor) {
+      setShowPortal(false);
+      return;
+    }
+    uiIncarnationTracker.bump();
+    const targetWs = workspaces.find((w) => w.id === cursor.lastWorkspaceId);
+    if (targetWs) {
+      setActiveWorkspaceId(targetWs.id);
+      if (cursor.lastSceneId && targetWs.scenes.some((s) => s.id === cursor.lastSceneId)) {
+        setActiveSceneId(cursor.lastSceneId);
+      }
+      setActiveView((cursor.lastView as ViewId) || settings.defaultOpeningView || 'manuscript');
+    }
+    setShowPortal(false);
+  };
+
+  const captureToStaging = (input: {
+    title: string;
+    content: string;
+    entityType: 'scene' | 'character' | 'location';
+  }) => {
+    const cleanTitle = input.title.trim() || 'Captura Rápida';
+    const cleanContent = input.content.trim();
+    if (!cleanContent) return;
+
+    const id = `stg_cap_${Date.now()}`;
+    const slug = cleanTitle
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'captura';
+
+    const folderMap = {
+      scene: 'manuscript',
+      character: 'lore/characters',
+      location: 'lore/worlds',
+    } as const;
+
+    updateProject((prev) => ({
+      ...prev,
+      stagingProposals: [
+        {
+          id,
+          fileName: `${slug}.md`,
+          targetPath: `./workspace/staging/${slug}.md`,
+          canonicalPath: `./workspace/${folderMap[input.entityType]}/${slug}.md`,
+          entityType: input.entityType,
+          entityName: cleanTitle,
+          action: 'create',
+          rationale: `Captura rápida registrada (${settings.deviceName || 'Dispositivo local'}).`,
+          createdAt: new Date().toISOString(),
+          status: 'pending',
+          epistemicImpact: [],
+          proposedFrontmatter: {
+            id: `${input.entityType}_${Date.now()}`,
+            name: cleanTitle,
+            status: 'draft',
+          },
+          proposedMarkdown: cleanContent,
+        },
+        ...prev.stagingProposals,
+      ],
+    }));
   };
 
   const switchWorkspace = (workspaceId: string, targetView?: ViewId) => {
     const target = workspaces.find((w) => w.id === workspaceId);
     if (!target) return;
+    uiIncarnationTracker.bump();
     const now = new Date().toISOString();
     setWorkspaces((prev) =>
       prev.map((w) => (w.id === workspaceId ? { ...w, lastOpenedAt: now } : w))
@@ -790,6 +986,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const restoreSnapshot = (snapshotId: string) => {
+    uiIncarnationTracker.bump();
     updateProject((prev) => {
       const target = prev.snapshots.find((s) => s.id === snapshotId);
       if (!target || target.scenesBackup.length === 0) return prev;
@@ -824,6 +1021,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const switchBranch = (branchId: string) => {
+    uiIncarnationTracker.bump();
     updateProject((prev) => {
       if (branchId === prev.activeBranchId) return prev;
       const targetBranch = prev.branches.find((b) => b.id === branchId);
@@ -1131,6 +1329,64 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const replaceAllWorkspaces = (items: ProjectData[]) => {
+    const normalized = items
+      .map((item) => normalizeWorkspaceData(item))
+      .filter((item): item is ProjectData => item !== null);
+    if (normalized.length === 0) return;
+    uiIncarnationTracker.bump();
+    setWorkspaces(normalized);
+    setActiveWorkspaceId(normalized[0]!.id);
+    setActiveSceneId(normalized[0]!.scenes[0]?.id ?? '');
+  };
+
+  const importScenesIntoWorkspace = (
+    title: string,
+    scenes: Scene[],
+    characters: Character[]
+  ) => {
+    const now = new Date().toISOString();
+    const blank = createBlankProjectData(title || 'Importado');
+    const ws: ProjectData = {
+      ...blank,
+      id: `ws_${Date.now()}`,
+      scenes: scenes.length > 0 ? scenes : blank.scenes,
+      characters,
+      updatedAt: now,
+      lastOpenedAt: now,
+    };
+    uiIncarnationTracker.bump();
+    setWorkspaces((prev) => [ws, ...prev]);
+    setActiveWorkspaceId(ws.id);
+    setActiveSceneId(ws.scenes[0]?.id ?? '');
+    setShowPortal(false);
+    setActiveView('manuscript');
+  };
+
+  const promoteCharacterToSeriesSiblings = (characterId: string): number => {
+    const sourceChar = project.characters.find((c) => c.id === characterId);
+    const seriesTag = (project.seriesId || project.folderOrTag || '').trim();
+    if (!sourceChar || !seriesTag) return 0;
+
+    let updatedCount = 0;
+    setWorkspaces((prev) =>
+      prev.map((ws) => {
+        if (ws.id === project.id) return ws;
+        const siblingTag = (ws.seriesId || ws.folderOrTag || '').trim();
+        if (siblingTag !== seriesTag) return ws;
+        updatedCount += 1;
+        const exists = ws.characters.some((c) => c.id === sourceChar.id);
+        return {
+          ...ws,
+          characters: exists
+            ? ws.characters.map((c) => (c.id === sourceChar.id ? sourceChar : c))
+            : [...ws.characters, sourceChar],
+        };
+      })
+    );
+    return updatedCount;
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -1139,6 +1395,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         activeWorkspaceId: project.id,
         settings,
         t,
+        sessionCursor,
+        storageKind,
         activeView,
         setActiveView,
         showPortal,
@@ -1147,6 +1405,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setShowCommandPalette,
         showCopilot,
         setShowCopilot,
+        showOnboarding,
+        openOnboarding,
+        completeOnboarding,
+        showQuickCapture,
+        setShowQuickCapture,
+        captureToStaging,
+        showMobileSidebar,
+        setShowMobileSidebar,
+        resumeLastSession,
         activeSceneId,
         setActiveSceneId,
         totalWordCount,
@@ -1161,6 +1428,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         toggleArchiveWorkspace,
         exportAllWorkspacesJson,
         importAllWorkspacesJson,
+        replaceAllWorkspaces,
+        importScenesIntoWorkspace,
+        promoteCharacterToSeriesSiblings,
         loadDemoProject,
         startBlankProject,
         applyTemplateToProject,

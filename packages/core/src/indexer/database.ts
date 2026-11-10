@@ -1,6 +1,13 @@
 import Database from "better-sqlite3";
-import type { BaseEntity, LoreDocument, Relationship } from "../domain/entity";
-import { InkGraphError } from "../domain/errors";
+import type {
+  BaseEntity,
+  LoreDocument,
+  Relationship,
+  VaultDocumentRecord,
+  VaultParseFailure,
+  VaultSection,
+} from "@inkgraph/domain";
+import { InkGraphError } from "@inkgraph/domain";
 import {
   LORE_DB_SCHEMA_SQL,
   type EpistemicStateResult,
@@ -28,6 +35,18 @@ export class LoreDatabase {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.db.exec(LORE_DB_SCHEMA_SQL);
+    this.ensureOptionalEntityColumns();
+  }
+
+  private ensureOptionalEntityColumns(): void {
+    const columns = this.db.prepare(`PRAGMA table_info(entities)`).all() as { name: string }[];
+    const colSet = new Set(columns.map((c) => c.name));
+    if (!colSet.has("archived_at")) {
+      this.db.exec(`ALTER TABLE entities ADD COLUMN archived_at TEXT`);
+    }
+    if (!colSet.has("fractional_order")) {
+      this.db.exec(`ALTER TABLE entities ADD COLUMN fractional_order TEXT`);
+    }
   }
 
   public upsertEntity(doc: LoreDocument): void {
@@ -35,14 +54,16 @@ export class LoreDatabase {
     const now = Date.now();
 
     const insertEntityStmt = this.db.prepare(`
-      INSERT INTO entities (id, type, subtype, name, status, revealed_at_scene, file_path, body, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO entities (id, type, subtype, name, status, revealed_at_scene, archived_at, fractional_order, file_path, body, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         type = excluded.type,
         subtype = excluded.subtype,
         name = excluded.name,
         status = excluded.status,
         revealed_at_scene = excluded.revealed_at_scene,
+        archived_at = excluded.archived_at,
+        fractional_order = excluded.fractional_order,
         file_path = excluded.file_path,
         body = excluded.body,
         updated_at = excluded.updated_at
@@ -83,6 +104,8 @@ export class LoreDatabase {
         frontmatter.name,
         frontmatter.status,
         frontmatter.epistemic.revealed_at_scene ?? null,
+        frontmatter.archived_at ?? null,
+        frontmatter.fractional_order ?? null,
         filePath,
         markdownBody,
         now
@@ -236,7 +259,12 @@ export class LoreDatabase {
     };
   }
 
-  public listEntities(filter?: { type?: string; tag?: string; status?: string }): {
+  public listEntities(filter?: {
+    type?: string;
+    tag?: string;
+    status?: string;
+    includeArchived?: boolean;
+  }): {
     id: string;
     name: string;
     type: string;
@@ -250,6 +278,9 @@ export class LoreDatabase {
     `;
     const params: any[] = [];
 
+    if (!filter?.includeArchived) {
+      query += ` AND e.archived_at IS NULL`;
+    }
     if (filter?.type) {
       query += ` AND e.type = ?`;
       params.push(filter.type);
@@ -263,7 +294,7 @@ export class LoreDatabase {
       params.push(filter.tag.toLowerCase());
     }
 
-    query += ` ORDER BY e.name ASC`;
+    query += ` ORDER BY COALESCE(e.fractional_order, e.name) ASC, e.name ASC`;
     return this.db.prepare(query).all(...params) as any[];
   }
 
@@ -306,6 +337,127 @@ export class LoreDatabase {
         FROM relationships
       `)
       .all() as any[];
+  }
+
+  public upsertVaultDocument(doc: VaultDocumentRecord): void {
+    const upsertStmt = this.db.prepare(`
+      INSERT INTO vault_documents (
+        id, section, title, status, file_path, body, metadata_json, archived_at, fractional_order, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        section = excluded.section,
+        title = excluded.title,
+        status = excluded.status,
+        file_path = excluded.file_path,
+        body = excluded.body,
+        metadata_json = excluded.metadata_json,
+        archived_at = excluded.archived_at,
+        fractional_order = excluded.fractional_order,
+        updated_at = excluded.updated_at
+    `);
+    const deleteFts = this.db.prepare(`DELETE FROM vault_documents_fts WHERE doc_id = ?`);
+    const insertFts = this.db.prepare(`
+      INSERT INTO vault_documents_fts (doc_id, section, title, body)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const tx = this.db.transaction(() => {
+      upsertStmt.run(
+        doc.id,
+        doc.section,
+        doc.title,
+        doc.status,
+        doc.filePath,
+        doc.body,
+        doc.metadataJson,
+        doc.archivedAt,
+        doc.fractionalOrder,
+        doc.updatedAt
+      );
+      deleteFts.run(doc.id);
+      insertFts.run(doc.id, doc.section, doc.title, doc.body);
+    });
+    tx();
+  }
+
+  public listVaultDocuments(filter?: {
+    section?: VaultSection;
+    includeArchived?: boolean;
+  }): VaultDocumentRecord[] {
+    let query = `
+      SELECT id, section, title, status, file_path as filePath, body,
+             metadata_json as metadataJson, archived_at as archivedAt,
+             fractional_order as fractionalOrder, updated_at as updatedAt
+      FROM vault_documents
+      WHERE 1=1
+    `;
+    const params: unknown[] = [];
+
+    if (filter?.section) {
+      query += ` AND section = ?`;
+      params.push(filter.section);
+    }
+    if (!filter?.includeArchived) {
+      query += ` AND archived_at IS NULL`;
+    }
+
+    query += ` ORDER BY COALESCE(fractional_order, file_path) ASC, title ASC`;
+    return this.db.prepare(query).all(...params) as VaultDocumentRecord[];
+  }
+
+  public searchVaultDocuments(
+    query: string,
+    section?: VaultSection,
+    limit = 20
+  ): { doc_id: string; section: VaultSection; title: string; snippet: string }[] {
+    const tokens = query.trim().match(/[\p{L}\p{N}_]+/gu) ?? [];
+    if (tokens.length === 0) return [];
+    const safeFtsQuery = tokens.map((token) => `"${token}"*`).join(" ");
+
+    let sql = `
+      SELECT doc_id, section, title, snippet(vault_documents_fts, 3, '<b>', '</b>', '...', 15) as snippet
+      FROM vault_documents_fts
+      WHERE vault_documents_fts MATCH ?
+    `;
+    const params: unknown[] = [safeFtsQuery];
+
+    if (section) {
+      sql += ` AND section = ?`;
+      params.push(section);
+    }
+    sql += ` LIMIT ?`;
+    params.push(limit);
+
+    return this.db.prepare(sql).all(...params) as {
+      doc_id: string;
+      section: VaultSection;
+      title: string;
+      snippet: string;
+    }[];
+  }
+
+  public clearParseFailures(): void {
+    this.db.prepare(`DELETE FROM vault_parse_errors`).run();
+  }
+
+  public recordParseFailure(failure: VaultParseFailure): void {
+    this.db
+      .prepare(`
+        INSERT INTO vault_parse_errors (file_path, section, error, recorded_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(file_path) DO UPDATE SET
+          section = excluded.section,
+          error = excluded.error,
+          recorded_at = excluded.recorded_at
+      `)
+      .run(failure.filePath, failure.section, failure.error, Date.now());
+  }
+
+  public getParseFailures(): VaultParseFailure[] {
+    return this.db
+      .prepare(`SELECT file_path as filePath, section, error FROM vault_parse_errors ORDER BY recorded_at DESC`)
+      .all() as VaultParseFailure[];
   }
 
   public close(): void {

@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../context/ProjectContext';
+import { runAiCompletion } from '../services/aiClient';
 import {
   calculateCharacterCompleteness,
   type Character,
@@ -8,7 +10,8 @@ import { CharacterRosterSidebar } from '../components/roster/CharacterRosterSide
 import { CharacterDossierTabs } from '../components/roster/CharacterDossierTabs';
 
 export function CharacterStudioView() {
-  const { project, upsertCharacter } = useProject();
+  const { project, settings, upsertCharacter } = useProject();
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
 
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'completeDesc' | 'completeAsc'>('completeDesc');
@@ -17,6 +20,8 @@ export function CharacterStudioView() {
   );
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiConcept, setAiConcept] = useState('');
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const filteredCharacters = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -69,31 +74,56 @@ export function CharacterStudioView() {
     setSelectedId(newChar.id);
   };
 
-  const handleCreateWithAi = () => {
-    const concept = aiConcept.trim() || 'um estrategista marcado pelo passado';
+  const handleCreateWithAi = async () => {
+    const concept = aiConcept.trim();
+    if (!concept || aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+
+    const res = await runAiCompletion({
+      settings,
+      systemPrompt:
+        'Return strictly valid JSON with keys: name, role, appearance, backstory, motivation, personalityTraits, flaws, want, need, lieBelieved, ghost. Language matches user prompt.',
+      userPrompt: `Project: ${project.title}. Character concept: ${concept}`,
+    });
+
+    setAiLoading(false);
+    if (!res.ok) {
+      setAiError(res.error);
+      return;
+    }
+
+    let parsed: Partial<Character> = {};
+    try {
+      const jsonMatch = /\{[\s\S]*\}/.exec(res.text);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : res.text) as Partial<Character>;
+    } catch {
+      parsed = { backstory: res.text };
+    }
+
     const newChar: Character = {
       id: `char_${Date.now()}`,
-      name: concept.split(' ').slice(0, 3).join(' '),
-      aliases: ['O Silencioso'],
-      role: 'Personagem Gerado',
+      name: parsed.name || concept.split(' ').slice(0, 3).join(' '),
+      aliases: [],
+      role: parsed.role || 'Coadjuvante',
       archetype: 'shapeshifter',
       status: 'provisional',
       avatarColor: '#a855f7',
-      appearance: `Presença marcante que reflete sua origem ligada a: ${concept}.`,
-      backstory: `Moldado por eventos formativos severos ligados a ${concept}, carrega dívidas antigas com as facções locais.`,
-      motivation: `Um desejo central conectado a ${concept} guia todas as suas escolhas.`,
-      personalityTraits: 'Engenhoso, reservado, determinado sob pressão.',
-      flaws: 'Desconfiança profunda que complica alianças duradouras.',
-      want: `Conquistar autonomia e resolver a pendência de ${concept}.`,
-      need: 'Aprender a confiar nos aliados antes do colapso final.',
-      lieBelieved: 'Acredita que qualquer vínculo pessoal é uma vulnerabilidade explorável.',
-      ghost: 'Um juramento quebrado durante a crise anterior.',
-      arcAct1: 'Atua nas sombras defendendo apenas seus próprios interesses.',
-      arcAct2: 'Forçado a escolher um lado quando o conflito atinge seus protegidos.',
-      arcAct3: 'Assume o risco final para salvar o grupo.',
-      characterArc: `Começa fechado em si mesmo e, ao longo da trama, é transformado por ${concept}.`,
+      appearance: parsed.appearance || '',
+      backstory: parsed.backstory || '',
+      motivation: parsed.motivation || '',
+      personalityTraits: parsed.personalityTraits || '',
+      flaws: parsed.flaws || '',
+      want: parsed.want || '',
+      need: parsed.need || '',
+      lieBelieved: parsed.lieBelieved || '',
+      ghost: parsed.ghost || '',
+      arcAct1: '',
+      arcAct2: '',
+      arcAct3: '',
+      characterArc: '',
       notes: '',
-      tags: ['gerado', 'elenco'],
+      tags: ['ia-provisional'],
       relationships: [],
       epistemicSecrets: [],
     };
@@ -115,7 +145,11 @@ export function CharacterStudioView() {
         sortBy={sortBy}
         onSortChange={setSortBy}
         onCreateManual={handleCreateManual}
-        onOpenAiModal={() => setShowAiModal(true)}
+        onOpenAiModal={() => {
+          setAiError(null);
+          setShowAiModal(true);
+        }}
+        showAiAction={aiActive}
       />
 
       {selected ? (
@@ -193,6 +227,11 @@ export function CharacterStudioView() {
                 marginBottom: 14,
               }}
             />
+            {aiError && (
+              <div style={{ fontSize: 12, color: '#fbbf24', marginBottom: 10 }}>
+                {aiError}
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
                 onClick={() => setShowAiModal(false)}
@@ -209,7 +248,8 @@ export function CharacterStudioView() {
                 Cancelar
               </button>
               <button
-                onClick={handleCreateWithAi}
+                onClick={() => void handleCreateWithAi()}
+                disabled={aiLoading || !aiConcept.trim()}
                 style={{
                   padding: '7px 14px',
                   backgroundColor: '#7c3aed',
@@ -218,10 +258,11 @@ export function CharacterStudioView() {
                   color: '#fff',
                   fontSize: 12,
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: aiLoading ? 'wait' : 'pointer',
+                  opacity: aiLoading || !aiConcept.trim() ? 0.6 : 1,
                 }}
               >
-                Gerar Perfil
+                {aiLoading ? 'Gerando...' : 'Gerar Perfil'}
               </button>
             </div>
           </div>

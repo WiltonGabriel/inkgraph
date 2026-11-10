@@ -182,6 +182,53 @@ export function EditorSettingsTab() {
             <span>{isEn ? 'Show estimated reading time' : 'Exibir estimativa de tempo de leitura'}</span>
           </label>
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>
+              {isEn ? 'Default Manuscript Mode' : 'Modo Padrão do Editor'}
+            </span>
+            <select
+              value={settings.editorMode}
+              onChange={(e) => setField('editorMode', e.target.value as AppSettings['editorMode'])}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '0.45rem 0.6rem',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <option value="rich">{isEn ? 'Blocks / Focus (TipTap)' : 'Blocos / Foco (TipTap)'}</option>
+              <option value="markdown">{isEn ? 'Raw Markdown (CodeMirror)' : 'Markdown Fonte (CodeMirror)'}</option>
+            </select>
+          </label>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={settings.languageToolEnabled}
+                onChange={(e) => setField('languageToolEnabled', e.target.checked)}
+              />
+              <span>{isEn ? 'Local LanguageTool Grammar Check (Opt-in)' : 'LanguageTool Local de Gramática (Opcional)'}</span>
+            </label>
+            <input
+              value={settings.languageToolUrl}
+              onChange={(e) => setField('languageToolUrl', e.target.value)}
+              disabled={!settings.languageToolEnabled}
+              placeholder="http://localhost:8010/v2/check"
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '0.42rem 0.6rem',
+                color: 'var(--text-primary)',
+                opacity: settings.languageToolEnabled ? 1 : 0.5,
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Amostra ao Vivo */}

@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<SceneStatus, string> = {
 };
 
 export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
-  const { project, activeSceneId, setActiveSceneId, upsertScene } = useProject();
+  const { project, activeSceneId, setActiveSceneId, setActiveView, upsertScene } = useProject();
 
   const toggleSceneSubplot = (scene: Scene, subplotId: string) => {
     const exists = scene.subplotIds.includes(subplotId);
@@ -57,7 +57,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, height: '100%', overflowY: 'auto' }}>
       {ACTS.map(({ act, label }) => {
         const scenes = project.scenes.filter(
           (s) => s.act === act && (!selectedSubplotId || s.subplotIds.includes(selectedSubplotId))
@@ -97,6 +97,11 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                   <div
                     key={scene.id}
                     onClick={() => setActiveSceneId(scene.id)}
+                    onDoubleClick={() => {
+                      setActiveSceneId(scene.id);
+                      setActiveView('manuscript');
+                    }}
+                    title="Clique para selecionar · Duplo-clique para abrir no Manuscrito"
                     style={{
                       padding: 12,
                       borderRadius: 7,

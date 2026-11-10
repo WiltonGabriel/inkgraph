@@ -1,3 +1,8 @@
+import type { AiMode, AiProviderId, SessionCursor } from '@inkgraph/domain';
+import type { AgentWriteGovernance } from '@inkgraph/capabilities';
+
+export type { AiMode, AiProviderId, SessionCursor, AgentWriteGovernance };
+
 export type ViewId =
   | 'dashboard'
   | 'manuscript'
@@ -421,6 +426,8 @@ export interface AppSettings {
   defaultOpeningView: ViewId;
   autosaveIntervalSeconds: number;
   confirmDestructiveActions: boolean;
+  onboardingCompleted: boolean;
+  deviceName: string;
 
   // 2. Aparência & Interface
   theme: 'dark' | 'light' | 'sepia';
@@ -444,15 +451,20 @@ export interface AppSettings {
   spellcheck: boolean;
   showWordCountFooter: boolean;
   showReadingTimeEstimate: boolean;
+  editorMode: 'rich' | 'markdown';
+  languageToolEnabled: boolean;
+  languageToolUrl: string;
 
   // 4. Inteligência Artificial & MCP
-  aiMode: 'cloud' | 'local' | 'hybrid' | 'eco';
-  aiProvider: 'gemini' | 'ollama' | 'openai' | 'mcp';
+  aiMode: AiMode;
+  aiProvider: AiProviderId;
   geminiApiKey: string;
   ollamaUrl: string;
   ollamaModel: string;
   mcpServerPort: number;
   mcpAutoSyncVault: boolean;
+  mcpGovernance: AgentWriteGovernance;
+  mcpToken: string;
   aiTemperature: number;
   aiMaxTokens: number;
   copilotEnabled: boolean;
@@ -466,13 +478,19 @@ export interface AppSettings {
   epistemicAlertsInEditor: boolean;
   dailyGoalReminder: boolean;
 
-  // 7. Armazenamento & Backup
+  // 7. Armazenamento, Sync & Backup
   autoSnapshotOnClose: boolean;
   maxSnapshotsPerWorkspace: number;
+  lanSyncUrl: string;
+  lanSyncToken: string;
+  googleDriveClientId: string;
+  googleDriveAccessToken: string;
+  syncLastHashes: Record<string, string>;
 }
 
 export interface ProjectData {
   id: string;
+  seriesId?: string;
   title: string;
   logline: string;
   genre: string;

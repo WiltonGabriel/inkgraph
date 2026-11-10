@@ -33,8 +33,7 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "get_entity",
-    description:
-      "Resolve any alias, title, or ID to the full entity dossier",
+    description: "Resolve any alias, title, or ID to the full entity dossier",
     inputSchema: {
       type: "object",
       properties: {
@@ -139,8 +138,7 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "propose_scene",
-    description:
-      "Generate a scene draft in ./workspace/staging/ respecting continuity rules",
+    description: "Generate a scene draft in ./workspace/staging/ respecting continuity rules",
     inputSchema: {
       type: "object",
       properties: {
@@ -183,6 +181,95 @@ export const MCP_TOOL_DEFINITIONS = [
     inputSchema: {
       type: "object",
       properties: {},
+    },
+  },
+  {
+    name: "resume_work",
+    description:
+      "Return an instant studio briefing: manuscript count, pending staging proposals, parse errors, and active undo history",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "read_manuscript",
+    description:
+      "Read a manuscript scene with word pagination (max_words and word cursor) so context limits are respected",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scene_id: {
+          type: "string",
+          description: "Manuscript document ID (omit to list available manuscript scenes)",
+        },
+        cursor: {
+          type: "number",
+          description: "Word offset cursor (default 0)",
+        },
+        max_words: {
+          type: "number",
+          description: "Max words per page (default 400)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_scene_context",
+    description:
+      "Return scene prose, POV metadata, and strictly filtered epistemic state (known facts vs withheld secrets)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scene_id: { type: "string" },
+        pov_entity_id: { type: "string" },
+      },
+      required: ["scene_id"],
+    },
+  },
+  {
+    name: "propose_prose_edit",
+    description:
+      "Edit or stage a prose replacement using expected_version and dry_run. Direct disk edits require 'draft_copilot' governance on draft scenes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scene_id: { type: "string" },
+        expected_version: { type: "number" },
+        proposed_content: { type: "string" },
+        rationale: { type: "string" },
+        client_name: { type: "string" },
+        dry_run: { type: "boolean" },
+      },
+      required: ["scene_id", "expected_version", "proposed_content", "rationale"],
+    },
+  },
+  {
+    name: "undo_change_set",
+    description: "Revert a recent direct draft edit by its undo_id within 24 hours",
+    inputSchema: {
+      type: "object",
+      properties: {
+        undo_id: { type: "string" },
+      },
+      required: ["undo_id"],
+    },
+  },
+  {
+    name: "upsert_beat",
+    description:
+      "Insert or update an inline ::beat{id} or ::epistemic-reveal directive inside a staged scene draft",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scene_id: { type: "string" },
+        beat_id: { type: "string" },
+        kind: { type: "string", enum: ["beat", "epistemic-reveal"] },
+        body: { type: "string" },
+        entity_id: { type: "string" },
+        secret: { type: "string" },
+      },
+      required: ["scene_id", "beat_id", "body"],
     },
   },
 ];

@@ -1,7 +1,7 @@
 {
   "name": "@inkgraph/core",
   "version": "0.1.0",
-  "description": "Core domain logic, markdown frontmatter parser, sqlite indexer, and graph resolver for InkGraph",
+  "description": "Node/SQLite FTS5 vault indexer, filesystem sync/watcher, and graph resolver for InkGraph",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "scripts": {
@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@inkgraph/capabilities": "workspace:*",
+    "@inkgraph/domain": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"

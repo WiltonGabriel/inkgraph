@@ -1,12 +1,22 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
-import { InkGraphError } from "../domain/errors";
-import { parseLoreMarkdown } from "../parser/markdownParser";
-import type { LoreDatabase } from "../indexer/database";
+import {
+  InkGraphError,
+  parseLoreMarkdown,
+  parseVaultDocument,
+  type VaultSection,
+} from "@inkgraph/domain";
+import type { LoreDatabase } from "./database";
 
 export interface SyncStats {
   readonly processed: number;
   readonly errors: { file: string; error: string }[];
+}
+
+export interface FullVaultSyncReport {
+  readonly loreProcessed: number;
+  readonly documentsProcessed: number;
+  readonly errors: { file: string; section: VaultSection; error: string }[];
 }
 
 /**
@@ -45,42 +55,115 @@ export function resolveSafeStagingPath(stagingDir: string, rawFilename: string):
   return resolvedTarget;
 }
 
+function collectMarkdownFiles(dirPath: string): string[] {
+  if (!existsSync(dirPath)) return [];
+  const results: string[] = [];
+
+  function walk(currentPath: string): void {
+    const entries = readdirSync(currentPath);
+    for (const entry of entries) {
+      const fullPath = join(currentPath, entry);
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) {
+        walk(fullPath);
+      } else if (stat.isFile() && fullPath.endsWith(".md")) {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  walk(dirPath);
+  return results;
+}
+
 /**
- * Recursively scans directory and syncs all markdown files into the SQLite database.
+ * Recursively scans a lore directory and syncs entity Markdown files into SQLite.
  */
 export function syncWorkspaceDirectory(dirPath: string, db: LoreDatabase): SyncStats {
   let processed = 0;
   const errors: { file: string; error: string }[] = [];
 
-  if (!existsSync(dirPath)) {
-    return { processed: 0, errors: [] };
+  for (const fullPath of collectMarkdownFiles(dirPath)) {
+    try {
+      const content = readFileSync(fullPath, "utf-8");
+      const doc = parseLoreMarkdown(content, fullPath);
+      db.upsertEntity(doc);
+      processed += 1;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ file: fullPath, error: message });
+    }
   }
 
-  function scan(currentPath: string): void {
-    const entries = readdirSync(currentPath);
+  return { processed, errors };
+}
 
-    for (const entry of entries) {
-      const fullPath = join(currentPath, entry);
-      const stat = statSync(fullPath);
+const NON_LORE_SECTIONS: readonly { dir: string; section: VaultSection }[] = [
+  { dir: "manuscript", section: "manuscript" },
+  { dir: "timeline", section: "timeline" },
+  { dir: "staging", section: "staging" },
+  { dir: "uploads", section: "uploads" },
+];
 
-      if (stat.isDirectory()) {
-        scan(fullPath);
-      } else if (stat.isFile() && fullPath.endsWith(".md")) {
-        try {
-          const content = readFileSync(fullPath, "utf-8");
-          const doc = parseLoreMarkdown(content, fullPath);
-          db.upsertEntity(doc);
-          processed += 1;
-        } catch (err: any) {
-          errors.push({
-            file: fullPath,
-            error: err.message ?? String(err),
-          });
-        }
+/**
+ * Indexes all workspace subdirectories (`lore/`, `shared-lore/`, `manuscript/`,
+ * `timeline/`, `staging/`, `uploads/`) without dropping broken files silently.
+ */
+export function syncFullWorkspaceVault(
+  workspaceRoot: string,
+  db: LoreDatabase,
+  options?: { sharedSeriesDir?: string }
+): FullVaultSyncReport {
+  db.clearParseFailures();
+
+  let loreProcessed = 0;
+  let documentsProcessed = 0;
+  const allErrors: FullVaultSyncReport["errors"] = [];
+
+  const loreDirs: { path: string; section: VaultSection }[] = [
+    { path: join(workspaceRoot, "lore"), section: "lore" },
+  ];
+  if (options?.sharedSeriesDir) {
+    loreDirs.unshift({ path: options.sharedSeriesDir, section: "series" });
+  }
+
+  for (const dirEntry of loreDirs) {
+    const stats = syncWorkspaceDirectory(dirEntry.path, db);
+    loreProcessed += stats.processed;
+    for (const err of stats.errors) {
+      const failure = { file: err.file, section: dirEntry.section, error: err.error };
+      allErrors.push(failure);
+      db.recordParseFailure({
+        filePath: err.file,
+        section: dirEntry.section,
+        error: err.error,
+      });
+    }
+  }
+
+  for (const target of NON_LORE_SECTIONS) {
+    const sectionDir = join(workspaceRoot, target.dir);
+    for (const fullPath of collectMarkdownFiles(sectionDir)) {
+      try {
+        const content = readFileSync(fullPath, "utf-8");
+        const doc = parseVaultDocument(content, fullPath, target.section);
+        db.upsertVaultDocument(doc);
+        documentsProcessed += 1;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        allErrors.push({ file: fullPath, section: target.section, error: message });
+        db.recordParseFailure({
+          filePath: fullPath,
+          section: target.section,
+          error: message,
+        });
       }
     }
   }
 
-  scan(dirPath);
-  return { processed, errors };
+  return {
+    loreProcessed,
+    documentsProcessed,
+    errors: allErrors,
+  };
 }

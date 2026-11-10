@@ -4,6 +4,7 @@ import { MySpaceTopBar } from '../home/MySpaceTopBar';
 import { GlobalCatalogMetricsBar } from '../home/GlobalCatalogMetricsBar';
 import { LastWorkspaceBanner } from '../home/LastWorkspaceBanner';
 import { QuickCreationBar } from '../home/QuickCreationBar';
+import { GlobalWorkspaceSearch } from '../home/GlobalWorkspaceSearch';
 import {
   WorkspaceFilterBar,
   type WorkspaceFilterTab,
@@ -83,7 +84,7 @@ export function HomeMySpaceView() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '24px 28px 40px',
+          padding: '18px clamp(14px, 3vw, 28px) 40px',
           maxWidth: 1240,
           width: '100%',
           margin: '0 auto',
@@ -110,6 +111,7 @@ export function HomeMySpaceView() {
             </div>
 
             <GlobalCatalogMetricsBar />
+            <GlobalWorkspaceSearch />
             <LastWorkspaceBanner />
             <QuickCreationBar />
             <WorkspaceFilterBar

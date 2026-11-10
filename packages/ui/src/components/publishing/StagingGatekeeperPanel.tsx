@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle, FileDiff, ShieldCheck } from 'lucide-react';
+import { computeWordDiff } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
 
 export function StagingGatekeeperPanel() {
@@ -75,9 +76,36 @@ export function StagingGatekeeperPanel() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                   <FileDiff size={12} /> Diff de Frontmatter YAML & Corpo Markdown
                 </div>
-                <pre style={{ background: '#070a10', border: '1px solid var(--border)', borderRadius: '5px', padding: '0.65rem', fontSize: '0.75rem', fontFamily: 'monospace', color: '#94a3b8', overflowX: 'auto' }}>
-                  {`---\n${JSON.stringify(prop.proposedFrontmatter, null, 2)}\n---\n\n${prop.proposedMarkdown}`}
-                </pre>
+                {prop.existingMarkdown !== undefined ? (
+                  <div style={{ background: '#070a10', border: '1px solid var(--border)', borderRadius: '5px', padding: '0.65rem', fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
+                    {computeWordDiff(prop.existingMarkdown, prop.proposedMarkdown).segments.map((seg, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          backgroundColor:
+                            seg.type === 'added'
+                              ? 'rgba(16,185,129,0.2)'
+                              : seg.type === 'removed'
+                                ? 'rgba(239,68,68,0.2)'
+                                : 'transparent',
+                          color:
+                            seg.type === 'added'
+                              ? '#6ee7b7'
+                              : seg.type === 'removed'
+                                ? '#fca5a5'
+                                : '#94a3b8',
+                          textDecoration: seg.type === 'removed' ? 'line-through' : 'none',
+                        }}
+                      >
+                        {seg.text}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <pre style={{ background: '#070a10', border: '1px solid var(--border)', borderRadius: '5px', padding: '0.65rem', fontSize: '0.75rem', fontFamily: 'monospace', color: '#94a3b8', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                    {`---\n${JSON.stringify(prop.proposedFrontmatter, null, 2)}\n---\n\n${prop.proposedMarkdown}`}
+                  </pre>
+                )}
               </div>
             </div>
           ))}

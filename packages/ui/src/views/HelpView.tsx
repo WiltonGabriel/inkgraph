@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { HelpCircle, Search, Keyboard, Layers } from 'lucide-react';
+import { HelpCircle, Search, Keyboard, Layers, BookOpenCheck } from 'lucide-react';
+import { useProject } from '../context/ProjectContext';
 
 const DOC_ARTICLES = [
   {
@@ -32,7 +33,9 @@ const SHORTCUTS = [
 ];
 
 export function HelpView() {
+  const { settings, openOnboarding, t } = useProject();
   const [query, setQuery] = useState('');
+  const isEn = settings.language === 'en';
 
   const filteredDocs = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,9 +55,30 @@ export function HelpView() {
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Guia de referência rápida do motor literário local-first.</p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.35rem 0.7rem' }}>
-          <Search size={14} color="var(--text-muted)" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar na documentação..." style={{ fontSize: '0.8rem', outline: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={openOnboarding}
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              padding: '0.42rem 0.78rem',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <BookOpenCheck size={14} color="var(--accent)" />
+            {t.onboarding.reopenBtn}
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.35rem 0.7rem' }}>
+            <Search size={14} color="var(--text-muted)" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isEn ? 'Search docs...' : 'Buscar na documentação...'} style={{ fontSize: '0.8rem', outline: 'none' }} />
+          </div>
         </div>
       </div>
 
@@ -67,7 +91,7 @@ export function HelpView() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.7rem' }}>
             <Keyboard size={16} color="var(--accent)" />

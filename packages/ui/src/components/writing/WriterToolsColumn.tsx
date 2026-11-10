@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Wand2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { runAiCompletion } from '../../services/aiClient';
 
 const STYLES = ['Padrão', 'Cinematográfico', 'Conciso', 'Descritivo', 'Minimalista'] as const;
 const TONES = [
@@ -28,35 +29,48 @@ interface WriterToolsColumnProps {
 }
 
 export function WriterToolsColumn({ onGenerateToScratchpad }: WriterToolsColumnProps) {
-  const { project, activeSceneId } = useProject();
+  const { project, settings, activeSceneId } = useProject();
   const [style, setStyle] = useState<(typeof STYLES)[number]>('Cinematográfico');
   const [tone, setTone] = useState<(typeof TONES)[number]>('Mais Suspense');
+  const [runningTool, setRunningTool] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const activeScene = project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
-  const povChar =
-    project.characters.find((c) => c.id === activeScene?.povCharacterId) ?? project.characters[0];
-  const faction = project.factions[0];
-  const world = project.worlds[0];
+  const povChar = project.characters.find((c) => c.id === activeScene?.povCharacterId);
 
-  const handleRunTool = (tool: (typeof TOOLS)[number]) => {
-    const charName = povChar?.name ?? project.characters[0]?.name ?? 'Protagonista';
-    const facName = faction?.name ?? 'a facção local';
-    const worldName = world?.name ?? 'este território';
-    const sceneTitle = activeScene?.title ?? 'Cena Atual';
+  const handleRunTool = async (tool: (typeof TOOLS)[number]) => {
+    const seq = ++requestIdRef.current;
+    const workspaceAtStart = project.id;
+    setRunningTool(tool);
+    setErrorMsg(null);
 
-    const outputs: Record<(typeof TOOLS)[number], string> = {
-      'Continuar Escrita': `[Estilo: ${style} · Tom: ${tone}]\n\nO vento cortante varreu as muralhas de ${worldName} enquanto ${charName} ajustava o manto pesado. Ao longe, as lanternas da ${facName} oscilavam como brasas na neblina. Cada passo sobre o calçamento gelado aproximava o inevitável confronto em "${sceneTitle}".`,
-      'Melhorar Texto': `[Refinamento Literário — ${style}]\n\nA penumbra engolia os estandartes rasgados da ${facName}. ${charName} conteve a respiração; o frio não era apenas climático, mas o prenúncio silencioso de que o acordo em ${worldName} havia ruído.`,
-      'Alterar Tom': `[Reescrita em tom ${tone}]\n\nNinguém pronunciou uma palavra quando os portões se fecharam. ${charName} sabia o que aquele silêncio custava nos corredores de ${worldName} — e quem pagaria a dívida antes do amanhecer.`,
-      'Gerar Diálogo': `— Você realmente acreditou que a ${facName} esqueceria o juramento? — murmurou ${charName}, sem erguer o olhar.\n— Em ${worldName}, promessas duram apenas enquanto o inverno permite — respondeu o emissário, pousando o selo quebrado sobre a mesa.`,
-      'Brainstorming de Ideias': `• E se ${charName} descobrir que o emissário da ${facName} guarda a chave do arquivo proibido?\n• Uma tempestade repentina isola os personagens no distrito antigo de ${worldName}.\n• Revelação parcial de um segredo epistêmico durante a negociação em "${sceneTitle}".`,
-      'Gerar Sinopse': `Em "${sceneTitle}", ${charName} enfrenta as consequências diretas das tensões com a ${facName} no coração de ${worldName}, elevando o conflito dramático do Ato ${activeScene?.act ?? 1}.`,
-      'Gramática e Estilo': `Diagnóstico de Estilo (${style}):\n• Ritmo frasal equilibrado com predominância de verbos de ação.\n• Sugestão: substituir adjetivações redundantes no segundo parágrafo por detalhes sensoriais de ${worldName}.`,
-      'Consistência do Universo': `Verificação Epistêmica e de Cânone:\n• [OK] ${charName} age de acordo com sua motivação registrada.\n• [Atenção] Verificar se os recursos citados da ${facName} respeitam os limites estabelecidos em ${worldName}.`,
-      'Detector de Furos de Enredo': `Auditoria de Causalidade (${sceneTitle}):\n• Transição temporal consistente com a duração declarada (${activeScene?.sceneDuration || 'padrão'}).\n• Nenhum personagem cita segredos ainda não revelados até este ponto da trama.`,
-    };
+    const systemPrompt = [
+      'You are an editorial assistant inside InkGraph.',
+      `Target literary style: ${style}. Target tone: ${tone}.`,
+      `Write in ${settings.language === 'en' ? 'English' : 'Portuguese (Brazil)'}.`,
+      'Respect canon strictly and never invent lore contradictions.',
+    ].join(' ');
 
-    onGenerateToScratchpad(outputs[tool]);
+    const userPrompt = [
+      `Task: ${tool}`,
+      `Scene title: ${activeScene?.title ?? 'Untitled'} (Act ${activeScene?.act ?? 1})`,
+      povChar ? `POV Character: ${povChar.name} (${povChar.role})` : '',
+      `Scene summary: ${activeScene?.summary ?? ''}`,
+      `Scene excerpt:\n${(activeScene?.content ?? '').slice(-2200)}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const res = await runAiCompletion({ settings, systemPrompt, userPrompt });
+    if (seq !== requestIdRef.current || workspaceAtStart !== project.id) return;
+
+    setRunningTool(null);
+    if (!res.ok) {
+      setErrorMsg(res.error);
+      return;
+    }
+    onGenerateToScratchpad(res.text);
   };
 
   return (
@@ -122,34 +136,47 @@ export function WriterToolsColumn({ onGenerateToScratchpad }: WriterToolsColumnP
         </select>
       </div>
 
+      {errorMsg && (
+        <div style={{ fontSize: 11.5, color: '#fbbf24', padding: 9, borderRadius: 6, backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.28)' }}>
+          {errorMsg}
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 11.5, fontWeight: 700, color: '#9ca3af', marginBottom: 2 }}>
-          Ferramentas de Redação (9)
+          Ferramentas ({TOOLS.length})
         </div>
-        {TOOLS.map((tool) => (
-          <button
-            key={tool}
-            onClick={() => handleRunTool(tool)}
-            style={{
-              width: '100%',
-              textAlign: 'left',
-              padding: '8px 11px',
-              backgroundColor: '#131824',
-              border: '1px solid #222a3d',
-              borderRadius: 6,
-              color: '#e5e7eb',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span>{tool}</span>
-            <span style={{ fontSize: 10, color: '#a78bfa' }}>Gerar</span>
-          </button>
-        ))}
+        {TOOLS.map((tool) => {
+          const isRunning = runningTool === tool;
+          return (
+            <button
+              key={tool}
+              onClick={() => void handleRunTool(tool)}
+              disabled={runningTool !== null}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '8px 11px',
+                backgroundColor: '#131824',
+                border: '1px solid #222a3d',
+                borderRadius: 6,
+                color: '#e5e7eb',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: runningTool !== null ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                opacity: runningTool !== null && !isRunning ? 0.6 : 1,
+              }}
+            >
+              <span>{tool}</span>
+              <span style={{ fontSize: 10, color: '#a78bfa' }}>
+                {isRunning ? '...' : 'Executar'}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </aside>
   );

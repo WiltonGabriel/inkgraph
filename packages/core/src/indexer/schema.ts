@@ -35,6 +35,8 @@ export const LORE_DB_SCHEMA_SQL = `
     name TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'canon',
     revealed_at_scene TEXT,
+    archived_at TEXT,
+    fractional_order TEXT,
     file_path TEXT NOT NULL,
     body TEXT NOT NULL,
     updated_at INTEGER NOT NULL
@@ -85,12 +87,42 @@ export const LORE_DB_SCHEMA_SQL = `
     FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
   );
 
-  -- Full-Text Search FTS5 Virtual Table
+  -- Full-Text Search FTS5 Virtual Table for lore entities
   CREATE VIRTUAL TABLE IF NOT EXISTS lore_fts USING fts5(
     entity_id UNINDEXED,
     name,
     aliases,
     body,
     tags
+  );
+
+  -- Generalized Vault Documents Table (manuscript, timeline, staging, uploads, series)
+  CREATE TABLE IF NOT EXISTS vault_documents (
+    id TEXT PRIMARY KEY,
+    section TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    file_path TEXT NOT NULL,
+    body TEXT NOT NULL,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    archived_at TEXT,
+    fractional_order TEXT,
+    updated_at INTEGER NOT NULL
+  );
+
+  -- Full-Text Search FTS5 Virtual Table across all vault documents
+  CREATE VIRTUAL TABLE IF NOT EXISTS vault_documents_fts USING fts5(
+    doc_id UNINDEXED,
+    section UNINDEXED,
+    title,
+    body
+  );
+
+  -- Non-destructive Parse Errors Log
+  CREATE TABLE IF NOT EXISTS vault_parse_errors (
+    file_path TEXT PRIMARY KEY,
+    section TEXT NOT NULL,
+    error TEXT NOT NULL,
+    recorded_at INTEGER NOT NULL
   );
 `;

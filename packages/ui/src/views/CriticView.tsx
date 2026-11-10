@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Sparkles, Activity, MessageSquare, Eye, BookOpen, AlertCircle } from 'lucide-react';
+import { Feather, Activity, MessageSquare, Eye, BookOpen, AlertCircle } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import { countWords } from '../types/project';
+import { calculateFleschReadability, scanFilterWords } from '@inkgraph/domain';
 
 const SENSORY_WORDS = [
   'sombra', 'luz', 'frio', 'quente', 'sangue', 'cheiro', 'vento', 'silêncio',
@@ -9,7 +10,7 @@ const SENSORY_WORDS = [
 ];
 
 export function CriticView() {
-  const { project, activeSceneId } = useProject();
+  const { project, activeSceneId, settings } = useProject();
   const [selectedSceneId, setSelectedSceneId] = useState<string>(
     activeSceneId || project.scenes[0]?.id || 'custom'
   );
@@ -33,10 +34,8 @@ export function CriticView() {
     const sensoryHits = SENSORY_WORDS.reduce((acc, w) => acc + (lower.includes(w) ? 1 : 0), 0);
     const sensoryDensity = Math.min(100, Math.round((sensoryHits / Math.max(1, words / 40)) * 25));
 
-    const fleschScore = Math.max(
-      10,
-      Math.min(100, Math.round(206.835 - 1.015 * avgWordsPerSentence - 60))
-    );
+    const fleschScore = calculateFleschReadability(activeText, settings.language);
+    const filterAnalysis = scanFilterWords(activeText, settings.language);
 
     const pacingLabel =
       avgWordsPerSentence < 12 ? 'Rápido / Urgente' : avgWordsPerSentence < 20 ? 'Equilibrado' : 'Contemplativo / Denso';
@@ -58,14 +57,14 @@ export function CriticView() {
       plotHoles.push('Texto vazio. Insira ou selecione uma cena para avaliação.');
     }
 
-    return { words, avgWordsPerSentence: Math.round(avgWordsPerSentence), dialogueRatio, sensoryDensity, fleschScore, pacingLabel, plotHoles };
-  }, [activeText, selectedSceneId, project.scenes]);
+    return { words, avgWordsPerSentence: Math.round(avgWordsPerSentence), dialogueRatio, sensoryDensity, fleschScore, filterAnalysis, pacingLabel, plotHoles };
+  }, [activeText, selectedSceneId, project.scenes, settings.language]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflowY: 'auto' }}>
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Sparkles size={20} color="var(--accent)" />
+          <Feather size={20} color="var(--accent)" />
           <div>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Crítico Literário & Análise de Enredo</h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -114,7 +113,16 @@ export function CriticView() {
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.9rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}><BookOpen size={14} /> LEGIBILIDADE FLESCH</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: '0.3rem', color: '#10b981' }}>{metrics.fleschScore}/100</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fluidez sintática do trecho</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Calibrado para {settings.language}</div>
+        </div>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.9rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}><AlertCircle size={14} /> PALAVRAS-MULETA</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: '0.3rem', color: metrics.filterAnalysis.perThousandWords > 20 ? '#f59e0b' : '#34d399' }}>
+            {metrics.filterAnalysis.perThousandWords}‰
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {metrics.filterAnalysis.matches.slice(0, 3).map((m) => `${m.word} (${m.count})`).join(', ') || 'Sem excessos'}
+          </div>
         </div>
       </div>
 

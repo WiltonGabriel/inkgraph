@@ -1,0 +1,13 @@
+{
+  "name": "@inkgraph/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri v2 Desktop & Mobile native shell scaffold for InkGraph",
+  "scripts": {
+    "typecheck": "node -e \"console.log('@inkgraph/desktop uses Tauri Rust shell')\"",
+    "test": "node -e \"console.log('@inkgraph/desktop scaffold ok')\"",
+    "build": "node -e \"console.log('@inkgraph/desktop requires Rust/Tauri CLI: cargo tauri build')\"",
+    "tauri:dev": "npx @tauri-apps/cli@2 dev",
+    "tauri:build": "npx @tauri-apps/cli@2 build"
+  }
+}

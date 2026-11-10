@@ -29,13 +29,26 @@ const OVERLAY_BEATS: Record<BeatOverlay, { pos: number; label: string }[]> = {
 };
 
 export function TensionCurveChart() {
-  const { project, activeSceneId, setActiveSceneId } = useProject();
+  const { project, activeSceneId, setActiveSceneId, setActiveView, upsertScene } = useProject();
   const [collapsed, setCollapsed] = useState(false);
   const [overlay, setOverlay] = useState<BeatOverlay>('three-act');
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const scenes = project.scenes;
   const width = 900;
   const height = 105;
+
+  const updateTensionFromClientY = (svgEl: SVGSVGElement, sceneId: string, clientY: number) => {
+    const rect = svgEl.getBoundingClientRect();
+    if (!rect.height) return;
+    const relY = ((clientY - rect.top) / rect.height) * height;
+    const rawPct = ((height - 18 - relY) / (height - 36)) * 100;
+    const snapped = Math.max(0, Math.min(100, Math.round(rawPct / 5) * 5));
+    const target = scenes.find((s) => s.id === sceneId);
+    if (target && target.tension !== snapped) {
+      upsertScene({ ...target, tension: snapped });
+    }
+  };
 
   const points = scenes.map((s, idx) => {
     const x = scenes.length === 1 ? width / 2 : 45 + (idx / (scenes.length - 1)) * (width - 90);
@@ -103,7 +116,16 @@ export function TensionCurveChart() {
       </div>
 
       {!collapsed && (
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 105, overflow: 'visible' }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          onPointerMove={(e) => {
+            if (!draggingId) return;
+            updateTensionFromClientY(e.currentTarget, draggingId, e.clientY);
+          }}
+          onPointerUp={() => setDraggingId(null)}
+          onPointerLeave={() => setDraggingId(null)}
+          style={{ width: '100%', height: 105, overflow: 'visible', touchAction: 'none' }}
+        >
           {OVERLAY_BEATS[overlay].map((b, i) => {
             const bx = 45 + b.pos * (width - 90);
             return (
@@ -132,18 +154,26 @@ export function TensionCurveChart() {
             return (
               <g
                 key={scene.id}
-                onClick={() => setActiveSceneId(scene.id)}
-                style={{ cursor: 'pointer' }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setActiveSceneId(scene.id);
+                  setDraggingId(scene.id);
+                }}
+                onDoubleClick={() => {
+                  setActiveSceneId(scene.id);
+                  setActiveView('manuscript');
+                }}
+                style={{ cursor: 'ns-resize' }}
               >
                 <circle
                   cx={x}
                   cy={y}
-                  r={active ? 6 : 4.5}
+                  r={active ? 7 : 5}
                   fill={scene.tension > 70 ? '#ef4444' : '#f59e0b'}
                   stroke="#fff"
                   strokeWidth={active ? 2 : 1}
                 />
-                <text x={x} y={y - 8} fill="#e2e8f0" fontSize={9.5} textAnchor="middle">
+                <text x={x} y={y - 9} fill="#e2e8f0" fontSize={9.5} textAnchor="middle">
                   {scene.tension}%
                 </text>
                 <text x={x} y={height - 3} fill="#94a3b8" fontSize={9.5} textAnchor="middle">

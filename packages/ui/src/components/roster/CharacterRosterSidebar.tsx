@@ -17,6 +17,7 @@ interface CharacterRosterSidebarProps {
   onSortChange: (s: 'name' | 'completeDesc' | 'completeAsc') => void;
   onCreateManual: () => void;
   onOpenAiModal: () => void;
+  showAiAction?: boolean;
 }
 
 export function CharacterRosterSidebar({
@@ -30,6 +31,7 @@ export function CharacterRosterSidebar({
   onSortChange,
   onCreateManual,
   onOpenAiModal,
+  showAiAction = true,
 }: CharacterRosterSidebarProps) {
   const avgCompleteness = useMemo(() => {
     if (characters.length === 0) return 0;
@@ -95,24 +97,26 @@ export function CharacterRosterSidebar({
             >
               <Plus size={13} /> Novo
             </button>
-            <button
-              onClick={onOpenAiModal}
-              title="Gerar com IA"
-              style={{
-                padding: '5px 8px',
-                backgroundColor: 'rgba(167,139,250,0.15)',
-                border: '1px solid rgba(167,139,250,0.35)',
-                borderRadius: 6,
-                color: '#c4b5fd',
-                fontSize: 11.5,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Sparkles size={13} /> IA
-            </button>
+            {showAiAction && (
+              <button
+                onClick={onOpenAiModal}
+                title="Gerar com IA"
+                style={{
+                  padding: '5px 8px',
+                  backgroundColor: 'rgba(167,139,250,0.15)',
+                  border: '1px solid rgba(167,139,250,0.35)',
+                  borderRadius: 6,
+                  color: '#c4b5fd',
+                  fontSize: 11.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Sparkles size={13} /> IA
+              </button>
+            )}
           </div>
         </div>
 

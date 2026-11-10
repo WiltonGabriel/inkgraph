@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Sparkles,
+  FileEdit,
   LayoutTemplate,
   ListTree,
   Kanban,
@@ -24,8 +25,11 @@ import {
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
+  X,
 } from 'lucide-react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
+import { useViewport } from '../../hooks/useViewport';
 import type { ViewId } from '../../types/project';
 
 interface NavGroup {
@@ -34,8 +38,29 @@ interface NavGroup {
 }
 
 export function Sidebar() {
-  const { activeView, setActiveView, project, settings, t } = useProject();
+  const {
+    activeView,
+    setActiveView,
+    project,
+    settings,
+    showMobileSidebar,
+    setShowMobileSidebar,
+    t,
+  } = useProject();
+  const { isMobile } = useViewport();
   const [collapsed, setCollapsed] = useState(() => settings.sidebarDefaultCollapsed);
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
+
+  if (isMobile && !showMobileSidebar) {
+    return null;
+  }
+
+  const handleSelectView = (view: ViewId) => {
+    setActiveView(view);
+    if (isMobile) {
+      setShowMobileSidebar(false);
+    }
+  };
 
   const pendingProposals = project.stagingProposals.filter(
     (p) => p.status === 'pending'
@@ -47,7 +72,7 @@ export function Sidebar() {
       items: [
         { id: 'dashboard', label: t.views.dashboard, icon: LayoutDashboard },
         { id: 'manuscript', label: t.views.manuscript, icon: BookOpen, badge: project.scenes.length },
-        { id: 'writer', label: t.views.writer, icon: Sparkles },
+        { id: 'writer', label: t.views.writer, icon: aiActive ? Sparkles : FileEdit },
       ],
     },
     {
@@ -84,11 +109,14 @@ export function Sidebar() {
     },
   ];
 
-  return (
+  const effectiveCollapsed = !isMobile && collapsed;
+
+  const asideElement = (
     <aside
       aria-label="Barra lateral principal"
       style={{
-        width: collapsed ? 58 : 228,
+        width: isMobile ? 270 : effectiveCollapsed ? 58 : 228,
+        height: '100%',
         backgroundColor: '#0c0e14',
         borderRight: '1px solid #1b202c',
         display: 'flex',
@@ -107,10 +135,10 @@ export function Sidebar() {
           borderBottom: '1px solid #1b202c',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
+          justifyContent: effectiveCollapsed ? 'center' : 'space-between',
         }}
       >
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span
               style={{
@@ -133,21 +161,31 @@ export function Sidebar() {
             </span>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          title={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#6b7280',
-            cursor: 'pointer',
-            padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-        </button>
+        {isMobile ? (
+          <button
+            onClick={() => setShowMobileSidebar(false)}
+            aria-label={t.common.close}
+            style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 6 }}
+          >
+            <X size={17} />
+          </button>
+        ) : (
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            title={effectiveCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#6b7280',
+              cursor: 'pointer',
+              padding: 4,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            {effectiveCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
+        )}
       </div>
 
       {/* Main Navigation */}
@@ -155,7 +193,7 @@ export function Sidebar() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: collapsed ? '8px 6px' : '10px 8px',
+          padding: effectiveCollapsed ? '8px 6px' : '10px 8px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
@@ -163,7 +201,7 @@ export function Sidebar() {
       >
         {groups.map((grp) => (
           <div key={grp.label}>
-            {!collapsed && (
+            {!effectiveCollapsed && (
               <div
                 style={{
                   fontSize: 10,
@@ -184,13 +222,14 @@ export function Sidebar() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveView(item.id)}
+                    onClick={() => handleSelectView(item.id)}
                     title={item.label}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: collapsed ? 'center' : 'space-between',
-                      padding: collapsed ? '9px 0' : '7px 10px',
+                      justifyContent: effectiveCollapsed ? 'center' : 'space-between',
+                      padding: effectiveCollapsed ? '9px 0' : '8px 10px',
+                      minHeight: isMobile ? 42 : undefined,
                       borderRadius: 6,
                       border: 'none',
                       backgroundColor: isActive ? '#171f30' : 'transparent',
@@ -203,9 +242,9 @@ export function Sidebar() {
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                       <Icon size={15} />
-                      {!collapsed && <span>{item.label}</span>}
+                      {!effectiveCollapsed && <span>{item.label}</span>}
                     </span>
-                    {!collapsed && item.badge !== undefined && (
+                    {!effectiveCollapsed && item.badge !== undefined && (
                       <span
                         style={{
                           fontSize: 10,
@@ -230,7 +269,7 @@ export function Sidebar() {
       {/* Bottom Secondary Nav */}
       <div
         style={{
-          padding: collapsed ? '8px 6px' : '8px',
+          padding: effectiveCollapsed ? '8px 6px' : '8px',
           borderTop: '1px solid #1b202c',
           display: 'flex',
           flexDirection: 'column',
@@ -238,14 +277,14 @@ export function Sidebar() {
         }}
       >
         <button
-          onClick={() => setActiveView('settings')}
+          onClick={() => handleSelectView('settings')}
           title={t.views.settings}
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
             gap: 9,
-            padding: collapsed ? '8px 0' : '7px 10px',
+            padding: effectiveCollapsed ? '8px 0' : '8px 10px',
             borderRadius: 6,
             border: 'none',
             backgroundColor: activeView === 'settings' ? '#171f30' : 'transparent',
@@ -255,17 +294,17 @@ export function Sidebar() {
           }}
         >
           <Settings size={15} />
-          {!collapsed && <span>{t.views.settings}</span>}
+          {!effectiveCollapsed && <span>{t.views.settings}</span>}
         </button>
         <button
-          onClick={() => setActiveView('help')}
+          onClick={() => handleSelectView('help')}
           title={t.views.help}
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
             gap: 9,
-            padding: collapsed ? '8px 0' : '7px 10px',
+            padding: effectiveCollapsed ? '8px 0' : '8px 10px',
             borderRadius: 6,
             border: 'none',
             backgroundColor: activeView === 'help' ? '#171f30' : 'transparent',
@@ -275,9 +314,30 @@ export function Sidebar() {
           }}
         >
           <HelpCircle size={15} />
-          {!collapsed && <span>{t.views.help}</span>}
+          {!effectiveCollapsed && <span>{t.views.help}</span>}
         </button>
       </div>
     </aside>
   );
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 190,
+          backgroundColor: 'rgba(6, 8, 13, 0.72)',
+          display: 'flex',
+        }}
+        onClick={() => setShowMobileSidebar(false)}
+      >
+        <div onClick={(e) => e.stopPropagation()} style={{ height: '100%' }}>
+          {asideElement}
+        </div>
+      </div>
+    );
+  }
+
+  return asideElement;
 }

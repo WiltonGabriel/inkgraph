@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Check, X, Layers } from 'lucide-react';
+import { useState } from 'react';
+import { Check, X, Layers, Play } from 'lucide-react';
+import { computeWordDiff } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
+import { runAiCompletion } from '../../services/aiClient';
 
 const STAGES = [
   '1. Ingestão e Diagnóstico',
@@ -15,12 +17,11 @@ const STAGES = [
 
 type StageName = (typeof STAGES)[number];
 
-interface ReviewItem {
-  id: string;
-  stage: StageName;
-  original: string;
-  proposed: string;
-  confidence: number;
+interface StageResult {
+  readonly stage: StageName;
+  readonly original: string;
+  readonly proposed: string;
+  readonly status: 'pending' | 'accepted' | 'rejected';
 }
 
 interface ProForgePipelinePanelProps {
@@ -28,138 +29,100 @@ interface ProForgePipelinePanelProps {
 }
 
 export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanelProps) {
-  const { project, activeSceneId } = useProject();
-  const [activeStage, setActiveStage] = useState<StageName | 'ALL'>('ALL');
-  const [decisions, setDecisions] = useState<Record<string, 'accepted' | 'rejected'>>({});
+  const { project, settings, activeSceneId } = useProject();
+  const [selectedStage, setSelectedStage] = useState<StageName>(STAGES[0]);
+  const [results, setResults] = useState<Partial<Record<StageName, StageResult>>>({});
+  const [running, setRunning] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const activeScene = project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
 
-  const dynamicItems = useMemo<ReviewItem[]>(() => {
-    const paragraphs = (activeScene?.content ?? '')
-      .split(/\n\s*\n/)
-      .map((p) => p.replace(/^#+\s*/, '').trim())
-      .filter(Boolean);
-    const firstPara = paragraphs[0] || activeScene?.summary || 'Parágrafo inicial da cena.';
-    const secondPara = paragraphs[1] || firstPara;
-    const charName = project.characters[0]?.name || 'o protagonista';
-    const facName = project.factions[0]?.name || 'a facção principal';
+  const handleRunStage = async (stage: StageName) => {
+    if (!activeScene) return;
+    setRunning(true);
+    setErrorMsg(null);
+    const original = activeScene.content;
 
-    return [
-      {
-        id: 'pf_1',
-        stage: '1. Ingestão e Diagnóstico',
-        original: firstPara.slice(0, 140),
-        proposed: `${firstPara.slice(0, 110)} — ancorando o conflito imediato de ${charName} logo na abertura.`,
-        confidence: 94,
-      },
-      {
-        id: 'pf_2',
-        stage: '2. Edição Estrutural',
-        original: `Tensão declarada da cena "${activeScene?.title ?? 'Cena'}": ${activeScene?.tension ?? 50}%.`,
-        proposed: `Inserir batida de reação sensorial antes da virada dramática do Ato ${activeScene?.act ?? 1}.`,
-        confidence: 91,
-      },
-      {
-        id: 'pf_3',
-        stage: '3. Linha e Prosa',
-        original: secondPara.slice(0, 140),
-        proposed: secondPara
-          .slice(0, 140)
-          .replace(/\bmuito\b/gi, '')
-          .trim() + ' — com ritmo verbal condensado.',
-        confidence: 96,
-      },
-      {
-        id: 'pf_4',
-        stage: '4. Edição de Cópia',
-        original: `Menções a ${charName} e ${facName} ao longo do capítulo.`,
-        proposed: `Padronizar títulos, travessões literários (—) e grafia canônica de ${facName}.`,
-        confidence: 98,
-      },
-      {
-        id: 'pf_5',
-        stage: '5. Prova Final',
-        original: 'Revisão ortográfica e pontuação de diálogos.',
-        proposed: 'Pontuação e concordância validadas para fechamento de prova.',
-        confidence: 97,
-      },
-      {
-        id: 'pf_6',
-        stage: '6. Produção',
-        original: `Capítulo ${activeScene?.chapterNumber ?? 1}: ${activeScene?.title ?? 'Sem título'}`,
-        proposed: 'Cabeçalhos e quebras de cena (* * *) normalizados para diagramação.',
-        confidence: 95,
-      },
-      {
-        id: 'pf_7',
-        stage: '7. Preparação para Publicação',
-        original: `Metadados editoriais de "${project.title}"`,
-        proposed: `Sinopse e folha de rosto sincronizadas com o perfil de compilação.`,
-        confidence: 93,
-      },
-      {
-        id: 'pf_8',
-        stage: '8. Resumo da Execução',
-        original: `${paragraphs.length} parágrafo(s) analisados na cena ativa.`,
-        proposed: 'Pipeline editorial concluído sem violações epistêmicas.',
-        confidence: 99,
-      },
-    ];
-  }, [activeScene, project.characters, project.factions, project.title]);
+    const res = await runAiCompletion({
+      settings,
+      systemPrompt: `You are running editorial stage "${stage}". Return an improved revision or structured editorial notes for the scene, preserving author voice and facts.`,
+      userPrompt: `Scene: ${activeScene.title}\nSummary: ${activeScene.summary}\nContent:\n${original}`,
+    });
 
-  const visibleItems = useMemo(
-    () =>
-      activeStage === 'ALL'
-        ? dynamicItems
-        : dynamicItems.filter((item) => item.stage === activeStage),
-    [dynamicItems, activeStage]
-  );
+    setRunning(false);
+    if (!res.ok) {
+      setErrorMsg(res.error);
+      return;
+    }
 
-  const handleDecision = (item: ReviewItem, status: 'accepted' | 'rejected') => {
-    setDecisions((prev) => ({ ...prev, [item.id]: status }));
+    setResults((prev) => ({
+      ...prev,
+      [stage]: {
+        stage,
+        original,
+        proposed: res.text,
+        status: 'pending',
+      },
+    }));
+  };
+
+  const currentResult = results[selectedStage];
+  const diffSummary = currentResult
+    ? computeWordDiff(currentResult.original, currentResult.proposed)
+    : null;
+
+  const handleDecision = (stage: StageName, status: 'accepted' | 'rejected') => {
+    const entry = results[stage];
+    if (!entry) return;
+    setResults((prev) => ({ ...prev, [stage]: { ...entry, status } }));
     if (status === 'accepted') {
-      onApplyProposal(item.proposed);
+      onApplyProposal(entry.proposed);
     }
   };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#0a0d14', overflow: 'hidden', padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Layers size={18} color="#a78bfa" />
-          <h2 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>Pipeline Editorial ProForge (8 Estágios)</h2>
+          <h2 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>Pipeline Editorial ProForge</h2>
         </div>
+
         <button
-          onClick={() => setActiveStage('ALL')}
+          onClick={() => void handleRunStage(selectedStage)}
+          disabled={running || !activeScene}
           style={{
-            padding: '5px 10px',
+            padding: '7px 14px',
             borderRadius: 6,
-            border: activeStage === 'ALL' ? '1px solid #a78bfa' : '1px solid #1f2533',
-            backgroundColor: activeStage === 'ALL' ? '#1d1836' : '#121621',
-            color: activeStage === 'ALL' ? '#e9d5ff' : '#9ca3af',
-            fontSize: 11.5,
+            backgroundColor: '#7c3aed',
+            color: '#fff',
+            fontSize: 12,
             fontWeight: 600,
-            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            opacity: running ? 0.6 : 1,
           }}
         >
-          Ver Todos ({dynamicItems.length})
+          <Play size={13} /> {running ? 'Executando...' : `Executar: ${selectedStage}`}
         </button>
       </div>
 
       {/* 8 Stages Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 6, marginBottom: 16 }}>
         {STAGES.map((stage) => {
-          const active = activeStage === stage;
+          const active = selectedStage === stage;
+          const hasResult = Boolean(results[stage]);
           return (
             <button
               key={stage}
-              onClick={() => setActiveStage(stage)}
+              onClick={() => setSelectedStage(stage)}
               style={{
                 padding: '8px 10px',
                 borderRadius: 6,
                 border: active ? '1px solid #a78bfa' : '1px solid #1f2533',
                 backgroundColor: active ? '#1d1836' : '#121621',
-                color: active ? '#e9d5ff' : '#9ca3af',
+                color: active ? '#e9d5ff' : hasResult ? '#34d399' : '#9ca3af',
                 fontSize: 11.5,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -172,88 +135,92 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
         })}
       </div>
 
-      {/* Review Diff Cards */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {visibleItems.map((item) => {
-          const status = decisions[item.id] ?? 'pending';
-          return (
-            <div
-              key={item.id}
-              style={{
-                padding: 14,
-                backgroundColor: '#121621',
-                border: '1px solid #222a3a',
-                borderRadius: 8,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>{item.stage}</span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    backgroundColor: 'rgba(16,185,129,0.15)',
-                    color: '#34d399',
-                    fontWeight: 600,
-                  }}
-                >
-                  Confiança: {item.confidence}%
+      {errorMsg && (
+        <div style={{ marginBottom: 12, padding: 10, borderRadius: 6, backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', fontSize: 12 }}>
+          {errorMsg}
+        </div>
+      )}
+
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {!currentResult ? (
+          <div style={{ padding: 24, borderRadius: 8, backgroundColor: '#121621', border: '1px solid #222a3a', color: '#9ca3af', fontSize: 13 }}>
+            Selecione o estágio acima e clique em <strong>Executar</strong> para enviar a cena ativa ao seu provedor de IA configurado. Nenhuma simulação automática é gerada sem inferência real.
+          </div>
+        ) : (
+          <div style={{ padding: 14, backgroundColor: '#121621', border: '1px solid #222a3a', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>{currentResult.stage}</span>
+              {diffSummary && (
+                <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                  +{diffSummary.addedWords} / -{diffSummary.removedWords} palavras
                 </span>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #2b1d24', borderRadius: 6 }}>
-                  <div style={{ fontSize: 10.5, color: '#f87171', fontWeight: 700, marginBottom: 4 }}>Original</div>
-                  <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>{item.original}</div>
-                </div>
-                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #1b3229', borderRadius: 6 }}>
-                  <div style={{ fontSize: 10.5, color: '#34d399', fontWeight: 700, marginBottom: 4 }}>Proposto</div>
-                  <div style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.5 }}>{item.proposed}</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button
-                  onClick={() => handleDecision(item, 'accepted')}
-                  style={{
-                    padding: '5px 12px',
-                    backgroundColor: status === 'accepted' ? '#059669' : '#10b981',
-                    color: '#052e16',
-                    border: 'none',
-                    borderRadius: 5,
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <Check size={12} /> {status === 'accepted' ? 'Aceito' : 'Aceitar'}
-                </button>
-                <button
-                  onClick={() => handleDecision(item, 'rejected')}
-                  style={{
-                    padding: '5px 12px',
-                    backgroundColor: '#19202e',
-                    color: '#f87171',
-                    border: '1px solid rgba(248,113,113,0.35)',
-                    borderRadius: 5,
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <X size={12} /> {status === 'rejected' ? 'Rejeitado' : 'Rejeitar'}
-                </button>
-              </div>
+              )}
             </div>
-          );
-        })}
+
+            {diffSummary && (
+              <div style={{ padding: 12, backgroundColor: '#0c0f17', border: '1px solid #1f2637', borderRadius: 6, marginBottom: 12, fontSize: 12.5, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                {diffSummary.segments.map((seg, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      backgroundColor:
+                        seg.type === 'added'
+                          ? 'rgba(16,185,129,0.22)'
+                          : seg.type === 'removed'
+                            ? 'rgba(239,68,68,0.22)'
+                            : 'transparent',
+                      color:
+                        seg.type === 'added'
+                          ? '#6ee7b7'
+                          : seg.type === 'removed'
+                            ? '#fca5a5'
+                            : '#d1d5db',
+                      textDecoration: seg.type === 'removed' ? 'line-through' : 'none',
+                    }}
+                  >
+                    {seg.text}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => handleDecision(currentResult.stage, 'accepted')}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: currentResult.status === 'accepted' ? '#059669' : '#10b981',
+                  color: '#052e16',
+                  borderRadius: 5,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Check size={12} /> {currentResult.status === 'accepted' ? 'Aceito' : 'Aplicar ao Rascunho'}
+              </button>
+              <button
+                onClick={() => handleDecision(currentResult.stage, 'rejected')}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#19202e',
+                  color: '#f87171',
+                  border: '1px solid rgba(248,113,113,0.35)',
+                  borderRadius: 5,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <X size={12} /> {currentResult.status === 'rejected' ? 'Rejeitado' : 'Descartar'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { NARRATIVE_TEMPLATES } from '../../data/templatesCatalog';
+import { ImportPreviewModal } from './ImportPreviewModal';
 
 const ACCENT_COLORS = [
   '#3b82f6',
@@ -35,6 +36,7 @@ export function QuickCreationBar() {
   );
   const [ideaPrompt, setIdeaPrompt] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -216,6 +218,27 @@ export function QuickCreationBar() {
           >
             <Upload size={13} />
             {t.home.importJsonBtn}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setImportModalOpen(true)}
+            style={{
+              padding: '7px 12px',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: '#151a26',
+              color: '#93c5fd',
+              border: '1px solid #262e40',
+            }}
+          >
+            <Upload size={13} />
+            Importar .MD / .DOCX / .ZIP
           </button>
 
           <button
@@ -417,6 +440,7 @@ export function QuickCreationBar() {
           </div>
         </div>
       )}
+      <ImportPreviewModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} />
     </section>
   );
 }

@@ -1,0 +1,16 @@
+{
+  "name": "InkGraph",
+  "short_name": "InkGraph",
+  "description": "Local-First Literary Worldbuilding & Lore Studio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090b10",
+  "theme_color": "#0a0d14",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

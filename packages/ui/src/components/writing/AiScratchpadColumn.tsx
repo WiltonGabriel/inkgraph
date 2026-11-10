@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, ArrowDownToLine, Replace, Sparkles, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowDownToLine, Replace, Sparkles, Layers, FileEdit } from 'lucide-react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
 
 export type StudioMode = 'fluxo' | 'foco' | 'proforge';
@@ -23,6 +24,8 @@ export function AiScratchpadColumn({
   onChangeStudioMode,
 }: AiScratchpadColumnProps) {
   const { project, settings, activeSceneId, upsertScene } = useProject();
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
+  const isEn = settings.language === 'en';
   const activeScene = project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
 
   const handleAppendToScene = () => {
@@ -59,11 +62,15 @@ export function AiScratchpadColumn({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={15} color="#a78bfa" />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>IA Scratchpad</span>
+          {aiActive ? <Sparkles size={15} color="#a78bfa" /> : <FileEdit size={15} color="#60a5fa" />}
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>
+            {aiActive
+              ? isEn ? 'Writing Scratchpad' : 'Rascunho & Estúdio'
+              : isEn ? 'Scene Scratchpad' : 'Bloco de Rascunho'}
+          </span>
         </div>
 
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button
             onClick={() => onChangeStudioMode('fluxo')}
             style={{
@@ -77,7 +84,7 @@ export function AiScratchpadColumn({
               cursor: 'pointer',
             }}
           >
-            Modo de Fluxo
+            {isEn ? 'Flow Mode' : 'Modo de Fluxo'}
           </button>
           <button
             onClick={() => onChangeStudioMode('foco')}
@@ -92,26 +99,28 @@ export function AiScratchpadColumn({
               cursor: 'pointer',
             }}
           >
-            Modo de Foco
+            {isEn ? 'Focus Mode' : 'Modo de Foco'}
           </button>
-          <button
-            onClick={() => onChangeStudioMode('proforge')}
-            style={{
-              padding: '5px 10px',
-              borderRadius: 6,
-              border: '1px solid rgba(167,139,250,0.4)',
-              backgroundColor: studioMode === 'proforge' ? '#7c3aed' : '#181e2c',
-              color: '#fff',
-              fontSize: 11.5,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Layers size={12} /> Pipeline ProForge
-          </button>
+          {aiActive && (
+            <button
+              onClick={() => onChangeStudioMode('proforge')}
+              style={{
+                padding: '5px 10px',
+                borderRadius: 6,
+                border: '1px solid rgba(167,139,250,0.4)',
+                backgroundColor: studioMode === 'proforge' ? '#7c3aed' : '#181e2c',
+                color: '#fff',
+                fontSize: 11.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Layers size={12} /> Pipeline ProForge
+            </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

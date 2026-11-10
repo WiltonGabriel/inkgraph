@@ -1,7 +1,7 @@
 {
   "name": "@inkgraph/mcp",
-  "version": "0.1.0",
-  "description": "Model Context Protocol (MCP) server for InkGraph integration with Google Antigravity",
+  "version": "0.2.0",
+  "description": "Model Context Protocol (MCP) Hub v2 + LAN Sync server for InkGraph",
   "main": "./src/index.ts",
   "bin": {
     "inkgraph-mcp": "./dist/index.js"
@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@inkgraph/core": "workspace:*",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "tsx": "^4.19.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

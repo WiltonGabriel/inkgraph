@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { resolve } from "node:path";
 import {
   BaseEntitySchema,
   RelationshipSchema,
@@ -236,6 +237,6 @@ Rainha.
     );
 
     const validPath = resolveSafeStagingPath("/tmp/workspace/staging", "proposed_vance");
-    expect(validPath).toBe("/tmp/workspace/staging/proposed_vance.md");
+    expect(validPath).toBe(resolve("/tmp/workspace/staging", "proposed_vance.md"));
   });
 });

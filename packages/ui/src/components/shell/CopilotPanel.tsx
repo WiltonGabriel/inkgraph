@@ -9,7 +9,9 @@ import {
   Cpu,
   ArrowUpRight,
 } from 'lucide-react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../../context/ProjectContext';
+import { runAiCompletion } from '../../services/aiClient';
 import {
   calculateCharacterCompleteness,
   calculateFactionCompleteness,
@@ -39,11 +41,12 @@ export function CopilotPanel() {
   const [input, setInput] = useState('');
   const [insightsExpanded, setInsightsExpanded] = useState(true);
   const [appliedBanner, setAppliedBanner] = useState('');
+  const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<CopilotChatTurn[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      text: 'Oi! Sou seu Copiloto. Sei em qual tela você está e conheço seus dossiês, facções, cenas e estado epistêmico. Peça um diagnóstico ou escolha uma sugestão abaixo.',
+      text: 'Assistente contextual pronto. Os alertas acima são determinísticos; perguntas no chat consultam o provedor de IA configurado (ou apenas métricas locais quando em modo estrito offline).',
     },
   ]);
 
@@ -125,75 +128,62 @@ export function CopilotPanel() {
     return list;
   }, [project]);
 
-  const generateContextualReply = (promptText: string): CopilotChatTurn => {
-    const q = promptText.toLowerCase();
-    const activeScene =
-      project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
-
-    if (q.includes('diagnóstico') || q.includes('urgente')) {
-      const avgTension =
-        project.scenes.length > 0
-          ? Math.round(
-              project.scenes.reduce((a, b) => a + b.tension, 0) / project.scenes.length
-            )
-          : 0;
-      const secretsWithReveal = project.characters.flatMap((c) =>
-        c.epistemicSecrets.filter((s) => s.revealedInSceneId)
-      );
-      const secretNote =
-        secretsWithReveal.length > 0
-          ? `• Ponto de atenção epistêmico: Existem segredos marcados para revelação. Verifique se nenhuma cena anterior trata os personagens como cientes antes do tempo.`
-          : `• Elenco e cenas sincronizados.`;
-
-      return {
-        id: `turn_${Date.now()}`,
-        role: 'assistant',
-        text: `Diagnóstico concluído — pontuação de estrutura: 88/100.\n• Cenas mapeadas: ${project.scenes.length} (Tensão média: ${avgTension}%)\n• Elenco: ${project.characters.length} personagens e ${project.factions.length} facções ativas.\n${secretNote}`,
-      };
-    }
-
-    if (q.includes('abertura') || q.includes('melhorar')) {
-      const leadChar = project.characters[0]?.name ?? 'personagem';
-      const snippet = activeScene
-        ? `\n\nO silêncio que se seguiu não era de paz, mas de ferro represado — como se as próprias sombras sob os pés de ${leadChar} aguardassem a primeira faísca.`
-        : undefined;
-      return {
-        id: `turn_${Date.now()}`,
-        role: 'assistant',
-        text: `Para fortalecer "${activeScene?.title ?? 'sua cena ativa'}", intensifique o contraste sensorial logo nos primeiros parágrafos e ancore o conflito imediato da cena. Sugestão de fechamento de parágrafo pronta para inserção:`,
-        suggestedSnippet: snippet,
-      };
-    }
-
-    if (q.includes('tensão')) {
-      const firstTension = project.scenes[0]?.tension ?? 60;
-      const lastTension = project.scenes[project.scenes.length - 1]?.tension ?? 90;
-      return {
-        id: `turn_${Date.now()}`,
-        role: 'assistant',
-        text: `Sua curva de tensão varia de ${firstTension}% no início até ${lastTension}% nos momentos finais. Para evitar fadiga do leitor entre cenas de pico, intercale momentos de reflexão ou dilema interno antes dos confrontos decisivos.`,
-      };
-    }
+  const buildDeterministicTelemetryReply = (): CopilotChatTurn => {
+    const avgTension =
+      project.scenes.length > 0
+        ? Math.round(
+            project.scenes.reduce((a, b) => a + b.tension, 0) / project.scenes.length
+          )
+        : 0;
+    const secretsCount = project.characters.reduce((acc, c) => acc + c.epistemicSecrets.length, 0);
+    const pendingStaging = project.stagingProposals.filter((p) => p.status === 'pending').length;
 
     return {
       id: `turn_${Date.now()}`,
       role: 'assistant',
-      text: `Analisando o contexto de "${project.title}" (tela atual: ${activeView}): você tem ${project.characters.length} personagens, ${project.factions.length} facções e ${project.scenes.length} cenas sincronizadas. Posso gerar trechos para "${activeScene?.title ?? 'o capítulo atual'}" ou auditar relações no Grafo.`,
-      suggestedSnippet: `\n\n[Nota de cena gerada pelo Copiloto: destacar a tensão política entre ${project.factions[0]?.name ?? 'a Ordem'} e ${project.factions[1]?.name ?? 'a Coroa'}.]`,
+      text: `Telemetria determinística (${project.title}):\n• ${project.scenes.length} cenas (tensão média: ${avgTension}%)\n• ${project.characters.length} personagens, ${project.factions.length} facções, ${secretsCount} segredos epistêmicos\n• ${pendingStaging} proposta(s) em staging\n• ${insights.length} alerta(s) estruturais abertos acima.`,
     };
   };
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const raw = (textToSend ?? input).trim();
-    if (!raw) return;
+    if (!raw || sending) return;
     const userTurn: CopilotChatTurn = {
       id: `u_${Date.now()}`,
       role: 'user',
       text: raw,
     };
-    const reply = generateContextualReply(raw);
-    setMessages((prev) => [...prev, userTurn, reply]);
+    setMessages((prev) => [...prev, userTurn]);
     if (!textToSend) setInput('');
+
+    if (
+      !isAiGenerativeEnabled(settings.aiMode) ||
+      settings.copilotHeuristicsOnly ||
+      settings.aiProvider === 'mcp'
+    ) {
+      setMessages((prev) => [...prev, buildDeterministicTelemetryReply()]);
+      return;
+    }
+
+    const activeScene =
+      project.scenes.find((s) => s.id === activeSceneId) ?? project.scenes[0];
+
+    setSending(true);
+    const res = await runAiCompletion({
+      settings,
+      systemPrompt: `You are the InkGraph studio copilot for "${project.title}". Current view: ${activeView}. Never fabricate unseen lore.`,
+      userPrompt: `Active scene: ${activeScene?.title ?? 'None'}\nExcerpt:\n${(activeScene?.content ?? '').slice(-1500)}\n\nQuestion: ${raw}`,
+    });
+    setSending(false);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `turn_${Date.now()}`,
+        role: 'assistant',
+        text: res.ok ? res.text : `Falha ao consultar provedor: ${res.error}`,
+      },
+    ]);
   };
 
   const handleApplyToChapter = (snippet: string) => {

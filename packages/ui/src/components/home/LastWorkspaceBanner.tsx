@@ -1,8 +1,13 @@
-import { BookOpen, Network, FolderOpen, Clock } from 'lucide-react';
+import { BookOpen, Network, FolderOpen, Clock, Play } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 
 export function LastWorkspaceBanner() {
-  const { project, totalWordCount, switchWorkspace, settings, t } = useProject();
+  const { project, workspaces, sessionCursor, resumeLastSession, totalWordCount, switchWorkspace, settings, t } = useProject();
+
+  const cursorWorkspace = sessionCursor
+    ? workspaces.find((w) => w.id === sessionCursor.lastWorkspaceId)
+    : undefined;
+  const cursorScene = cursorWorkspace?.scenes.find((s) => s.id === sessionCursor?.lastSceneId);
 
   const goal = Math.max(1, project.wordCountGoal || 80000);
   const progressPct = Math.min(100, Math.round((totalWordCount / goal) * 100));
@@ -125,6 +130,34 @@ export function LastWorkspaceBanner() {
             flexWrap: 'wrap',
           }}
         >
+          {cursorWorkspace && (
+            <button
+              type="button"
+              onClick={resumeLastSession}
+              style={{
+                padding: '8px 14px',
+                backgroundColor: '#10b981',
+                color: '#062016',
+                border: 'none',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+              title={
+                cursorScene
+                  ? `${cursorScene.title} (${sessionCursor?.deviceName ?? ''})`
+                  : cursorWorkspace.title
+              }
+            >
+              <Play size={13} />
+              {t.home.resumeSceneBtn}
+              {cursorScene ? `: ${cursorScene.title}` : ''}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => switchWorkspace(project.id, 'dashboard')}

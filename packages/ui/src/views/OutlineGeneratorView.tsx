@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ListTree,
-  Sparkles,
   Plus,
   Trash2,
   ArrowUp,
@@ -10,11 +9,13 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
+import { useViewport } from '../hooks/useViewport';
 import type { OutlineSection } from '../types/project';
 
 export function OutlineGeneratorView() {
   const { project, setOutline, applyOutlineToManuscript, setActiveView } =
     useProject();
+  const { isMobile } = useViewport();
 
   const [prompt, setPrompt] = useState(project.logline);
   const [genre, setGenre] = useState(project.genre);
@@ -71,13 +72,15 @@ export function OutlineGeneratorView() {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 46px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
       {/* Left: Idea & Advanced Options Form */}
       <div
         style={{
-          width: 370,
+          width: isMobile ? '100%' : 370,
+          maxHeight: isMobile ? '46vh' : undefined,
           backgroundColor: '#0e1118',
-          borderRight: '1px solid #1b202c',
+          borderRight: isMobile ? 'none' : '1px solid #1b202c',
+          borderBottom: isMobile ? '1px solid #1b202c' : 'none',
           padding: 18,
           overflowY: 'auto',
           display: 'flex',
@@ -87,10 +90,10 @@ export function OutlineGeneratorView() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: '#f3f4f6' }}>
-          <ListTree size={16} color="#60a5fa" /> Gerador de Contorno
+          <ListTree size={16} color="#60a5fa" /> Estruturador de Capítulos
         </div>
         <p style={{ margin: 0, fontSize: 12, color: '#9ca3af', lineHeight: 1.45 }}>
-          Descreva sua ideia de história e gere um esboço estruturado e editável.
+          Crie uma espinha dorsal em 3 atos proporcional à quantidade de capítulos desejada.
         </p>
 
         <div>
@@ -183,7 +186,7 @@ export function OutlineGeneratorView() {
             gap: 8,
           }}
         >
-          <Sparkles size={15} /> Gerar Esboço Estruturado
+          <ListTree size={15} /> Criar Estrutura em 3 Atos
         </button>
       </div>
 

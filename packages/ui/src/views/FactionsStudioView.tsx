@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
+import { isAiGenerativeEnabled } from '@inkgraph/domain';
 import { useProject } from '../context/ProjectContext';
 import type { Faction } from '../types/project';
 import { FactionRosterSidebar } from '../components/roster/FactionRosterSidebar';
 import { FactionDossierTabs } from '../components/roster/FactionDossierTabs';
 
 export function FactionsStudioView() {
-  const { project, upsertFaction } = useProject();
+  const { project, settings, upsertFaction } = useProject();
+  const aiActive = isAiGenerativeEnabled(settings.aiMode);
 
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string>(
@@ -26,46 +28,22 @@ export function FactionsStudioView() {
     project.factions.find((f) => f.id === selectedId) ?? filteredFactions[0];
 
   const handleCreateFaction = (withAi = false) => {
-    const worldLabel = project.worlds[0]?.name || 'o território';
     const newFaction: Faction = {
       id: `faction_${Date.now()}`,
-      name: withAi ? `Coalizão de ${project.title}` : 'Nova Facção',
-      aliases: withAi ? ['O Conselho Interno'] : [],
-      subtype: withAi ? 'Coalizão Institucional' : 'Ordem / Organização',
-      motto: withAi ? 'Ordem através da vigilância mútua.' : '',
+      name: 'Nova Facção',
+      aliases: [],
+      subtype: 'Ordem / Organização',
+      motto: '',
       color: '#a855f7',
-      status: 'provisional',
-      publicAgenda: withAi
-        ? `Manter a estabilidade política e logística em ${worldLabel}.`
-        : '',
-      secretAgenda: withAi
-        ? 'Expandir influência estratégica sobre as rotas e arquivos centrais.'
-        : '',
-      doctrine: withAi
-        ? 'A preservação da estrutura coletiva precede interesses individuais.'
-        : '',
-      history: withAi
-        ? `Fundada durante o período de transição de ${worldLabel}.`
-        : '',
-      resourcesAndPower: withAi
-        ? 'Rede de informantes, controle de entrepostos e reservas financeiras.'
-        : '',
-      internalConflicts: withAi
-        ? 'Divergência entre a ala tradicionalista e os reformistas.'
-        : '',
+      status: withAi ? 'provisional' : 'draft',
+      publicAgenda: '',
+      secretAgenda: '',
+      doctrine: '',
+      history: '',
+      resourcesAndPower: '',
+      internalConflicts: '',
       notes: '',
-      ranks: withAi
-        ? [
-            {
-              id: `rk_${Date.now()}`,
-              title: 'Regente Geral',
-              authorityLevel: 10,
-              holderIds: [],
-              responsibilities:
-                'Coordenação estratégica e representação diplomática.',
-            },
-          ]
-        : [],
+      ranks: [],
       controlledLocationIds: [],
       tags: ['faccao'],
       relationships: [],
@@ -85,6 +63,7 @@ export function FactionsStudioView() {
         search={search}
         onSearchChange={setSearch}
         onCreateFaction={handleCreateFaction}
+        showAiAction={aiActive}
       />
 
       {selected ? (
