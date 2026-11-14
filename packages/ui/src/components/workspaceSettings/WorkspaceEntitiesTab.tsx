@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Boxes, Plus, Trash2, EyeOff } from 'lucide-react';
+import { Boxes, Plus, Trash2, EyeOff, RotateCcw, Asterisk } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import {
   getEffectiveEntitySchemas,
+  getPluginProvidedFieldKeys,
   NATIVE_FIELD_OPTIONS,
 } from '../../domain/registry';
 import type { CustomFieldSchema, CustomFieldType, EntityTypeDefinition } from '../../types/project';
@@ -18,6 +19,7 @@ import {
   primaryButtonStyle,
   THEME_VAR,
 } from '../settings/settingsStyles';
+import { CUSTOM_FIELD_TYPES, CustomFieldEditorRow } from './CustomFieldEditorRow';
 
 const ICON_OPTIONS = [
   'Box',
@@ -32,16 +34,6 @@ const ICON_OPTIONS = [
   'Feather',
 ];
 
-const FIELD_TYPES: { value: CustomFieldType; label: string }[] = [
-  { value: 'text', label: 'Texto curto' },
-  { value: 'textarea', label: 'Texto longo' },
-  { value: 'number', label: 'Número' },
-  { value: 'select', label: 'Lista de opções' },
-  { value: 'boolean', label: 'Caixa Sim/Não' },
-  { value: 'tags', label: 'Tags / Marcadores' },
-  { value: 'entity_ref', label: 'Vínculo a outra entidade' },
-];
-
 export function WorkspaceEntitiesTab() {
   const { project, updateWorkspaceConfig, updateProject, requestConfirm, notify } = useProject();
   const schemas = useMemo(() => getEffectiveEntitySchemas(project), [project]);
@@ -52,20 +44,49 @@ export function WorkspaceEntitiesTab() {
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldType, setNewFieldType] = useState<CustomFieldType>('text');
   const [newFieldOptions, setNewFieldOptions] = useState('');
+  const [newFieldTargetType, setNewFieldTargetType] = useState('character');
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldIncludeMemory, setNewFieldIncludeMemory] = useState(true);
 
   const selected = schemas[selectedId] ?? schemaList[0];
+  const pluginFieldKeys = useMemo(
+    () => (selected ? getPluginProvidedFieldKeys(project, selected.id) : new Set<string>()),
+    [project, selected]
+  );
 
   const updateSchema = (typeId: string, updater: (prev: EntityTypeDefinition) => EntityTypeDefinition) => {
     const base = schemas[typeId];
     if (!base) return;
-    updateWorkspaceConfig((cfg) => ({
-      ...cfg,
-      entitySchemas: {
-        ...cfg.entitySchemas,
-        [typeId]: updater(cfg.entitySchemas[typeId] ?? base),
-      },
-    }));
+    updateWorkspaceConfig((cfg) => {
+      const existing = cfg.entitySchemas[typeId];
+      const seed: EntityTypeDefinition = existing
+        ? {
+            ...base,
+            ...existing,
+            hiddenNativeFields: [...(existing.hiddenNativeFields ?? base.hiddenNativeFields)],
+            hiddenCustomFields: [...(existing.hiddenCustomFields ?? base.hiddenCustomFields ?? [])],
+            requiredNativeFields: [...(existing.requiredNativeFields ?? base.requiredNativeFields ?? [])],
+            customFields:
+              existing.customFields.length > 0 || base.customFields.length === 0
+                ? existing.customFields
+                : [...base.customFields],
+          }
+        : {
+            ...base,
+            hiddenNativeFields: [...base.hiddenNativeFields],
+            hiddenCustomFields: [...(base.hiddenCustomFields ?? [])],
+            requiredNativeFields: [...(base.requiredNativeFields ?? [])],
+            customFields: [...base.customFields],
+          };
+
+      return {
+        ...cfg,
+        entitySchemas: {
+          ...cfg.entitySchemas,
+          [typeId]: updater(seed),
+        },
+      };
+    });
   };
 
   const handleCreateCustomType = () => {
@@ -163,6 +184,7 @@ export function WorkspaceEntitiesTab() {
       key,
       label: newFieldLabel.trim(),
       type: newFieldType,
+      required: newFieldRequired,
       options:
         newFieldType === 'select'
           ? newFieldOptions
@@ -170,17 +192,61 @@ export function WorkspaceEntitiesTab() {
               .map((s) => s.trim())
               .filter(Boolean)
           : undefined,
+      targetEntityType: newFieldType === 'entity_ref' ? newFieldTargetType : undefined,
       includeInMemory: newFieldIncludeMemory,
-      completenessWeight: 3,
+      completenessWeight: newFieldRequired ? 5 : 3,
     };
 
     updateSchema(selected.id, (prev) => ({
       ...prev,
-      customFields: [...prev.customFields, field],
+      hiddenCustomFields: (prev.hiddenCustomFields ?? []).filter((k) => k !== key),
+      customFields: [...prev.customFields.filter((f) => f.key !== key), field],
     }));
     setNewFieldLabel('');
     setNewFieldOptions('');
+    setNewFieldRequired(false);
     notify(`Campo "${field.label}" adicionado em ${selected.label}.`, 'success');
+  };
+
+  const handleSaveCustomField = (updated: CustomFieldSchema) => {
+    if (!selected) return;
+    updateSchema(selected.id, (prev) => {
+      const exists = prev.customFields.some((f) => f.key === updated.key);
+      return {
+        ...prev,
+        customFields: exists
+          ? prev.customFields.map((f) => (f.key === updated.key ? updated : f))
+          : [...prev.customFields, updated],
+      };
+    });
+    notify(`Campo "${updated.label}" atualizado em ${selected.label}.`, 'success');
+  };
+
+  const handleRemoveOrHideCustomField = (fieldKey: string) => {
+    if (!selected) return;
+    const isPluginField = pluginFieldKeys.has(fieldKey);
+    updateSchema(selected.id, (prev) => ({
+      ...prev,
+      customFields: prev.customFields.filter((f) => f.key !== fieldKey),
+      hiddenCustomFields: isPluginField
+        ? Array.from(new Set([...(prev.hiddenCustomFields ?? []), fieldKey]))
+        : prev.hiddenCustomFields,
+    }));
+    notify(
+      isPluginField
+        ? 'Campo de plugin ocultado neste workspace (pode ser restaurado a qualquer momento).'
+        : 'Campo removido do esquema.',
+      'info'
+    );
+  };
+
+  const handleRestorePluginFields = () => {
+    if (!selected) return;
+    updateSchema(selected.id, (prev) => ({
+      ...prev,
+      hiddenCustomFields: [],
+    }));
+    notify(`Campos padrão de plugin restaurados em ${selected.label}.`, 'success');
   };
 
   const nativeOptions = selected ? (NATIVE_FIELD_OPTIONS[selected.id] ?? []) : [];
@@ -348,41 +414,87 @@ export function WorkspaceEntitiesTab() {
                     }}
                   >
                     <EyeOff size={13} />
-                    Campos Nativos Visíveis no Estúdio (desmarque para simplificar a ficha)
+                    Campos Nativos: Visibilidade e Obrigatoriedade
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {nativeOptions.map((opt) => {
                       const isVisible = !selected.hiddenNativeFields.includes(opt.key);
+                      const isRequired = (selected.requiredNativeFields ?? []).includes(opt.key);
                       return (
-                        <label
+                        <div
                           key={opt.key}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 5,
-                            padding: '4px 9px',
+                            gap: 4,
+                            padding: '3px 8px',
                             borderRadius: 999,
                             backgroundColor: isVisible ? THEME_VAR.accentSoft : THEME_VAR.bgSurface,
                             border: `1px solid ${THEME_VAR.borderSubtle}`,
                             fontSize: 11.5,
                             color: THEME_VAR.textPrimary,
-                            cursor: 'pointer',
                           }}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isVisible}
-                            onChange={() =>
-                              updateSchema(selected.id, (prev) => ({
-                                ...prev,
-                                hiddenNativeFields: isVisible
-                                  ? [...prev.hiddenNativeFields, opt.key]
-                                  : prev.hiddenNativeFields.filter((k) => k !== opt.key),
-                              }))
-                            }
-                          />
-                          {opt.label}
-                        </label>
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isVisible}
+                              onChange={() =>
+                                updateSchema(selected.id, (prev) => ({
+                                  ...prev,
+                                  hiddenNativeFields: isVisible
+                                    ? [...prev.hiddenNativeFields, opt.key]
+                                    : prev.hiddenNativeFields.filter((k) => k !== opt.key),
+                                  requiredNativeFields: isVisible
+                                    ? (prev.requiredNativeFields ?? []).filter((k) => k !== opt.key)
+                                    : prev.requiredNativeFields,
+                                }))
+                              }
+                            />
+                            {opt.label}
+                          </label>
+                          {isVisible && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateSchema(selected.id, (prev) => ({
+                                  ...prev,
+                                  requiredNativeFields: isRequired
+                                    ? (prev.requiredNativeFields ?? []).filter((k) => k !== opt.key)
+                                    : [...(prev.requiredNativeFields ?? []), opt.key],
+                                }))
+                              }
+                              title={
+                                isRequired
+                                  ? 'Campo obrigatório (clique para tornar opcional)'
+                                  : 'Campo opcional (clique para exigir preenchimento)'
+                              }
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                padding: '1px 6px',
+                                borderRadius: 999,
+                                border: `1px solid ${isRequired ? THEME_VAR.accentPrimary : THEME_VAR.borderSubtle}`,
+                                backgroundColor: isRequired ? THEME_VAR.accentPrimary : 'transparent',
+                                color: isRequired ? '#ffffff' : THEME_VAR.textMuted,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Asterisk size={9} />
+                              {isRequired ? 'Obrig.' : 'Opc.'}
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -390,47 +502,38 @@ export function WorkspaceEntitiesTab() {
               )}
 
               <div style={{ ...innerCardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: THEME_VAR.textPrimary }}>
-                  Campos Customizados ({selected.customFields.length})
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: THEME_VAR.textPrimary }}>
+                    Campos Customizados & Extensões ({selected.customFields.length})
+                  </div>
+                  {(selected.hiddenCustomFields?.length ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleRestorePluginFields}
+                      style={{ ...secondaryButtonStyle, fontSize: 11, padding: '3px 9px' }}
+                    >
+                      <RotateCcw size={12} /> Restaurar {selected.hiddenCustomFields?.length} oculto(s)
+                    </button>
+                  )}
                 </div>
 
                 {selected.customFields.map((field) => (
-                  <div
+                  <CustomFieldEditorRow
                     key={field.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 8,
-                      padding: '6px 10px',
-                      borderRadius: THEME_VAR.radiusSm,
-                      backgroundColor: THEME_VAR.bgSurface,
-                      border: `1px solid ${THEME_VAR.borderSubtle}`,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 12.5, fontWeight: 600, color: THEME_VAR.textPrimary }}>
-                        {field.label}{' '}
-                        <code style={{ fontSize: 11, color: THEME_VAR.textMuted }}>({field.key})</code>
-                      </div>
-                      <div style={{ fontSize: 11, color: THEME_VAR.textSecondary }}>
-                        Tipo: {FIELD_TYPES.find((t) => t.value === field.type)?.label ?? field.type}
-                        {field.includeInMemory ? ' · Indexado no AI Memory' : ''}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateSchema(selected.id, (prev) => ({
-                          ...prev,
-                          customFields: prev.customFields.filter((f) => f.key !== field.key),
-                        }))
-                      }
-                      style={{ ...secondaryButtonStyle, color: '#ef4444', padding: '4px 8px' }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                    field={field}
+                    isPluginProvided={pluginFieldKeys.has(field.key)}
+                    allEntityTypes={schemaList}
+                    onSave={handleSaveCustomField}
+                    onRemove={() => handleRemoveOrHideCustomField(field.key)}
+                  />
                 ))}
 
                 <div
@@ -459,7 +562,7 @@ export function WorkspaceEntitiesTab() {
                       onChange={(e) => setNewFieldType(e.target.value as CustomFieldType)}
                       style={controlInputStyle}
                     >
-                      {FIELD_TYPES.map((ft) => (
+                      {CUSTOM_FIELD_TYPES.map((ft) => (
                         <option key={ft.value} value={ft.value}>
                           {ft.label}
                         </option>
@@ -480,22 +583,60 @@ export function WorkspaceEntitiesTab() {
                   />
                 )}
 
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 11.5,
-                    color: THEME_VAR.textSecondary,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={newFieldIncludeMemory}
-                    onChange={(e) => setNewFieldIncludeMemory(e.target.checked)}
-                  />
-                  Incluir este campo automaticamente no compilador AI Memory e Radar de Cânone
-                </label>
+                {newFieldType === 'entity_ref' && (
+                  <label style={fieldColumnStyle}>
+                    <span style={fieldLabelTextStyle}>Entidade Vinculada</span>
+                    <select
+                      value={newFieldTargetType}
+                      onChange={(e) => setNewFieldTargetType(e.target.value)}
+                      style={controlInputStyle}
+                    >
+                      {schemaList.map((et) => (
+                        <option key={et.id} value={et.id}>
+                          {et.label} ({et.id})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 11.5,
+                      color: THEME_VAR.textSecondary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={newFieldRequired}
+                      onChange={(e) => setNewFieldRequired(e.target.checked)}
+                    />
+                    Exigir preenchimento (obrigatório)
+                  </label>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 11.5,
+                      color: THEME_VAR.textSecondary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={newFieldIncludeMemory}
+                      onChange={(e) => setNewFieldIncludeMemory(e.target.checked)}
+                    />
+                    Incluir este campo automaticamente no compilador AI Memory e Radar de Cânone
+                  </label>
+                </div>
               </div>
             </div>
           )}

@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { useProject } from '../context/ProjectContext';
 import {
-  ALL_GRAPH_ENTITY_KINDS,
   buildFilteredGraphData,
+  getGraphLayersForProject,
   type GraphEntityKind,
   type GraphNode,
 } from '../components/graph/graphDataBuilder';
@@ -12,29 +12,39 @@ import { GraphTableView } from '../components/graph/GraphTableView';
 import { GraphNodeInspector } from '../components/graph/GraphNodeInspector';
 
 export function PhysicsForceGraphView() {
-  const { project, setActiveView, setActiveSubPath } = useProject();
-  const [enabledKinds, setEnabledKinds] = useState<GraphEntityKind[]>(() => [
-    ...ALL_GRAPH_ENTITY_KINDS,
-  ]);
+  const { project, setActiveView, setActiveSubPath, setActiveCustomEntityTypeId } = useProject();
+  const [disabledKinds, setDisabledKinds] = useState<GraphEntityKind[]>([]);
   const [viewMode, setViewMode] = useState<'graph' | 'table'>('graph');
   const [repulsionStrength, setRepulsionStrength] = useState<number>(450);
   const [pinnedCount, setPinnedCount] = useState<number>(0);
   const [releaseSignal, setReleaseSignal] = useState<number>(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string>('');
 
-  const handleToggleKind = useCallback((kind: GraphEntityKind) => {
-    setEnabledKinds((prev) => {
-      if (prev.includes(kind)) {
+  const graphLayers = useMemo(() => getGraphLayersForProject(project), [project]);
+  const enabledKinds = useMemo(
+    () => graphLayers.map((l) => l.kind).filter((k) => !disabledKinds.includes(k)),
+    [graphLayers, disabledKinds]
+  );
+
+  const handleToggleKind = useCallback(
+    (kind: GraphEntityKind) => {
+      setDisabledKinds((prev) => {
+        if (prev.includes(kind)) {
+          return prev.filter((item) => item !== kind);
+        }
         // Keep at least 1 layer enabled so the canvas isn't accidentally emptied
-        if (prev.length === 1) return prev;
-        return prev.filter((item) => item !== kind);
-      }
-      return [...prev, kind];
-    });
-  }, []);
+        const remaining = graphLayers.filter(
+          (l) => l.kind !== kind && !prev.includes(l.kind)
+        );
+        if (remaining.length === 0) return prev;
+        return [...prev, kind];
+      });
+    },
+    [graphLayers]
+  );
 
   const handleSelectAllKinds = useCallback(() => {
-    setEnabledKinds([...ALL_GRAPH_ENTITY_KINDS]);
+    setDisabledKinds([]);
   }, []);
 
   const { nodes, links, allEntities } = useMemo(
@@ -59,8 +69,12 @@ export function PhysicsForceGraphView() {
         setActiveView('worlds');
         setActiveSubPath('Sistemas & Leis');
       } else if (node.kind === 'object') setActiveView('objects');
+      else {
+        setActiveCustomEntityTypeId(node.kind);
+        setActiveView('custom-entity');
+      }
     },
-    [setActiveView, setActiveSubPath]
+    [setActiveView, setActiveSubPath, setActiveCustomEntityTypeId]
   );
 
   const handleReleasePinnedNodes = useCallback(() => setReleaseSignal((p) => p + 1), []);
@@ -74,6 +88,7 @@ export function PhysicsForceGraphView() {
         }}
       >
         <GraphToolbar
+          layers={graphLayers}
           enabledKinds={enabledKinds}
           onToggleKind={handleToggleKind}
           onSelectAllKinds={handleSelectAllKinds}

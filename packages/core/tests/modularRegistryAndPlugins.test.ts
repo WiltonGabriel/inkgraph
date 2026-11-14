@@ -13,6 +13,12 @@ import {
   exportWorkspaceTemplateBundle,
   parseWorkspaceTemplateBundle,
 } from '../../ui/src/domain/registry';
+import { calculateCharacterCompleteness } from '../../ui/src/domain/completenessCalculator';
+import { buildWorkspaceSystemPrompt } from '../../ui/src/domain/memoryCompiler';
+import {
+  buildFilteredGraphData,
+  getGraphLayersForProject,
+} from '../../ui/src/components/graph/graphDataBuilder';
 
 describe('Modular Workspace Config, Registry Kernel & Declarative Plugins', () => {
   it('validates custom_attributes in @inkgraph/core BaseEntitySchema and PluginManifestSchema', () => {
@@ -143,5 +149,177 @@ describe('Modular Workspace Config, Registry Kernel & Declarative Plugins', () =
     const parsedBundle = parseWorkspaceTemplateBundle(bundle);
     expect(parsedBundle.ok).toBe(true);
     expect(parsedBundle.bundle?.name).toBe('Template Vapor');
+  });
+
+  it('persists author field overrides and hiddenCustomFields over plugin defaults', () => {
+    const project = createBlankProjectData('RPG Customizado');
+    project.workspaceConfig = togglePluginEnabled(
+      project.workspaceConfig!,
+      'plugin_litrpg_stats',
+      true
+    );
+
+    // Override plugin field `rank` (from F..S select -> number 1..100) & hide `mana_cost`
+    project.workspaceConfig!.entitySchemas.skill_ability = {
+      ...getEffectiveEntitySchemas(project).skill_ability,
+      hiddenCustomFields: ['mana_cost'],
+      customFields: [
+        {
+          key: 'rank',
+          label: 'Potência Numérica (AEF)',
+          type: 'number',
+          required: true,
+          completenessWeight: 5,
+          includeInMemory: true,
+        },
+      ],
+    };
+
+    const effective = getEffectiveEntitySchemas(project).skill_ability;
+    const rankField = effective.customFields.find((f) => f.key === 'rank');
+    expect(rankField?.type).toBe('number');
+    expect(rankField?.label).toBe('Potência Numérica (AEF)');
+    expect(rankField?.required).toBe(true);
+    expect(effective.customFields.some((f) => f.key === 'mana_cost')).toBe(false);
+  });
+
+  it('dynamically scores character completeness ignoring hidden native fields and counting required custom fields', () => {
+    const project = createBlankProjectData('Completude Dinâmica');
+    const charSchema = getEffectiveEntitySchemas(project).character;
+    const hero = {
+      id: 'char_hero',
+      name: 'Kael',
+      aliases: [],
+      role: 'Protagonista',
+      archetype: 'hero' as const,
+      status: 'canon' as const,
+      avatarColor: '#3b82f6',
+      appearance: '',
+      backstory: '',
+      motivation: 'Proteger a cidadela',
+      personalityTraits: 'Determinado',
+      flaws: 'Orgulhoso',
+      want: '',
+      need: '',
+      lieBelieved: '',
+      ghost: '',
+      characterArc: '',
+      arcAct1: '',
+      arcAct2: '',
+      arcAct3: '',
+      relationships: [],
+      epistemicSecrets: [],
+      tags: [],
+      notes: '',
+    };
+
+    const relaxedSchema = {
+      ...charSchema,
+      hiddenNativeFields: ['appearance', 'backstory', 'want', 'need', 'arcsByAct'],
+      customFields: [
+        {
+          key: 'poder_especial',
+          label: 'Poder Especial',
+          type: 'text' as const,
+          required: true,
+          completenessWeight: 5,
+        },
+      ],
+    };
+    const beforeFill = calculateCharacterCompleteness(hero, relaxedSchema);
+    const afterFill = calculateCharacterCompleteness(
+      { ...hero, customAttributes: { poder_especial: 'Cronocinese' } },
+      relaxedSchema
+    );
+    expect(afterFill).toBeGreaterThan(beforeFill);
+  });
+
+  it('renders custom entities and entity_ref custom links in Graph and compiles schema-aware System Prompt', () => {
+    const project = createBlankProjectData('Grafo e IA');
+    project.workspaceConfig = togglePluginEnabled(
+      project.workspaceConfig!,
+      'plugin_litrpg_stats',
+      true
+    );
+    project.workspaceConfig!.entitySchemas.skill_ability = {
+      ...getEffectiveEntitySchemas(project).skill_ability,
+      customFields: [
+        ...getEffectiveEntitySchemas(project).skill_ability.customFields,
+        {
+          key: 'origin_char',
+          label: 'Criador da Técnica',
+          type: 'entity_ref',
+          targetEntityType: 'character',
+          includeInMemory: true,
+        },
+      ],
+    };
+
+    const heroId = 'char_kael';
+    project.characters = [
+      {
+        id: heroId,
+        name: 'Kael',
+        aliases: [],
+        role: 'Protagonista',
+        archetype: 'hero',
+        status: 'canon',
+        avatarColor: '#3b82f6',
+        appearance: '',
+        backstory: '',
+        motivation: '',
+        personalityTraits: '',
+        flaws: '',
+        want: '',
+        need: '',
+        lieBelieved: '',
+        ghost: '',
+        characterArc: '',
+        arcAct1: '',
+        arcAct2: '',
+        arcAct3: '',
+        relationships: [],
+        epistemicSecrets: [],
+        tags: [],
+        notes: '',
+      },
+    ];
+    project.customEntities = {
+      skill_ability: [
+        {
+          id: 'skill_void',
+          entityTypeId: 'skill_ability',
+          name: 'Corte Dimensional',
+          aliases: [],
+          status: 'canon',
+          summary: 'Golpe espacial.',
+          notes: '',
+          tags: [],
+          customAttributes: { rank: 'S', origin_char: heroId },
+          relationships: [],
+          epistemicSecrets: [],
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const layers = getGraphLayersForProject(project);
+    expect(layers.some((l) => l.kind === 'skill_ability')).toBe(true);
+
+    const graph = buildFilteredGraphData(
+      project,
+      layers.map((l) => l.kind)
+    );
+    expect(graph.nodes.some((n) => n.id === 'skill_void' && n.kind === 'skill_ability')).toBe(
+      true
+    );
+    expect(graph.links.some((l) => l.source === 'skill_void' && l.target === heroId)).toBe(true);
+
+    project.workspaceConfig!.agentConfig!.customSystemPrompt =
+      'Sempre responder como revisor técnico rigoroso.';
+    const prompt = buildWorkspaceSystemPrompt(project);
+    expect(prompt).toContain('Sempre responder como revisor técnico rigoroso.');
+    expect(prompt).toContain('skill_ability');
+    expect(prompt).toContain('origin_char');
   });
 });

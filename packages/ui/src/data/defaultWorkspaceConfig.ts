@@ -320,5 +320,23 @@ export function createDefaultWorkspaceConfig(): WorkspaceConfig {
       autoTrackEpistemic: true,
       strictEntityRefs: true,
     },
+    agentConfig: {
+      customSystemPrompt:
+        'Atue como editor literário e guardião de cânone do InkGraph. Respeite estritamente a continuidade epistêmica (quem sabe o quê em cada cena), preserve os atributos definidos no esquema do workspace e proponha alterações via Staging antes de canonizar fatos.',
+      writingVoiceAndTone: 'Literário em Português, consistente com o gênero e as regras de mundo configuradas.',
+      autoInjectEntitySchemasInPrompt: true,
+      autoInjectCanonRulesInPrompt: true,
+      allowedAiCapabilities: {
+        readCanonAndEpistemic: true,
+        proposeStaging: true,
+        directDraftEdits: true,
+        analyzeConsistency: true,
+      },
+      externalIntegrations: {
+        mcpTransportEnabled: true,
+        preferredModelLabel: 'Local / MCP Stdio',
+        webhookOrEndpointUrl: '',
+      },
+    },
   };
 }

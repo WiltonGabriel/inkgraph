@@ -5,6 +5,7 @@ import {
   type ProjectData,
   type ViewId,
 } from '../../types/project';
+import { getEntitySchema } from '../../domain/registry';
 import { calculateFleschReadability } from '../../domain/wordCounter';
 
 export interface HealthDimension {
@@ -47,20 +48,26 @@ export function computeProjectHealthSummary(
     Math.round((totalWordCount / Math.max(1, project.wordCountGoal)) * 100)
   );
 
-  const charScores = project.characters.map(calculateCharacterCompleteness);
+  const charSchema = getEntitySchema(project, 'character');
+  const charScores = project.characters.map((c) =>
+    calculateCharacterCompleteness(c, charSchema)
+  );
   const castDepth =
     charScores.length > 0
       ? Math.round(charScores.reduce((a, b) => a + b, 0) / charScores.length)
       : 0;
   const completeChars = charScores.filter((s) => s >= 70).length;
 
-  const worldScores = project.worlds.map(calculateWorldCompleteness);
+  const worldScores = project.worlds.map((w) => calculateWorldCompleteness(w));
   const worldOnlyDepth =
     worldScores.length > 0
       ? Math.round(worldScores.reduce((a, b) => a + b, 0) / worldScores.length)
       : 0;
 
-  const factionScores = project.factions.map(calculateFactionCompleteness);
+  const factionSchema = getEntitySchema(project, 'faction');
+  const factionScores = project.factions.map((f) =>
+    calculateFactionCompleteness(f, factionSchema)
+  );
   const factionDepth =
     factionScores.length > 0
       ? Math.round(factionScores.reduce((a, b) => a + b, 0) / factionScores.length)

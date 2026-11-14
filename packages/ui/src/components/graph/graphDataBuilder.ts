@@ -1,3 +1,4 @@
+import { getEffectiveEntitySchemas, listCustomEntitySchemas } from '../../domain/registry';
 import type {
   EntityRelationship,
   ProjectData,
@@ -5,15 +6,43 @@ import type {
 } from '../../types/project';
 
 export type ScopeFilter = 'all' | 'character' | 'faction' | 'location' | 'system_object';
-export type GraphEntityKind = 'character' | 'faction' | 'location' | 'system' | 'object';
+export type BuiltinGraphEntityKind = 'character' | 'faction' | 'location' | 'system' | 'object';
+export type GraphEntityKind = BuiltinGraphEntityKind | (string & {});
 
-export const ALL_GRAPH_ENTITY_KINDS: readonly GraphEntityKind[] = [
+export const ALL_GRAPH_ENTITY_KINDS: readonly BuiltinGraphEntityKind[] = [
   'character',
   'faction',
   'location',
   'system',
   'object',
 ];
+
+export interface GraphLayerDescriptor {
+  kind: GraphEntityKind;
+  label: string;
+  color: string;
+  iconName: string;
+  isCustom?: boolean;
+}
+
+export function getGraphLayersForProject(project: ProjectData): GraphLayerDescriptor[] {
+  const customLayers: GraphLayerDescriptor[] = listCustomEntitySchemas(project).map((schema) => ({
+    kind: schema.id,
+    label: schema.pluralLabel,
+    color: schema.color,
+    iconName: schema.iconName,
+    isCustom: true,
+  }));
+
+  return [
+    { kind: 'character', label: 'Personagens', color: '#3b82f6', iconName: 'Users' },
+    { kind: 'faction', label: 'Facções', color: '#ef4444', iconName: 'Shield' },
+    { kind: 'location', label: 'Locais', color: '#10b981', iconName: 'MapPin' },
+    { kind: 'system', label: 'Sistemas', color: '#a855f7', iconName: 'Cpu' },
+    { kind: 'object', label: 'Objetos', color: '#f59e0b', iconName: 'Package' },
+    ...customLayers,
+  ];
+}
 
 export interface GraphNode {
   id: string;
@@ -119,6 +148,11 @@ export function buildFilteredGraphData(
 ): { nodes: GraphNode[]; links: GraphLink[]; allEntities: GraphNode[] } {
   const allLocations = project.worlds.flatMap((w) => w.locations ?? []);
   const allSystems = project.worlds.flatMap((w) => w.systems ?? []);
+  const schemas = getEffectiveEntitySchemas(project);
+  const customSchemas = listCustomEntitySchemas(project);
+  const allCustomRecords = customSchemas.flatMap((schema) =>
+    (project.customEntities?.[schema.id] ?? []).map((record) => ({ schema, record }))
+  );
 
   const nodeList: GraphNode[] = [
     ...project.characters.map((c) => ({
@@ -160,6 +194,14 @@ export function buildFilteredGraphData(
       subtitle: obj.type,
       color: '#f59e0b',
       val: 7,
+    })),
+    ...allCustomRecords.map(({ schema, record }) => ({
+      id: record.id,
+      name: record.name,
+      kind: schema.id,
+      subtitle: schema.label,
+      color: schema.color || '#06b6d4',
+      val: 8,
     })),
   ];
 
@@ -220,13 +262,14 @@ export function buildFilteredGraphData(
     linkList.push({ id, source, target, label, type, strength, sentiment });
   };
 
-  // Pass 1: Explicit custom relationships across all 5 entity kinds
+  // Pass 1: Explicit custom relationships across built-in & custom/plugin entities
   for (const entity of [
     ...project.characters,
     ...project.factions,
     ...allLocations,
     ...allSystems,
     ...project.objects,
+    ...allCustomRecords.map((item) => item.record),
   ]) {
     for (const rel of entity.relationships ?? []) {
       pushCustomRel(entity.id, rel);
@@ -283,6 +326,40 @@ export function buildFilteredGraphData(
     }
     for (const charId of obj.linkedCharacterIds ?? []) {
       pushStructural(`obj_char_${obj.id}_${charId}`, charId, obj.id, 'Vinculado ao Objeto', 'acquaintance', 5, 0.2);
+    }
+  }
+
+  // Pass 2b: Structural links derived dynamically from custom `entity_ref` fields
+  const refEntities: { id: string; schemaId: string; customAttributes?: Record<string, unknown> }[] = [
+    ...project.characters.map((c) => ({ id: c.id, schemaId: 'character', customAttributes: c.customAttributes })),
+    ...project.factions.map((f) => ({ id: f.id, schemaId: 'faction', customAttributes: f.customAttributes })),
+    ...allLocations.map((l) => ({ id: l.id, schemaId: 'location', customAttributes: l.customAttributes })),
+    ...allSystems.map((s) => ({ id: s.id, schemaId: 'rule_system', customAttributes: s.customAttributes })),
+    ...project.objects.map((o) => ({ id: o.id, schemaId: 'object', customAttributes: o.customAttributes })),
+    ...allCustomRecords.map(({ schema, record }) => ({
+      id: record.id,
+      schemaId: schema.id,
+      customAttributes: record.customAttributes,
+    })),
+  ];
+
+  for (const item of refEntities) {
+    const schema = schemas[item.schemaId];
+    if (!schema || !item.customAttributes) continue;
+    for (const field of schema.customFields) {
+      if (field.type !== 'entity_ref') continue;
+      const targetId = item.customAttributes[field.key];
+      if (typeof targetId === 'string' && targetId.trim()) {
+        pushStructural(
+          `ref_${item.id}_${field.key}_${targetId}`,
+          item.id,
+          targetId,
+          field.label,
+          'acquaintance',
+          5,
+          0.2
+        );
+      }
     }
   }
 

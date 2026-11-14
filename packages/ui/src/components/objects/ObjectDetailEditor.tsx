@@ -189,20 +189,22 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={lbl}>Personagem Portador</label>
-                <select
-                  value={selectedObj.ownerCharacterId ?? ''}
-                  onChange={(e) => updateField({ ownerCharacterId: e.target.value || undefined })}
-                  style={inp}
-                >
-                  <option value="">Nenhum</option>
-                  {project.characters.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+              {!hiddenFields.has('ownerCharacterId') && (
+                <div>
+                  <label style={lbl}>Personagem Portador</label>
+                  <select
+                    value={selectedObj.ownerCharacterId ?? ''}
+                    onChange={(e) => updateField({ ownerCharacterId: e.target.value || undefined })}
+                    style={inp}
+                  >
+                    <option value="">Nenhum</option>
+                    {project.characters.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={lbl}>Facção Vinculada</label>
                 <select

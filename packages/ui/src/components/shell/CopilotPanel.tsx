@@ -73,6 +73,11 @@ export function CopilotPanel() {
   };
 
   const handleSendToStaging = (turnId: string, snippet: string) => {
+    const agentPerms = project.workspaceConfig?.agentConfig?.allowedAiCapabilities;
+    if (agentPerms?.proposeStaging === false) {
+      notify('Propostas em Staging por IA estão desabilitadas nas Configurações do Workspace.', 'warning');
+      return;
+    }
     if (!activeScene) {
       notify('Crie ou selecione uma cena antes de enviar para Staging.', 'warning');
       return;
@@ -89,6 +94,11 @@ export function CopilotPanel() {
   };
 
   const handleApplyToDraftWithSnapshot = (turnId: string, snippet: string) => {
+    const agentPerms = project.workspaceConfig?.agentConfig?.allowedAiCapabilities;
+    if (agentPerms?.directDraftEdits === false) {
+      notify('Edição direta no rascunho pela IA está bloqueada neste workspace (use Staging).', 'warning');
+      return;
+    }
     if (!activeScene) {
       notify('Crie ou selecione uma cena antes de aplicar ao rascunho.', 'warning');
       return;

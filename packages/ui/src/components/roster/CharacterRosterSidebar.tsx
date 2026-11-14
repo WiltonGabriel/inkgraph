@@ -5,6 +5,7 @@ import {
   type Character,
 } from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import { checkAiAvailability } from '../../domain/aiAvailability';
 import { CompletenessRing } from '../ui/CompletenessRing';
 import { SubtleAiGatePopover } from '../common/SubtleAiGatePopover';
@@ -34,21 +35,22 @@ export function CharacterRosterSidebar({
   onCreateManual,
   onOpenAiModal,
 }: CharacterRosterSidebarProps) {
-  const { settings } = useProject();
+  const { project, settings } = useProject();
+  const charSchema = getEntitySchema(project, 'character');
   const [aiGateOpen, setAiGateOpen] = useState(false);
   const aiStatus = checkAiAvailability(settings);
 
   const avgCompleteness = useMemo(() => {
     if (characters.length === 0) return 0;
     const sum = characters.reduce(
-      (acc, c) => acc + calculateCharacterCompleteness(c),
+      (acc, c) => acc + calculateCharacterCompleteness(c, charSchema),
       0
     );
     return Math.round(sum / characters.length);
-  }, [characters]);
+  }, [characters, charSchema]);
 
   const developedCount = characters.filter(
-    (c) => calculateCharacterCompleteness(c) >= 80
+    (c) => calculateCharacterCompleteness(c, charSchema) >= 80
   ).length;
 
   const handleAiClick = () => {
@@ -250,7 +252,7 @@ export function CharacterRosterSidebar({
         }}
       >
         {filteredCharacters.map((c) => {
-          const pct = calculateCharacterCompleteness(c);
+          const pct = calculateCharacterCompleteness(c, charSchema);
           const active = selectedId === c.id;
           return (
             <div

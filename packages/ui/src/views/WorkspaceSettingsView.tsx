@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { SlidersHorizontal, BookOpen, Boxes, Puzzle, ShieldCheck } from 'lucide-react';
+import { SlidersHorizontal, BookOpen, Boxes, Puzzle, ShieldCheck, Bot } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import { WorkspaceGeneralAndModelTab } from '../components/workspaceSettings/WorkspaceGeneralAndModelTab';
 import { WorkspaceEntitiesTab } from '../components/workspaceSettings/WorkspaceEntitiesTab';
 import { WorkspaceModulesAndPluginsTab } from '../components/workspaceSettings/WorkspaceModulesAndPluginsTab';
 import { WorkspaceTemplatesAndCanonTab } from '../components/workspaceSettings/WorkspaceTemplatesAndCanonTab';
+import { WorkspaceAdvancedAiTab } from '../components/workspaceSettings/WorkspaceAdvancedAiTab';
 import { THEME_VAR } from '../components/settings/settingsStyles';
 
-type WorkspaceTab = 'general' | 'entities' | 'modules' | 'templates';
+type WorkspaceTab = 'general' | 'entities' | 'modules' | 'templates' | 'advanced';
 
 const TABS: { id: WorkspaceTab; label: string; icon: typeof BookOpen }[] = [
   { id: 'general', label: 'Geral & Modelo', icon: BookOpen },
   { id: 'entities', label: 'Entidades & Campos', icon: Boxes },
   { id: 'modules', label: 'Módulos & Plugins', icon: Puzzle },
   { id: 'templates', label: 'Cânone & Exportação', icon: ShieldCheck },
+  { id: 'advanced', label: 'Avançado & IA', icon: Bot },
 ];
 
 export function WorkspaceSettingsView() {
@@ -106,6 +108,7 @@ export function WorkspaceSettingsView() {
         {activeTab === 'entities' && <WorkspaceEntitiesTab />}
         {activeTab === 'modules' && <WorkspaceModulesAndPluginsTab />}
         {activeTab === 'templates' && <WorkspaceTemplatesAndCanonTab />}
+        {activeTab === 'advanced' && <WorkspaceAdvancedAiTab />}
       </div>
     </div>
   );

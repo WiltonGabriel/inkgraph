@@ -37,6 +37,12 @@ function normalizeWorkspaceConfig(raw: unknown): WorkspaceConfig {
         hiddenNativeFields: Array.isArray(schema.hiddenNativeFields)
           ? schema.hiddenNativeFields
           : (base?.hiddenNativeFields ?? []),
+        hiddenCustomFields: Array.isArray(schema.hiddenCustomFields)
+          ? schema.hiddenCustomFields
+          : (base?.hiddenCustomFields ?? []),
+        requiredNativeFields: Array.isArray(schema.requiredNativeFields)
+          ? schema.requiredNativeFields
+          : (base?.requiredNativeFields ?? []),
         customFields: Array.isArray(schema.customFields)
           ? schema.customFields
           : (base?.customFields ?? []),
@@ -79,6 +85,49 @@ function normalizeWorkspaceConfig(raw: unknown): WorkspaceConfig {
         cfg.canonSettings?.autoTrackEpistemic ?? defaults.canonSettings.autoTrackEpistemic,
       strictEntityRefs:
         cfg.canonSettings?.strictEntityRefs ?? defaults.canonSettings.strictEntityRefs,
+    },
+    agentConfig: {
+      customSystemPrompt:
+        typeof cfg.agentConfig?.customSystemPrompt === 'string'
+          ? cfg.agentConfig.customSystemPrompt
+          : (defaults.agentConfig?.customSystemPrompt ?? ''),
+      writingVoiceAndTone:
+        typeof cfg.agentConfig?.writingVoiceAndTone === 'string'
+          ? cfg.agentConfig.writingVoiceAndTone
+          : (defaults.agentConfig?.writingVoiceAndTone ?? ''),
+      autoInjectEntitySchemasInPrompt:
+        cfg.agentConfig?.autoInjectEntitySchemasInPrompt ??
+        (defaults.agentConfig?.autoInjectEntitySchemasInPrompt ?? true),
+      autoInjectCanonRulesInPrompt:
+        cfg.agentConfig?.autoInjectCanonRulesInPrompt ??
+        (defaults.agentConfig?.autoInjectCanonRulesInPrompt ?? true),
+      allowedAiCapabilities: {
+        readCanonAndEpistemic:
+          cfg.agentConfig?.allowedAiCapabilities?.readCanonAndEpistemic ??
+          (defaults.agentConfig?.allowedAiCapabilities.readCanonAndEpistemic ?? true),
+        proposeStaging:
+          cfg.agentConfig?.allowedAiCapabilities?.proposeStaging ??
+          (defaults.agentConfig?.allowedAiCapabilities.proposeStaging ?? true),
+        directDraftEdits:
+          cfg.agentConfig?.allowedAiCapabilities?.directDraftEdits ??
+          (defaults.agentConfig?.allowedAiCapabilities.directDraftEdits ?? true),
+        analyzeConsistency:
+          cfg.agentConfig?.allowedAiCapabilities?.analyzeConsistency ??
+          (defaults.agentConfig?.allowedAiCapabilities.analyzeConsistency ?? true),
+      },
+      externalIntegrations: {
+        mcpTransportEnabled:
+          cfg.agentConfig?.externalIntegrations?.mcpTransportEnabled ??
+          (defaults.agentConfig?.externalIntegrations.mcpTransportEnabled ?? true),
+        preferredModelLabel:
+          typeof cfg.agentConfig?.externalIntegrations?.preferredModelLabel === 'string'
+            ? cfg.agentConfig.externalIntegrations.preferredModelLabel
+            : (defaults.agentConfig?.externalIntegrations.preferredModelLabel ?? 'Local / MCP Stdio'),
+        webhookOrEndpointUrl:
+          typeof cfg.agentConfig?.externalIntegrations?.webhookOrEndpointUrl === 'string'
+            ? cfg.agentConfig.externalIntegrations.webhookOrEndpointUrl
+            : '',
+      },
     },
   };
 }

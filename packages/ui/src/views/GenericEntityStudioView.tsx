@@ -2,8 +2,14 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, Search } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import { getEntitySchema, listCustomEntitySchemas } from '../domain/registry';
-import type { CanonStatus, GenericEntityRecord } from '../types/project';
+import {
+  calculateGenericEntityCompleteness,
+  type CanonStatus,
+  type GenericEntityRecord,
+} from '../types/project';
 import { DynamicFieldRenderer } from '../components/common/DynamicFieldRenderer';
+import { EntityMetaConnectionsPanel } from '../components/common/EntityMetaConnectionsPanel';
+import { CompletenessRing } from '../components/ui/CompletenessRing';
 import { resolveEntityIcon } from '../components/common/entityIconResolver';
 import { THEME_VAR } from '../components/settings/settingsStyles';
 
@@ -253,6 +259,11 @@ export function GenericEntityStudioView() {
         ) : (
           <div style={{ maxWidth: 820, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <CompletenessRing
+                percent={calculateGenericEntityCompleteness(activeRecord, schema)}
+                size={40}
+                strokeWidth={4}
+              />
               <input
                 value={activeRecord.name}
                 onChange={(e) =>
@@ -405,6 +416,27 @@ export function GenericEntityStudioView() {
                 upsertCustomEntity({
                   ...activeRecord,
                   customAttributes: nextAttrs,
+                  updatedAt: new Date().toISOString(),
+                })
+              }
+            />
+
+            <EntityMetaConnectionsPanel
+              project={project}
+              currentEntityId={activeRecord.id}
+              relationships={activeRecord.relationships}
+              epistemicSecrets={activeRecord.epistemicSecrets}
+              onChangeRelationships={(nextRels) =>
+                upsertCustomEntity({
+                  ...activeRecord,
+                  relationships: nextRels,
+                  updatedAt: new Date().toISOString(),
+                })
+              }
+              onChangeSecrets={(nextSecrets) =>
+                upsertCustomEntity({
+                  ...activeRecord,
+                  epistemicSecrets: nextSecrets,
                   updatedAt: new Date().toISOString(),
                 })
               }

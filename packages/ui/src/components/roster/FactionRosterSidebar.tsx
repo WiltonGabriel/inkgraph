@@ -5,6 +5,7 @@ import {
   type Faction,
 } from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import { checkAiAvailability } from '../../domain/aiAvailability';
 import { CompletenessRing } from '../ui/CompletenessRing';
 import { SubtleAiGatePopover } from '../common/SubtleAiGatePopover';
@@ -30,18 +31,19 @@ export function FactionRosterSidebar({
   onCreateManual,
   onOpenAiModal,
 }: FactionRosterSidebarProps) {
-  const { settings } = useProject();
+  const { project, settings } = useProject();
+  const factionSchema = getEntitySchema(project, 'faction');
   const [aiGateOpen, setAiGateOpen] = useState(false);
   const aiStatus = checkAiAvailability(settings);
 
   const avgCompleteness = useMemo(() => {
     if (factions.length === 0) return 0;
     const sum = factions.reduce(
-      (acc, f) => acc + calculateFactionCompleteness(f),
+      (acc, f) => acc + calculateFactionCompleteness(f, factionSchema),
       0
     );
     return Math.round(sum / factions.length);
-  }, [factions]);
+  }, [factions, factionSchema]);
 
   const handleAiClick = () => {
     if (!aiStatus.connected) {
@@ -211,7 +213,7 @@ export function FactionRosterSidebar({
         }}
       >
         {filteredFactions.map((f) => {
-          const pct = calculateFactionCompleteness(f);
+          const pct = calculateFactionCompleteness(f, factionSchema);
           const active = selectedId === f.id;
           return (
             <div

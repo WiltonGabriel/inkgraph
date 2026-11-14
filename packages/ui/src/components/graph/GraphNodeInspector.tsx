@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema, listCustomEntitySchemas } from '../../domain/registry';
 import {
   calculateCharacterCompleteness,
   calculateFactionCompleteness,
+  calculateGenericEntityCompleteness,
   type EntityRelationship,
   type EpistemicSecret,
 } from '../../types/project';
@@ -38,8 +40,16 @@ export function GraphNodeInspector({
   onOpenDossier,
   onClose,
 }: GraphNodeInspectorProps) {
-  const { project, upsertCharacter, upsertFaction, upsertWorld, upsertObject } = useProject();
+  const {
+    project,
+    upsertCharacter,
+    upsertFaction,
+    upsertWorld,
+    upsertObject,
+    upsertCustomEntity,
+  } = useProject();
   const [inspectorTab, setInspectorTab] = useState<InspectorTabId>('formulation');
+  const customSchemas = useMemo(() => listCustomEntitySchemas(project), [project]);
 
   const allLocationsWithWorld = useMemo(
     () => project.worlds.flatMap((world) => (world.locations ?? []).map((loc) => ({ world, loc }))),
@@ -67,12 +77,21 @@ export function GraphNodeInspector({
     const obj = project.objects.find((o) => o.id === selectedNodeId);
     if (obj) return { kind: 'object', entity: obj };
 
+    for (const schema of customSchemas) {
+      const rec = (project.customEntities?.[schema.id] ?? []).find(
+        (item) => item.id === selectedNodeId
+      );
+      if (rec) return { kind: 'custom', entity: rec, schema };
+    }
+
     return null;
   }, [
     selectedNodeId,
     project.characters,
     project.factions,
     project.objects,
+    project.customEntities,
+    customSchemas,
     allLocationsWithWorld,
     allSystemsWithWorld,
   ]);
@@ -133,6 +152,13 @@ export function GraphNodeInspector({
         return;
       case 'object':
         upsertObject({ ...selectedEntity.entity, ...patch });
+        return;
+      case 'custom':
+        upsertCustomEntity({
+          ...selectedEntity.entity,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        });
         return;
     }
   };
@@ -282,18 +308,46 @@ export function GraphNodeInspector({
                 </option>
               ))}
             </optgroup>
+            {customSchemas.map((schema) => {
+              const items = project.customEntities?.[schema.id] ?? [];
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={schema.id} label={schema.pluralLabel}>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({schema.label})
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
         </div>
 
         {selectedEntity?.kind === 'character' && (
           <CompletenessRing
-            percent={calculateCharacterCompleteness(selectedEntity.entity)}
+            percent={calculateCharacterCompleteness(
+              selectedEntity.entity,
+              getEntitySchema(project, 'character')
+            )}
             size={42}
           />
         )}
         {selectedEntity?.kind === 'faction' && (
           <CompletenessRing
-            percent={calculateFactionCompleteness(selectedEntity.entity)}
+            percent={calculateFactionCompleteness(
+              selectedEntity.entity,
+              getEntitySchema(project, 'faction')
+            )}
+            size={42}
+          />
+        )}
+        {selectedEntity?.kind === 'custom' && (
+          <CompletenessRing
+            percent={calculateGenericEntityCompleteness(
+              selectedEntity.entity,
+              selectedEntity.schema
+            )}
             size={42}
           />
         )}
@@ -361,6 +415,7 @@ export function GraphNodeInspector({
             onUpdateFaction={upsertFaction}
             onUpdateWorld={upsertWorld}
             onUpdateObject={upsertObject}
+            onUpdateCustomEntity={upsertCustomEntity}
           />
         )}
 

@@ -78,6 +78,8 @@ export function WorldLocationsTab({
   onOpenAtlas?: () => void;
 }) {
   const { project, requestConfirm, notify } = useProject();
+  const locSchema = getEntitySchema(project, 'location');
+  const hiddenLocFields = new Set(locSchema?.hiddenNativeFields ?? []);
   const { width } = useViewport();
   const isNarrow = width < 960;
 
@@ -461,21 +463,27 @@ export function WorldLocationsTab({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div>
-              <label htmlFor="loc-faction" style={worldStyles.label}>Facção Controladora</label>
-              <select id="loc-faction" value={selectedLoc.controlledByFactionId ?? ''} onChange={(e) => updateLocation(selectedLoc.id, { controlledByFactionId: e.target.value || undefined })} style={worldStyles.input}>
-                <option value="">Sem controle definido</option>
-                {factions.map((fac) => (
-                  <option key={fac.id} value={fac.id}>{fac.name}</option>
-                ))}
-              </select>
+          {(!hiddenLocFields.has('controlledByFactionId') || !hiddenLocFields.has('population')) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+              {!hiddenLocFields.has('controlledByFactionId') && (
+                <div>
+                  <label htmlFor="loc-faction" style={worldStyles.label}>Facção Controladora</label>
+                  <select id="loc-faction" value={selectedLoc.controlledByFactionId ?? ''} onChange={(e) => updateLocation(selectedLoc.id, { controlledByFactionId: e.target.value || undefined })} style={worldStyles.input}>
+                    <option value="">Sem controle definido</option>
+                    {factions.map((fac) => (
+                      <option key={fac.id} value={fac.id}>{fac.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {!hiddenLocFields.has('population') && (
+                <div>
+                  <label htmlFor="loc-pop" style={worldStyles.label}>População</label>
+                  <input id="loc-pop" value={selectedLoc.population ?? ''} onChange={(e) => updateLocation(selectedLoc.id, { population: e.target.value })} placeholder="Ex.: 40.000 habitantes" style={worldStyles.input} />
+                </div>
+              )}
             </div>
-            <div>
-              <label htmlFor="loc-pop" style={worldStyles.label}>População</label>
-              <input id="loc-pop" value={selectedLoc.population ?? ''} onChange={(e) => updateLocation(selectedLoc.id, { population: e.target.value })} placeholder="Ex.: 40.000 habitantes" style={worldStyles.input} />
-            </div>
-          </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div>
@@ -506,20 +514,24 @@ export function WorldLocationsTab({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="loc-climate" style={worldStyles.label}>Clima & Atmosfera Sensorial</label>
-            <textarea id="loc-climate" rows={2} value={selectedLoc.climateOrAtmosphere} onChange={(e) => updateLocation(selectedLoc.id, { climateOrAtmosphere: e.target.value })} style={worldStyles.textarea} />
-          </div>
+          {!hiddenLocFields.has('climateOrAtmosphere') && (
+            <div>
+              <label htmlFor="loc-climate" style={worldStyles.label}>Clima & Atmosfera Sensorial</label>
+              <textarea id="loc-climate" rows={2} value={selectedLoc.climateOrAtmosphere} onChange={(e) => updateLocation(selectedLoc.id, { climateOrAtmosphere: e.target.value })} style={worldStyles.textarea} />
+            </div>
+          )}
 
           <div>
             <label htmlFor="loc-desc" style={worldStyles.label}>Descrição Geográfica & Arquitetônica</label>
             <textarea id="loc-desc" rows={3} value={selectedLoc.description} onChange={(e) => updateLocation(selectedLoc.id, { description: e.target.value })} style={worldStyles.textarea} />
           </div>
 
-          <div>
-            <label htmlFor="loc-strategy" style={worldStyles.label}>Valor Estratégico & Narrativo</label>
-            <textarea id="loc-strategy" rows={2} value={selectedLoc.strategicValue} onChange={(e) => updateLocation(selectedLoc.id, { strategicValue: e.target.value })} style={worldStyles.textarea} />
-          </div>
+          {!hiddenLocFields.has('strategicValue') && (
+            <div>
+              <label htmlFor="loc-strategy" style={worldStyles.label}>Valor Estratégico & Narrativo</label>
+              <textarea id="loc-strategy" rows={2} value={selectedLoc.strategicValue} onChange={(e) => updateLocation(selectedLoc.id, { strategicValue: e.target.value })} style={worldStyles.textarea} />
+            </div>
+          )}
 
           <div>
             <div style={{ ...worldStyles.label, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>

@@ -1,19 +1,23 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
 import type {
   Character,
+  EntityTypeDefinition,
   Faction,
+  GenericEntityRecord,
   RuleSystem,
   StoryObject,
   World,
   WorldLocation,
 } from '../../types/project';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 
 export type SelectedGraphEntity =
   | { kind: 'character'; entity: Character }
   | { kind: 'faction'; entity: Faction }
   | { kind: 'location'; entity: WorldLocation; world: World }
   | { kind: 'system'; entity: RuleSystem; world: World }
-  | { kind: 'object'; entity: StoryObject };
+  | { kind: 'object'; entity: StoryObject }
+  | { kind: 'custom'; entity: GenericEntityRecord; schema?: EntityTypeDefinition };
 
 interface GraphInspectorAttributesProps {
   selected: SelectedGraphEntity;
@@ -22,6 +26,7 @@ interface GraphInspectorAttributesProps {
   onUpdateFaction: (faction: Faction) => void;
   onUpdateWorld: (world: World) => void;
   onUpdateObject: (obj: StoryObject) => void;
+  onUpdateCustomEntity?: (record: GenericEntityRecord) => void;
 }
 
 type KeysMatching<T, V> = { [K in keyof T]-?: T[K] extends V ? K : never }[keyof T] & string;
@@ -109,6 +114,14 @@ const OBJECT_FIELDS: FieldSpec<StoryObject>[] = [
   txt('notes', 'Notas do Objeto', 2),
 ];
 
+const CUSTOM_ENTITY_FIELDS: FieldSpec<GenericEntityRecord>[] = [
+  inp('name', 'Nome'),
+  csv('aliases', 'Aliases / Codinomes (vírgula)'),
+  txt('summary', 'Resumo Canônico', 2),
+  csv('tags', 'Tags (vírgula)'),
+  txt('notes', 'Notas & Detalhes', 3),
+];
+
 export function GraphInspectorAttributes({
   selected,
   mode,
@@ -116,6 +129,7 @@ export function GraphInspectorAttributes({
   onUpdateFaction,
   onUpdateWorld,
   onUpdateObject,
+  onUpdateCustomEntity,
 }: GraphInspectorAttributesProps) {
   if (selected.kind === 'character') {
     const specs = mode === 'deep' ? CHAR_DEEP_FIELDS : CHAR_FORM_FIELDS;
@@ -178,6 +192,40 @@ export function GraphInspectorAttributes({
           })
         }
       />
+    );
+  }
+
+  if (selected.kind === 'custom') {
+    const rec = selected.entity;
+    const fields = selected.schema?.customFields ?? [];
+    return (
+      <>
+        <SpecList
+          specs={CUSTOM_ENTITY_FIELDS}
+          entity={rec}
+          onPatch={(p) =>
+            onUpdateCustomEntity?.({
+              ...rec,
+              ...p,
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        />
+        {fields.length > 0 && (
+          <DynamicFieldRenderer
+            title={`Campos de ${selected.schema?.label ?? rec.entityTypeId}`}
+            fields={fields}
+            values={rec.customAttributes}
+            onChange={(nextAttrs) =>
+              onUpdateCustomEntity?.({
+                ...rec,
+                customAttributes: nextAttrs,
+                updatedAt: new Date().toISOString(),
+              })
+            }
+          />
+        )}
+      </>
     );
   }
 

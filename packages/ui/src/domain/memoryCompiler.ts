@@ -368,10 +368,18 @@ function buildRollingSummaryLayer(
     });
   }
 
+  const agentCfg = project.workspaceConfig?.agentConfig;
+  const voiceSummary = agentCfg?.writingVoiceAndTone?.trim()
+    ? agentCfg.writingVoiceAndTone.trim()
+    : 'Respeitar continuidade epistêmica, tom literário em Português e travas de Cânone/Staging.';
+  const customRule = agentCfg?.customSystemPrompt?.trim()
+    ? ` | Diretriz: ${summarizeText(agentCfg.customSystemPrompt, 120)}`
+    : '';
+
   items.push({
     id: 'roll_procedural_voice',
-    title: 'Voz Procedural do Projeto',
-    summary: `Gênero: ${project.genre || 'Narrativa'}. Respeitar continuidade epistêmica, tom literário em Português e travas de Cânone/Staging.`,
+    title: 'Voz Procedural & System Prompt',
+    summary: `Gênero: ${project.genre || 'Narrativa'}. ${voiceSummary}${customRule}`,
   });
 
   return {
@@ -382,10 +390,90 @@ function buildRollingSummaryLayer(
   };
 }
 
+/**
+ * Generates a live, schema-aware System Prompt for both the built-in Copilot
+ * and external MCP/local AI agents connected to this workspace.
+ */
+export function buildWorkspaceSystemPrompt(project: ProjectData): string {
+  const cfg = project.workspaceConfig;
+  const agent = cfg?.agentConfig;
+  const lines: string[] = [
+    `# SYSTEM PROMPT — WORKSPACE INKGRAPH: ${project.title}`,
+    `Gênero: ${project.genre || 'Narrativa'}`,
+  ];
+
+  if (project.logline?.trim()) {
+    lines.push(`Logline: ${project.logline.trim()}`);
+  }
+
+  lines.push('');
+  lines.push('## Instruções Centrais do Autor');
+  lines.push(
+    agent?.customSystemPrompt?.trim() ||
+      'Atue como editor literário e guardião de cânone do InkGraph. Respeite continuidade epistêmica e proponha mudanças via Staging antes de alterar o cânone.'
+  );
+
+  if (agent?.writingVoiceAndTone?.trim()) {
+    lines.push('');
+    lines.push('## Voz e Tom Literário');
+    lines.push(agent.writingVoiceAndTone.trim());
+  }
+
+  if (agent?.autoInjectCanonRulesInPrompt !== false) {
+    const canon = cfg?.canonSettings;
+    const acts = (cfg?.acts ?? []).map((a) => `Ato ${a.number}: ${a.title}`).join(' | ');
+    const perms = agent?.allowedAiCapabilities;
+    lines.push('');
+    lines.push('## Governança de Cânone & Epistemologia');
+    if (acts) lines.push(`- Estrutura de Atos: ${acts}`);
+    lines.push(
+      `- Staging obrigatório para cânone: ${canon?.requireStagingForCopilot !== false ? 'SIM' : 'NÃO'}`
+    );
+    lines.push(
+      `- Rastreamento epistêmico ativo (Autor vs Leitor vs Personagem): ${canon?.autoTrackEpistemic !== false ? 'SIM' : 'NÃO'}`
+    );
+    lines.push(
+      `- Permissões do agente: Leitura=${perms?.readCanonAndEpistemic !== false ? 'Sim' : 'Não'}, Staging=${perms?.proposeStaging !== false ? 'Sim' : 'Não'}, Rascunho c/ Snapshot=${perms?.directDraftEdits !== false ? 'Sim' : 'Não'}, Auditoria=${perms?.analyzeConsistency !== false ? 'Sim' : 'Não'}`
+    );
+  }
+
+  if (agent?.autoInjectEntitySchemasInPrompt !== false) {
+    const schemas = Object.values(getEffectiveEntitySchemas(project));
+    lines.push('');
+    lines.push('## Contrato de Entidades & Campos Ativos no Workspace');
+    for (const schema of schemas) {
+      const hiddenNative = schema.hiddenNativeFields.length > 0
+        ? ` | nativos ocultos: [${schema.hiddenNativeFields.join(', ')}]`
+        : '';
+      const requiredNative = (schema.requiredNativeFields ?? []).length > 0
+        ? ` | nativos obrigatórios: [${schema.requiredNativeFields!.join(', ')}]`
+        : '';
+      lines.push(`- ${schema.label} (type_id="${schema.id}")${requiredNative}${hiddenNative}`);
+      for (const field of schema.customFields) {
+        if (field.includeInMemory === false) continue;
+        const opts =
+          field.type === 'select' && field.options?.length
+            ? ` opções=[${field.options.join(', ')}]`
+            : '';
+        const target =
+          field.type === 'entity_ref' && field.targetEntityType
+            ? ` destino=${field.targetEntityType}`
+            : '';
+        const req = field.required ? ' [OBRIGATÓRIO]' : '';
+        lines.push(`  • ${field.key} ("${field.label}"): tipo=${field.type}${opts}${target}${req}`);
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
 function formatCompiledPrompt(
+  project: ProjectData,
   layers: CompiledMemoryLayer[],
   handoff: string
 ): string {
+  const systemHeader = buildWorkspaceSystemPrompt(project);
   const blocks = layers.map((layer) => {
     const lines =
       layer.items.length > 0
@@ -393,7 +481,7 @@ function formatCompiledPrompt(
         : '- (Sem registros ativos nesta camada)';
     return `## ${layer.label}\n${lines}`;
   });
-  return `${blocks.join('\n\n')}\n\n## Handoff da Sessão\n${handoff}`;
+  return `${systemHeader}\n\n${blocks.join('\n\n')}\n\n## Handoff da Sessão\n${handoff}`;
 }
 
 /**
@@ -467,6 +555,6 @@ export function compileFourLayerContext(
     cloudAllowed,
     epistemicAlerts: alerts,
     sessionHandoff,
-    formattedPrompt: formatCompiledPrompt(layers, sessionHandoff),
+    formattedPrompt: formatCompiledPrompt(project, layers, sessionHandoff),
   };
 }

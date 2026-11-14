@@ -10,6 +10,8 @@ import { CanonBadgePill, worldStyles } from './WorldScoreChecklistBanner';
 
 export function WorldSystemsTab({ world, onUpdateWorld }: { world: World; onUpdateWorld: (next: World) => void }) {
   const { project, requestConfirm, notify } = useProject();
+  const sysSchema = getEntitySchema(project, 'rule_system');
+  const hiddenSysFields = new Set(sysSchema?.hiddenNativeFields ?? []);
   const { width } = useViewport();
   const isNarrow = width < 820;
 
@@ -121,16 +123,22 @@ export function WorldSystemsTab({ world, onUpdateWorld }: { world: World; onUpda
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: 10 }}>
-              <div>
-                <label htmlFor={`sys-source-${sys.id}`} style={worldStyles.label}>Fonte Primária / Fundamento</label>
-                <input id={`sys-source-${sys.id}`} value={sys.coreSource} onChange={(e) => handleUpdateSystem(sys.id, { coreSource: e.target.value })} style={worldStyles.input} />
+            {(!hiddenSysFields.has('coreSource') || !hiddenSysFields.has('costsAndToll')) && (
+              <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                {!hiddenSysFields.has('coreSource') && (
+                  <div>
+                    <label htmlFor={`sys-source-${sys.id}`} style={worldStyles.label}>Fonte Primária / Fundamento</label>
+                    <input id={`sys-source-${sys.id}`} value={sys.coreSource} onChange={(e) => handleUpdateSystem(sys.id, { coreSource: e.target.value })} style={worldStyles.input} />
+                  </div>
+                )}
+                {!hiddenSysFields.has('costsAndToll') && (
+                  <div>
+                    <label htmlFor={`sys-cost-${sys.id}`} style={worldStyles.label}>Custos, Restrições & Pedágio</label>
+                    <input id={`sys-cost-${sys.id}`} value={sys.costsAndToll} onChange={(e) => handleUpdateSystem(sys.id, { costsAndToll: e.target.value })} style={worldStyles.input} />
+                  </div>
+                )}
               </div>
-              <div>
-                <label htmlFor={`sys-cost-${sys.id}`} style={worldStyles.label}>Custos, Restrições & Pedágio</label>
-                <input id={`sys-cost-${sys.id}`} value={sys.costsAndToll} onChange={(e) => handleUpdateSystem(sys.id, { costsAndToll: e.target.value })} style={worldStyles.input} />
-              </div>
-            </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: 10 }}>
               <div>
@@ -157,11 +165,13 @@ export function WorldSystemsTab({ world, onUpdateWorld }: { world: World; onUpda
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: 10 }}>
-              <div>
-                <label htmlFor={`sys-taboos-${sys.id}`} style={worldStyles.label}>Tabus Sociais & Sanções Legais</label>
-                <input id={`sys-taboos-${sys.id}`} value={sys.socialTaboos} onChange={(e) => handleUpdateSystem(sys.id, { socialTaboos: e.target.value })} placeholder="Práticas proibidas, crimes capitais ou estigmas sociais..." style={worldStyles.input} />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {!hiddenSysFields.has('socialTaboos') && (
+                <div>
+                  <label htmlFor={`sys-taboos-${sys.id}`} style={worldStyles.label}>Tabus Sociais & Sanções Legais</label>
+                  <input id={`sys-taboos-${sys.id}`} value={sys.socialTaboos} onChange={(e) => handleUpdateSystem(sys.id, { socialTaboos: e.target.value })} placeholder="Práticas proibidas, crimes capitais ou estigmas sociais..." style={worldStyles.input} />
+                </div>
+              )}
               <div>
                 <label htmlFor={`sys-notes-${sys.id}`} style={worldStyles.label}>Notas & Exceções Canônicas</label>
                 <input id={`sys-notes-${sys.id}`} value={sys.notes} onChange={(e) => handleUpdateSystem(sys.id, { notes: e.target.value })} placeholder="Observações de consistência..." style={worldStyles.input} />

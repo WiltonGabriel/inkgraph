@@ -18,6 +18,8 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
   const { project, upsertCharacter, deleteCharacter } = useProject();
   const schema = getEntitySchema(project, 'character');
   const hiddenFields = new Set(schema?.hiddenNativeFields ?? []);
+  const requiredFields = new Set(schema?.requiredNativeFields ?? []);
+  const reqMark = (key: string) => (requiredFields.has(key) ? ' *' : '');
   const [activeTab, setActiveTab] = useState<
     'profile' | 'arc' | 'relationships' | 'epistemic' | 'notes'
   >('profile');
@@ -37,7 +39,7 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <CompletenessRing
-            percent={calculateCharacterCompleteness(selected)}
+            percent={calculateCharacterCompleteness(selected, schema)}
             size={48}
             strokeWidth={4}
           />
@@ -150,47 +152,67 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Facção Principal</label>
-                <select
-                  value={selected.factionId ?? ''}
-                  onChange={(e) =>
-                    upsertCharacter({
-                      ...selected,
-                      factionId: e.target.value || undefined,
-                    })
-                  }
-                  style={inputStyle}
-                >
-                  <option value="">Sem facção</option>
-                  {project.factions.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Localização Atual</label>
-                <select
-                  value={selected.locationId ?? ''}
-                  onChange={(e) =>
-                    upsertCharacter({
-                      ...selected,
-                      locationId: e.target.value || undefined,
-                    })
-                  }
-                  style={inputStyle}
-                >
-                  <option value="">Sem local fixo</option>
-                  {(project.worlds[0]?.locations ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {!hiddenFields.has('factionId') && (
+                <div>
+                  <label style={labelStyle}>Facção Principal{reqMark('factionId')}</label>
+                  <select
+                    value={selected.factionId ?? ''}
+                    onChange={(e) =>
+                      upsertCharacter({
+                        ...selected,
+                        factionId: e.target.value || undefined,
+                      })
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="">Sem facção</option>
+                    {project.factions.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {!hiddenFields.has('locationId') && (
+                <div>
+                  <label style={labelStyle}>Localização Atual{reqMark('locationId')}</label>
+                  <select
+                    value={selected.locationId ?? ''}
+                    onChange={(e) =>
+                      upsertCharacter({
+                        ...selected,
+                        locationId: e.target.value || undefined,
+                      })
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="">Sem local fixo</option>
+                    {(project.worlds[0]?.locations ?? []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {!hiddenFields.has('age') && (
+                <div>
+                  <label style={labelStyle}>Idade / Faixa Etária{reqMark('age')}</label>
+                  <input
+                    value={selected.age ?? ''}
+                    onChange={(e) =>
+                      upsertCharacter({
+                        ...selected,
+                        age: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: 28 anos, Secular..."
+                    style={inputStyle}
+                  />
+                </div>
+              )}
               <div>
                 <label style={labelStyle}>Codinomes (separados por vírgula)</label>
                 <input
@@ -278,48 +300,60 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
 
         {activeTab === 'arc' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Desejo Consciente (Want)</label>
-                <textarea
-                  rows={3}
-                  value={selected.want}
-                  onChange={(e) => upsertCharacter({ ...selected, want: e.target.value })}
-                  style={textareaStyle}
-                />
+            {(!hiddenFields.has('want') || !hiddenFields.has('need')) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                {!hiddenFields.has('want') && (
+                  <div>
+                    <label style={labelStyle}>Desejo Consciente (Want){reqMark('want')}</label>
+                    <textarea
+                      rows={3}
+                      value={selected.want}
+                      onChange={(e) => upsertCharacter({ ...selected, want: e.target.value })}
+                      style={textareaStyle}
+                    />
+                  </div>
+                )}
+                {!hiddenFields.has('need') && (
+                  <div>
+                    <label style={labelStyle}>Necessidade Inconsciente (Need){reqMark('need')}</label>
+                    <textarea
+                      rows={3}
+                      value={selected.need}
+                      onChange={(e) => upsertCharacter({ ...selected, need: e.target.value })}
+                      style={textareaStyle}
+                    />
+                  </div>
+                )}
               </div>
-              <div>
-                <label style={labelStyle}>Necessidade Inconsciente (Need)</label>
-                <textarea
-                  rows={3}
-                  value={selected.need}
-                  onChange={(e) => upsertCharacter({ ...selected, need: e.target.value })}
-                  style={textareaStyle}
-                />
+            )}
+            {(!hiddenFields.has('lieBelieved') || !hiddenFields.has('ghost')) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                {!hiddenFields.has('lieBelieved') && (
+                  <div>
+                    <label style={labelStyle}>A Mentira em que Acredita (The Lie){reqMark('lieBelieved')}</label>
+                    <textarea
+                      rows={3}
+                      value={selected.lieBelieved}
+                      onChange={(e) =>
+                        upsertCharacter({ ...selected, lieBelieved: e.target.value })
+                      }
+                      style={textareaStyle}
+                    />
+                  </div>
+                )}
+                {!hiddenFields.has('ghost') && (
+                  <div>
+                    <label style={labelStyle}>O Fantasma / Ferida de Origem (The Ghost){reqMark('ghost')}</label>
+                    <textarea
+                      rows={3}
+                      value={selected.ghost}
+                      onChange={(e) => upsertCharacter({ ...selected, ghost: e.target.value })}
+                      style={textareaStyle}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>A Mentira em que Acredita (The Lie)</label>
-                <textarea
-                  rows={3}
-                  value={selected.lieBelieved}
-                  onChange={(e) =>
-                    upsertCharacter({ ...selected, lieBelieved: e.target.value })
-                  }
-                  style={textareaStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>O Fantasma / Ferida de Origem (The Ghost)</label>
-                <textarea
-                  rows={3}
-                  value={selected.ghost}
-                  onChange={(e) => upsertCharacter({ ...selected, ghost: e.target.value })}
-                  style={textareaStyle}
-                />
-              </div>
-            </div>
+            )}
             <div>
               <label style={labelStyle}>Síntese do Arco do Personagem</label>
               <textarea
@@ -331,35 +365,37 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
                 style={textareaStyle}
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Ato I — Ponto de Partida</label>
-                <textarea
-                  rows={4}
-                  value={selected.arcAct1}
-                  onChange={(e) => upsertCharacter({ ...selected, arcAct1: e.target.value })}
-                  style={textareaStyle}
-                />
+            {!hiddenFields.has('arcsByAct') && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Ato I — Ponto de Partida{reqMark('arcsByAct')}</label>
+                  <textarea
+                    rows={4}
+                    value={selected.arcAct1}
+                    onChange={(e) => upsertCharacter({ ...selected, arcAct1: e.target.value })}
+                    style={textareaStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Ato II — Crise e Mudança</label>
+                  <textarea
+                    rows={4}
+                    value={selected.arcAct2}
+                    onChange={(e) => upsertCharacter({ ...selected, arcAct2: e.target.value })}
+                    style={textareaStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Ato III — Desfecho do Arco</label>
+                  <textarea
+                    rows={4}
+                    value={selected.arcAct3}
+                    onChange={(e) => upsertCharacter({ ...selected, arcAct3: e.target.value })}
+                    style={textareaStyle}
+                  />
+                </div>
               </div>
-              <div>
-                <label style={labelStyle}>Ato II — Crise e Mudança</label>
-                <textarea
-                  rows={4}
-                  value={selected.arcAct2}
-                  onChange={(e) => upsertCharacter({ ...selected, arcAct2: e.target.value })}
-                  style={textareaStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Ato III — Desfecho do Arco</label>
-                <textarea
-                  rows={4}
-                  value={selected.arcAct3}
-                  onChange={(e) => upsertCharacter({ ...selected, arcAct3: e.target.value })}
-                  style={textareaStyle}
-                />
-              </div>
-            </div>
+            )}
           </div>
         )}
 

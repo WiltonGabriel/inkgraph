@@ -70,49 +70,53 @@ function mergeCustomFields(
   return Array.from(byKey.values());
 }
 
+export function getPluginProvidedFieldKeys(
+  project: ProjectData,
+  typeId: string
+): Set<string> {
+  const keys = new Set<string>();
+  const enabledPlugins = (project.workspaceConfig?.plugins ?? []).filter((p) => p.enabled);
+  for (const plugin of enabledPlugins) {
+    for (const pt of plugin.entityTypes ?? []) {
+      if (pt.id === typeId) {
+        for (const f of pt.customFields) keys.add(f.key);
+      }
+    }
+    for (const ext of plugin.fieldExtensions ?? []) {
+      if (ext.targetType === typeId) {
+        for (const f of ext.fields) keys.add(f.key);
+      }
+    }
+  }
+  return keys;
+}
+
 /**
  * Resolves the effective entity schemas for a workspace by combining:
  * 1. Built-in default schemas
- * 2. Author customizations in `project.workspaceConfig.entitySchemas`
- * 3. Custom entity types and field extensions from enabled plugins
+ * 2. Custom entity types and field extensions from enabled plugins
+ * 3. Author customizations in `project.workspaceConfig.entitySchemas` (always take precedence)
+ * 4. Filtering out any fields listed in `hiddenCustomFields`
  */
 export function getEffectiveEntitySchemas(
   project: ProjectData
 ): Record<string, EntityTypeDefinition> {
   const result: Record<string, EntityTypeDefinition> = {};
   const workspaceSchemas = project.workspaceConfig?.entitySchemas ?? {};
+  const enabledPlugins = (project.workspaceConfig?.plugins ?? []).filter((p) => p.enabled);
 
+  // 1. Built-in baselines
   for (const [id, builtin] of Object.entries(BUILTIN_ENTITY_SCHEMAS)) {
-    const custom = workspaceSchemas[id];
-    result[id] = custom
-      ? {
-          ...builtin,
-          ...custom,
-          id,
-          isBuiltin: true,
-          builtinTarget: builtin.builtinTarget,
-          hiddenNativeFields: [...(custom.hiddenNativeFields ?? [])],
-          customFields: [...(custom.customFields ?? [])],
-        }
-      : {
-          ...builtin,
-          hiddenNativeFields: [...builtin.hiddenNativeFields],
-          customFields: [...builtin.customFields],
-        };
-  }
-
-  for (const [id, schema] of Object.entries(workspaceSchemas)) {
-    if (result[id]) continue;
     result[id] = {
-      ...schema,
-      id,
-      hiddenNativeFields: [...(schema.hiddenNativeFields ?? [])],
-      customFields: [...(schema.customFields ?? [])],
+      ...builtin,
+      hiddenNativeFields: [...builtin.hiddenNativeFields],
+      hiddenCustomFields: [...(builtin.hiddenCustomFields ?? [])],
+      requiredNativeFields: [...(builtin.requiredNativeFields ?? [])],
+      customFields: [...builtin.customFields],
     };
   }
 
-  const enabledPlugins = (project.workspaceConfig?.plugins ?? []).filter((p) => p.enabled);
-
+  // 2. Enabled plugin entity types (base)
   for (const plugin of enabledPlugins) {
     for (const pluginType of plugin.entityTypes ?? []) {
       const existing = result[pluginType.id];
@@ -120,19 +124,22 @@ export function getEffectiveEntitySchemas(
         ? {
             ...pluginType,
             ...existing,
-            customFields: mergeCustomFields(pluginType.customFields, existing.customFields),
+            customFields: mergeCustomFields(existing.customFields, pluginType.customFields),
             sourcePluginId: existing.sourcePluginId ?? plugin.id,
           }
         : {
             ...pluginType,
             isBuiltin: false,
             hiddenNativeFields: [...(pluginType.hiddenNativeFields ?? [])],
+            hiddenCustomFields: [...(pluginType.hiddenCustomFields ?? [])],
+            requiredNativeFields: [...(pluginType.requiredNativeFields ?? [])],
             customFields: [...(pluginType.customFields ?? [])],
             sourcePluginId: plugin.id,
           };
     }
   }
 
+  // 3. Enabled plugin field extensions (base)
   for (const plugin of enabledPlugins) {
     for (const ext of plugin.fieldExtensions ?? []) {
       const target = result[ext.targetType];
@@ -140,6 +147,45 @@ export function getEffectiveEntitySchemas(
       result[ext.targetType] = {
         ...target,
         customFields: mergeCustomFields(target.customFields, ext.fields),
+      };
+    }
+  }
+
+  // 4. Author workspace overrides (always take precedence over plugin defaults)
+  for (const [id, custom] of Object.entries(workspaceSchemas)) {
+    const base = result[id];
+    if (base) {
+      result[id] = {
+        ...base,
+        ...custom,
+        id,
+        isBuiltin: base.isBuiltin,
+        builtinTarget: base.builtinTarget,
+        hiddenNativeFields: [...(custom.hiddenNativeFields ?? base.hiddenNativeFields ?? [])],
+        hiddenCustomFields: [...(custom.hiddenCustomFields ?? base.hiddenCustomFields ?? [])],
+        requiredNativeFields: [...(custom.requiredNativeFields ?? base.requiredNativeFields ?? [])],
+        customFields: mergeCustomFields(base.customFields, custom.customFields ?? []),
+        sourcePluginId: base.sourcePluginId ?? custom.sourcePluginId,
+      };
+    } else {
+      result[id] = {
+        ...custom,
+        id,
+        hiddenNativeFields: [...(custom.hiddenNativeFields ?? [])],
+        hiddenCustomFields: [...(custom.hiddenCustomFields ?? [])],
+        requiredNativeFields: [...(custom.requiredNativeFields ?? [])],
+        customFields: [...(custom.customFields ?? [])],
+      };
+    }
+  }
+
+  // 5. Filter out hidden plugin/custom fields
+  for (const [id, schema] of Object.entries(result)) {
+    const hidden = new Set(schema.hiddenCustomFields ?? []);
+    if (hidden.size > 0) {
+      result[id] = {
+        ...schema,
+        customFields: schema.customFields.filter((f) => !hidden.has(f.key)),
       };
     }
   }

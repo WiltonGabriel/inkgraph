@@ -44,7 +44,7 @@ export type RelationshipType =
 export interface EntityRelationship {
   id: string;
   targetId: string;
-  targetKind: 'character' | 'faction' | 'location' | 'system' | 'object';
+  targetKind: 'character' | 'faction' | 'location' | 'system' | 'object' | (string & {});
   type: RelationshipType;
   label: string;
   strength: number; // 1 to 10
@@ -629,6 +629,8 @@ export interface EntityTypeDefinition {
   builtinTarget?: 'character' | 'faction' | 'location' | 'rule_system' | 'object';
   mentionPrefix?: string;
   hiddenNativeFields: string[];
+  hiddenCustomFields?: string[];
+  requiredNativeFields?: string[];
   customFields: CustomFieldSchema[];
   sourcePluginId?: string;
 }
@@ -697,6 +699,24 @@ export interface GenericEntityRecord {
   updatedAt: string;
 }
 
+export interface WorkspaceAgentConfig {
+  customSystemPrompt: string;
+  writingVoiceAndTone: string;
+  autoInjectEntitySchemasInPrompt: boolean;
+  autoInjectCanonRulesInPrompt: boolean;
+  allowedAiCapabilities: {
+    readCanonAndEpistemic: boolean;
+    proposeStaging: boolean;
+    directDraftEdits: boolean;
+    analyzeConsistency: boolean;
+  };
+  externalIntegrations: {
+    mcpTransportEnabled: boolean;
+    preferredModelLabel: string;
+    webhookOrEndpointUrl?: string;
+  };
+}
+
 export interface WorkspaceConfig {
   schemaVersion: number;
   activeTemplateId?: string;
@@ -709,6 +729,7 @@ export interface WorkspaceConfig {
     autoTrackEpistemic: boolean;
     strictEntityRefs: boolean;
   };
+  agentConfig?: WorkspaceAgentConfig;
 }
 
 export interface WorkspaceTemplateBundle {
@@ -762,5 +783,6 @@ export {
   calculateCharacterCompleteness,
   calculateFactionCompleteness,
   calculateWorldCompleteness,
+  calculateGenericEntityCompleteness,
 } from '../domain/completenessCalculator';
 export { countWords } from '../domain/wordCounter';

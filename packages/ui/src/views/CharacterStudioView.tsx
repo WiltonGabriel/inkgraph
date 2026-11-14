@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useProject } from '../context/ProjectContext';
+import { getEntitySchema } from '../domain/registry';
 import {
   calculateCharacterCompleteness,
   type Character,
@@ -9,6 +10,7 @@ import { CharacterDossierTabs } from '../components/roster/CharacterDossierTabs'
 
 export function CharacterStudioView() {
   const { project, upsertCharacter } = useProject();
+  const charSchema = getEntitySchema(project, 'character');
 
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'completeDesc' | 'completeAsc'>('completeDesc');
@@ -29,11 +31,11 @@ export function CharacterStudioView() {
     );
     return list.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
-      const ca = calculateCharacterCompleteness(a);
-      const cb = calculateCharacterCompleteness(b);
+      const ca = calculateCharacterCompleteness(a, charSchema);
+      const cb = calculateCharacterCompleteness(b, charSchema);
       return sortBy === 'completeDesc' ? cb - ca : ca - cb;
     });
-  }, [project.characters, search, sortBy]);
+  }, [project.characters, charSchema, search, sortBy]);
 
   const selected =
     project.characters.find((c) => c.id === selectedId) ?? filteredCharacters[0];

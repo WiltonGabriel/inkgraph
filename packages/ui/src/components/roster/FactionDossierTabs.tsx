@@ -38,7 +38,7 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <CompletenessRing
-            percent={calculateFactionCompleteness(selected)}
+            percent={calculateFactionCompleteness(selected, schema)}
             size={48}
             strokeWidth={4}
           />
@@ -198,98 +198,106 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
 
         {activeTab === 'hierarchy' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Recursos, Poder Militar & Economia</label>
-              <textarea
-                rows={3}
-                value={selected.resourcesAndPower}
-                onChange={(e) =>
-                  upsertFaction({ ...selected, resourcesAndPower: e.target.value })
-                }
-                style={textareaStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Conflitos Internos & Facções Dissidentes</label>
-              <textarea
-                rows={3}
-                value={selected.internalConflicts}
-                onChange={(e) =>
-                  upsertFaction({ ...selected, internalConflicts: e.target.value })
-                }
-                style={textareaStyle}
-              />
-            </div>
-
-            <h4 style={{ margin: '8px 0 0', fontSize: 13.5, color: 'var(--text-primary, #f1f5f9)' }}>
-              Patentes & Cargos da Hierarquia
-            </h4>
-            {selected.ranks.map((rk) => (
-              <div
-                key={rk.id}
-                style={{
-                  padding: 12,
-                  backgroundColor: 'var(--bg-elevated, #171d2e)',
-                  border: '1px solid var(--border-subtle, #263046)',
-                  borderRadius: 'var(--radius-md, 8px)',
-                }}
-              >
-                <div style={{ fontWeight: 700, color: 'var(--accent-primary, #3b82f6)', fontSize: 13 }}>
-                  {rk.title} (Autoridade {rk.authorityLevel}/10)
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
-                  {rk.responsibilities}
-                </div>
+            {!hiddenFields.has('resourcesAndPower') && (
+              <div>
+                <label style={labelStyle}>Recursos, Poder Militar & Economia</label>
+                <textarea
+                  rows={3}
+                  value={selected.resourcesAndPower}
+                  onChange={(e) =>
+                    upsertFaction({ ...selected, resourcesAndPower: e.target.value })
+                  }
+                  style={textareaStyle}
+                />
               </div>
-            ))}
+            )}
+            {!hiddenFields.has('internalConflicts') && (
+              <div>
+                <label style={labelStyle}>Conflitos Internos & Facções Dissidentes</label>
+                <textarea
+                  rows={3}
+                  value={selected.internalConflicts}
+                  onChange={(e) =>
+                    upsertFaction({ ...selected, internalConflicts: e.target.value })
+                  }
+                  style={textareaStyle}
+                />
+              </div>
+            )}
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={newRankTitle}
-                onChange={(e) => setNewRankTitle(e.target.value)}
-                placeholder="Título da patente (ex.: Alto Inquisidor)..."
-                style={inputStyle}
-              />
-              <input
-                value={newRankResp}
-                onChange={(e) => setNewRankResp(e.target.value)}
-                placeholder="Responsabilidades..."
-                style={inputStyle}
-              />
-              <button
-                onClick={() => {
-                  if (!newRankTitle.trim()) return;
-                  upsertFaction({
-                    ...selected,
-                    ranks: [
-                      ...selected.ranks,
-                      {
-                        id: `rk_${Date.now()}`,
-                        title: newRankTitle.trim(),
-                        authorityLevel: 7,
-                        holderIds: [],
-                        responsibilities: newRankResp.trim(),
-                      },
-                    ],
-                  });
-                  setNewRankTitle('');
-                  setNewRankResp('');
-                }}
-                style={{
-                  padding: '8px 14px',
-                  backgroundColor: '#2563eb',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                + Cargo
-              </button>
-            </div>
+            {!hiddenFields.has('ranks') && (
+              <>
+                <h4 style={{ margin: '8px 0 0', fontSize: 13.5, color: 'var(--text-primary, #f1f5f9)' }}>
+                  Patentes & Cargos da Hierarquia
+                </h4>
+                {selected.ranks.map((rk) => (
+                  <div
+                    key={rk.id}
+                    style={{
+                      padding: 12,
+                      backgroundColor: 'var(--bg-elevated, #171d2e)',
+                      border: '1px solid var(--border-subtle, #263046)',
+                      borderRadius: 'var(--radius-md, 8px)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: 'var(--accent-primary, #3b82f6)', fontSize: 13 }}>
+                      {rk.title} (Autoridade {rk.authorityLevel}/10)
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
+                      {rk.responsibilities}
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={newRankTitle}
+                    onChange={(e) => setNewRankTitle(e.target.value)}
+                    placeholder="Título da patente (ex.: Alto Inquisidor)..."
+                    style={inputStyle}
+                  />
+                  <input
+                    value={newRankResp}
+                    onChange={(e) => setNewRankResp(e.target.value)}
+                    placeholder="Responsabilidades..."
+                    style={inputStyle}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!newRankTitle.trim()) return;
+                      upsertFaction({
+                        ...selected,
+                        ranks: [
+                          ...selected.ranks,
+                          {
+                            id: `rk_${Date.now()}`,
+                            title: newRankTitle.trim(),
+                            authorityLevel: 7,
+                            holderIds: [],
+                            responsibilities: newRankResp.trim(),
+                          },
+                        ],
+                      });
+                      setNewRankTitle('');
+                      setNewRankResp('');
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      backgroundColor: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    + Cargo
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

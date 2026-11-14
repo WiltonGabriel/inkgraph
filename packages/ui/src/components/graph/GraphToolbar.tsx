@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import {
   CheckSquare,
-  Cpu,
   Filter,
-  MapPin,
   Network,
-  Package,
-  Shield,
   Square,
   Table,
   Unlock,
-  Users,
 } from 'lucide-react';
 import {
   ALL_GRAPH_ENTITY_KINDS,
   type GraphEntityKind,
+  type GraphLayerDescriptor,
 } from './graphDataBuilder';
+import { resolveEntityIcon } from '../common/entityIconResolver';
 
 interface GraphToolbarProps {
+  layers?: GraphLayerDescriptor[];
   enabledKinds: GraphEntityKind[];
   onToggleKind: (kind: GraphEntityKind) => void;
   onSelectAllKinds: () => void;
@@ -31,20 +29,16 @@ interface GraphToolbarProps {
   onReleasePinnedNodes: () => void;
 }
 
-const FILTER_LAYERS: {
-  kind: GraphEntityKind;
-  label: string;
-  icon: typeof Users;
-  color: string;
-}[] = [
-  { kind: 'character', label: 'Personagens', icon: Users, color: '#3b82f6' },
-  { kind: 'faction', label: 'Facções', icon: Shield, color: '#ef4444' },
-  { kind: 'location', label: 'Locais', icon: MapPin, color: '#10b981' },
-  { kind: 'system', label: 'Sistemas', icon: Cpu, color: '#a855f7' },
-  { kind: 'object', label: 'Objetos', icon: Package, color: '#f59e0b' },
+const DEFAULT_FILTER_LAYERS: GraphLayerDescriptor[] = [
+  { kind: 'character', label: 'Personagens', iconName: 'Users', color: '#3b82f6' },
+  { kind: 'faction', label: 'Facções', iconName: 'Shield', color: '#ef4444' },
+  { kind: 'location', label: 'Locais', iconName: 'MapPin', color: '#10b981' },
+  { kind: 'system', label: 'Sistemas', iconName: 'Cpu', color: '#a855f7' },
+  { kind: 'object', label: 'Objetos', iconName: 'Package', color: '#f59e0b' },
 ];
 
 export function GraphToolbar({
+  layers,
   enabledKinds,
   onToggleKind,
   onSelectAllKinds,
@@ -58,8 +52,10 @@ export function GraphToolbar({
   onReleasePinnedNodes,
 }: GraphToolbarProps) {
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const activeLayers = layers && layers.length > 0 ? layers : DEFAULT_FILTER_LAYERS;
   const enabledSet = new Set(enabledKinds);
-  const allChecked = enabledKinds.length === ALL_GRAPH_ENTITY_KINDS.length;
+  const totalKinds = activeLayers.length || ALL_GRAPH_ENTITY_KINDS.length;
+  const allChecked = enabledKinds.length >= totalKinds;
 
   return (
     <div
@@ -186,11 +182,11 @@ export function GraphToolbar({
           >
             <Filter size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
             <span>
-              Filtro ({enabledKinds.length}/{ALL_GRAPH_ENTITY_KINDS.length})
+              Filtro ({enabledKinds.length}/{totalKinds})
             </span>
           </button>
 
-          {FILTER_LAYERS.map((layer) => {
+          {activeLayers.map((layer) => {
             const checked = enabledSet.has(layer.kind);
             const CheckIcon = checked ? CheckSquare : Square;
             return (
@@ -291,9 +287,9 @@ export function GraphToolbar({
                   Visão Completa
                 </button>
               </div>
-              {FILTER_LAYERS.map((layer) => {
+              {activeLayers.map((layer) => {
                 const checked = enabledSet.has(layer.kind);
-                const Icon = layer.icon;
+                const Icon = resolveEntityIcon(layer.iconName);
                 return (
                   <label
                     key={layer.kind}
