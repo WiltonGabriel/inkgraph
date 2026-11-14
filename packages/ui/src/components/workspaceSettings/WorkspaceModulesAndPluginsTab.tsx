@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Blocks, Puzzle, Upload, Trash2 } from 'lucide-react';
+import { Blocks, Puzzle, Upload, Download, Trash2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import {
   installOrUpdatePlugin,
@@ -8,6 +8,7 @@ import {
   uninstallPlugin,
   validatePluginManifest,
 } from '../../domain/registry';
+import type { InkGraphPluginManifest } from '../../types/project';
 import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 import {
   sectionCardStyle,
@@ -58,6 +59,18 @@ export function WorkspaceModulesAndPluginsTab() {
     reader.readAsText(file);
   };
 
+  const handleExportPluginFile = (plugin: InkGraphPluginManifest) => {
+    const blob = new Blob([JSON.stringify(plugin, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeSlug = plugin.id.toLowerCase().replace(/[^a-z0-9_-]+/g, '-') || 'plugin';
+    a.download = `${safeSlug}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify(`Plugin "${plugin.name}" exportado em .json.`, 'success');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
       <section style={sectionCardStyle}>
@@ -91,7 +104,7 @@ export function WorkspaceModulesAndPluginsTab() {
               onClick={() => fileInputRef.current?.click()}
               style={secondaryButtonStyle}
             >
-              <Upload size={14} /> Importar .inkplugin.json
+              <Upload size={14} /> Importar Plugin (.json)
             </button>
           </div>
         </div>
@@ -164,6 +177,14 @@ export function WorkspaceModulesAndPluginsTab() {
                       Ajustes
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => handleExportPluginFile(plugin)}
+                    style={secondaryButtonStyle}
+                    title="Exportar manifesto do plugin em .json"
+                  >
+                    <Download size={13} />
+                  </button>
                   {!plugin.isBuiltinSample && (
                     <button
                       type="button"
