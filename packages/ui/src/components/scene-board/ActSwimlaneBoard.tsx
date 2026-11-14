@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Plus, ArrowLeft, ArrowRight, User } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { countWords, type Scene, type SceneStatus } from '../../types/project';
@@ -21,13 +22,13 @@ const STATUS_LABELS: Record<SceneStatus, string> = {
 };
 
 export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
-  const { project, activeSceneId, setActiveSceneId, upsertScene } = useProject();
+  const { project, settings, activeSceneId, setActiveSceneId, upsertScene } = useProject();
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const reducedMotion = settings.reducedMotion || !settings.enableAnimations || settings.lowPowerMode;
 
   const toggleSceneSubplot = (scene: Scene, subplotId: string) => {
     const exists = scene.subplotIds.includes(subplotId);
-    const nextIds = exists
-      ? scene.subplotIds.filter((id) => id !== subplotId)
-      : [...scene.subplotIds, subplotId];
+    const nextIds = exists ? scene.subplotIds.filter((id) => id !== subplotId) : [...scene.subplotIds, subplotId];
     upsertScene({ ...scene, subplotIds: nextIds });
   };
 
@@ -57,69 +58,53 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, height: '100%', overflow: 'hidden' }}>
+    <div style={boardGridStyle}>
       {ACTS.map(({ act, label }) => {
         const scenes = project.scenes.filter(
           (s) => s.act === act && (!selectedSubplotId || s.subplotIds.includes(selectedSubplotId))
         );
         return (
-          <div
-            key={act}
-            style={{
-              backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
-              border: '1px solid var(--border-subtle, var(--border, #263046))',
-              borderRadius: 'var(--radius-md, 8px)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                padding: '10px 14px',
-                backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
-                borderBottom: '1px solid var(--border-subtle, var(--border, #263046))',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
-                {label}
-              </span>
-              <span style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)' }}>
+          <div key={act} style={columnStyle}>
+            <div style={columnHeaderStyle}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 {scenes.length === 1 ? '1 cena' : `${scenes.length} cenas`}
               </span>
             </div>
 
-            <div style={{ padding: 10, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={columnBodyStyle}>
               {scenes.map((scene) => {
                 const isSelected = scene.id === activeSceneId;
+                const isHovered = hoveredId === scene.id;
                 const pov = project.characters.find((c) => c.id === scene.povCharacterId);
                 const words = countWords(scene.content);
                 return (
                   <div
                     key={scene.id}
                     onClick={() => setActiveSceneId(scene.id)}
+                    onMouseEnter={() => setHoveredId(scene.id)}
+                    onMouseLeave={() => setHoveredId((p) => (p === scene.id ? null : p))}
                     style={{
                       padding: 12,
-                      borderRadius: 'var(--radius-sm, 6px)',
+                      minWidth: 0,
+                      width: '100%',
+                      borderRadius: 'var(--radius-sm)',
                       backgroundColor: isSelected
-                        ? 'var(--bg-elevated, var(--bg-card, #171d2e))'
-                        : 'var(--bg-canvas, var(--bg-primary, #0b0e16))',
-                      border: `1px solid ${
-                        isSelected
-                          ? 'var(--accent-primary, #6366f1)'
-                          : 'var(--border-subtle, var(--border, #263046))'
-                      }`,
+                        ? 'var(--bg-elevated)'
+                        : isHovered
+                        ? 'var(--bg-hover)'
+                        : 'var(--bg-canvas)',
+                      border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 7,
+                      overflowWrap: 'anywhere',
+                      transition: reducedMotion ? 'none' : 'background-color 120ms ease, border-color 120ms ease',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary, #f8fafc)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 0 }}>
                         #{scene.chapterNumber} {scene.title}
                       </span>
                       <span
@@ -127,53 +112,42 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                           fontSize: 10.5,
                           padding: '2px 6px',
                           borderRadius: 4,
-                          backgroundColor: 'var(--accent-soft, rgba(59, 130, 246, 0.14))',
-                          color: 'var(--accent-primary, #3b82f6)',
+                          backgroundColor: 'var(--accent-soft)',
+                          color: 'var(--accent-primary)',
                           fontWeight: 600,
+                          flexShrink: 0,
                         }}
                       >
                         {STATUS_LABELS[scene.status]}
                       </span>
                     </div>
 
-                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.4 }}>
+                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
                       {scene.summary}
                     </p>
 
-                    <div
-                      style={{
-                        height: 5,
-                        backgroundColor: 'var(--bg-hover, #1f273d)',
-                        borderRadius: 999,
-                        overflow: 'hidden',
-                      }}
-                    >
+                    <div style={{ height: 5, backgroundColor: 'var(--bg-hover)', borderRadius: 999, overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${scene.tension}%`,
                           height: '100%',
-                          backgroundColor: scene.tension > 70 ? '#ef4444' : scene.tension > 40 ? '#f59e0b' : '#3b82f6',
+                          backgroundColor:
+                            scene.tension > 70 ? '#ef4444' : scene.tension > 40 ? '#f59e0b' : 'var(--accent-primary)',
                         }}
                       />
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: 11,
-                        color: 'var(--text-secondary, #94a3b8)',
-                      }}
-                    >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <User size={11} /> {pov ? pov.name : 'Sem POV'}
                       </span>
-                      <span>{words} pal. • {scene.tension}% tensão</span>
+                      <span>
+                        {words} pal. • {scene.tension}% tensão
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
                         {project.subplots.map((sp) => {
                           const active = scene.subplotIds.includes(sp.id);
                           return (
@@ -191,7 +165,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                                 borderRadius: 999,
                                 backgroundColor: active ? sp.color : 'transparent',
                                 border: `1px solid ${sp.color}`,
-                                color: active ? '#fff' : 'var(--text-secondary, #94a3b8)',
+                                color: active ? '#ffffff' : 'var(--text-secondary)',
                               }}
                             >
                               {sp.name}
@@ -200,7 +174,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                         })}
                       </div>
 
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                         {act > 1 && (
                           <button
                             type="button"
@@ -209,12 +183,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                               upsertScene({ ...scene, act: (act - 1) as 1 | 2 | 3 });
                             }}
                             title="Mover para ato anterior"
-                            style={{
-                              padding: 3,
-                              borderRadius: 4,
-                              backgroundColor: 'var(--bg-elevated, #1e293b)',
-                              color: 'var(--text-secondary, #cbd5e1)',
-                            }}
+                            style={moveBtnStyle}
                           >
                             <ArrowLeft size={12} />
                           </button>
@@ -227,12 +196,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                               upsertScene({ ...scene, act: (act + 1) as 1 | 2 | 3 });
                             }}
                             title="Mover para próximo ato"
-                            style={{
-                              padding: 3,
-                              borderRadius: 4,
-                              backgroundColor: 'var(--bg-elevated, #1e293b)',
-                              color: 'var(--text-secondary, #cbd5e1)',
-                            }}
+                            style={moveBtnStyle}
                           >
                             <ArrowRight size={12} />
                           </button>
@@ -243,22 +207,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                 );
               })}
 
-              <button
-                type="button"
-                onClick={() => handleAddScene(act)}
-                style={{
-                  padding: '8px',
-                  borderRadius: 'var(--radius-sm, 6px)',
-                  border: '1px dashed var(--border-subtle, #334155)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-secondary, #94a3b8)',
-                  fontSize: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 5,
-                }}
-              >
+              <button type="button" onClick={() => handleAddScene(act)} style={addSceneBtnStyle}>
                 <Plus size={14} /> Adicionar Cena
               </button>
             </div>
@@ -268,3 +217,63 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
     </div>
   );
 }
+
+const boardGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  gap: 12,
+  height: '100%',
+  minWidth: 0,
+  overflowX: 'auto',
+  overflowY: 'auto',
+  alignItems: 'stretch',
+};
+const columnStyle: React.CSSProperties = {
+  minWidth: 0,
+  minHeight: 260,
+  backgroundColor: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-md)',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  boxShadow: 'var(--card-shadow)',
+};
+const columnHeaderStyle: React.CSSProperties = {
+  padding: '10px 14px',
+  backgroundColor: 'var(--bg-elevated)',
+  borderBottom: '1px solid var(--border-subtle)',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 8,
+};
+const columnBodyStyle: React.CSSProperties = {
+  padding: 10,
+  overflowY: 'auto',
+  overflowX: 'auto',
+  minWidth: 0,
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+};
+const moveBtnStyle: React.CSSProperties = {
+  padding: 3,
+  borderRadius: 4,
+  backgroundColor: 'var(--bg-elevated)',
+  border: '1px solid var(--border-subtle)',
+  color: 'var(--text-secondary)',
+};
+const addSceneBtnStyle: React.CSSProperties = {
+  padding: 8,
+  borderRadius: 'var(--radius-sm)',
+  border: '1px dashed var(--border-subtle)',
+  backgroundColor: 'transparent',
+  color: 'var(--text-secondary)',
+  fontSize: 12,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 5,
+};

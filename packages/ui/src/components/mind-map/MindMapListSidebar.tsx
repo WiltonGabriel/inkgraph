@@ -11,6 +11,7 @@ interface MindMapListSidebarProps {
 export function MindMapListSidebar({ selectedMapId, onSelectMap }: MindMapListSidebarProps) {
   const { project, upsertMindMap, deleteMindMap } = useProject();
   const [newName, setNewName] = useState('');
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const handleCreate = () => {
     const title = newName.trim() || `Mapa Mental ${project.mindMaps.length + 1}`;
@@ -41,17 +42,35 @@ export function MindMapListSidebar({ selectedMapId, onSelectMap }: MindMapListSi
     <div
       style={{
         width: 260,
-        backgroundColor: '#111622',
-        border: '1px solid #242f44',
-        borderRadius: 8,
+        minWidth: 220,
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-md)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        boxShadow: 'var(--card-shadow)',
       }}
     >
-      <div style={{ padding: 12, borderBottom: '1px solid #242f44', backgroundColor: '#182030' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 8 }}>
-          <Network size={15} color="#6366f1" /> Mapas Mentais
+      <div
+        style={{
+          padding: 12,
+          borderBottom: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--bg-elevated)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: 8,
+          }}
+        >
+          <Network size={15} color="var(--accent-primary)" /> Mapas Mentais
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
@@ -62,21 +81,23 @@ export function MindMapListSidebar({ selectedMapId, onSelectMap }: MindMapListSi
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             style={{
               flex: 1,
-              backgroundColor: '#0a0d14',
-              border: '1px solid #242f44',
-              borderRadius: 6,
+              minWidth: 0,
+              backgroundColor: 'var(--bg-canvas)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
               padding: '5px 8px',
               fontSize: 12,
-              color: '#f1f5f9',
+              color: 'var(--text-primary)',
             }}
           />
           <button
+            type="button"
             onClick={handleCreate}
             style={{
               padding: '5px 9px',
-              borderRadius: 6,
-              backgroundColor: '#6366f1',
-              color: '#fff',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--accent-primary)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
             }}
@@ -87,40 +108,74 @@ export function MindMapListSidebar({ selectedMapId, onSelectMap }: MindMapListSi
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}
+      >
         {project.mindMaps.map((m) => {
           const active = m.id === selectedMapId;
+          const hovered = hoveredId === m.id;
           return (
             <div
               key={m.id}
               onClick={() => onSelectMap(m.id)}
+              onMouseEnter={() => setHoveredId(m.id)}
+              onMouseLeave={() => setHoveredId((prev) => (prev === m.id ? null : prev))}
               style={{
                 padding: '9px 10px',
-                borderRadius: 6,
-                backgroundColor: active ? '#182030' : 'transparent',
-                border: `1px solid ${active ? '#6366f1' : 'transparent'}`,
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: active
+                  ? 'var(--bg-elevated)'
+                  : hovered
+                  ? 'var(--bg-hover)'
+                  : 'transparent',
+                border: `1px solid ${active ? 'var(--accent-primary)' : 'transparent'}`,
                 cursor: 'pointer',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: 6,
               }}
             >
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: active ? '#fff' : '#cbd5e1' }}>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {m.name}
                 </div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                  {m.nodes.length} nós • {m.edges.length} conexões
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {m.nodes.length} {m.nodes.length === 1 ? 'nó' : 'nós'} • {m.edges.length}{' '}
+                  {m.edges.length === 1 ? 'conexão' : 'conexões'}
                 </div>
               </div>
               {project.mindMaps.length > 1 && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteMindMap(m.id);
                   }}
                   title="Excluir mapa"
-                  style={{ background: 'transparent', color: '#94a3b8', padding: 4 }}
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--text-muted)',
+                    padding: 4,
+                    borderRadius: 4,
+                    flexShrink: 0,
+                  }}
                 >
                   <Trash2 size={13} />
                 </button>

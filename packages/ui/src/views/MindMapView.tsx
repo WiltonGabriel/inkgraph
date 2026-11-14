@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { MindMapListSidebar } from '../components/mind-map/MindMapListSidebar';
 import { MindMapCanvasSvg } from '../components/mind-map/MindMapCanvasSvg';
@@ -12,20 +12,51 @@ export function MindMapView() {
     activeMap?.nodes[0]?.id ?? null
   );
 
-  const handleMoveNode = (nodeId: string, dx: number, dy: number) => {
-    if (!activeMap) return;
-    upsertMindMap({
-      ...activeMap,
-      nodes: activeMap.nodes.map((n) =>
-        n.id === nodeId
-          ? { ...n, x: Math.max(60, n.x + dx), y: Math.max(50, n.y + dy) }
-          : n
-      ),
-    });
-  };
+  const handleMoveNode = useCallback(
+    (nodeId: string, dx: number, dy: number) => {
+      if (!activeMap) return;
+      upsertMindMap({
+        ...activeMap,
+        nodes: activeMap.nodes.map((n) =>
+          n.id === nodeId ? { ...n, x: n.x + dx, y: n.y + dy } : n
+        ),
+      });
+    },
+    [activeMap, upsertMindMap]
+  );
+
+  const handleCreateEdge = useCallback(
+    (fromNodeId: string, toNodeId: string) => {
+      if (!activeMap || fromNodeId === toNodeId) return;
+      upsertMindMap({
+        ...activeMap,
+        edges: [
+          ...activeMap.edges,
+          {
+            id: `edge_${Date.now()}`,
+            fromNodeId,
+            toNodeId,
+            label: '',
+            style: 'solid',
+            direction: 'uni',
+          },
+        ],
+      });
+    },
+    [activeMap, upsertMindMap]
+  );
 
   return (
-    <div style={{ display: 'flex', gap: 12, height: 'calc(100vh - 64px)', padding: 14 }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        height: '100%',
+        padding: 14,
+        backgroundColor: 'var(--bg-canvas)',
+        minWidth: 0,
+      }}
+    >
       <MindMapListSidebar
         selectedMapId={activeMap?.id ?? ''}
         onSelectMap={(id) => {
@@ -42,6 +73,7 @@ export function MindMapView() {
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             onMoveNode={handleMoveNode}
+            onCreateEdge={handleCreateEdge}
           />
           <MindMapNodeEditorPanel
             map={activeMap}
@@ -50,7 +82,18 @@ export function MindMapView() {
           />
         </>
       ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-secondary)',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
           Crie um mapa mental na barra lateral.
         </div>
       )}

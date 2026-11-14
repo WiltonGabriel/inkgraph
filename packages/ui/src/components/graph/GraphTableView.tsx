@@ -1,31 +1,94 @@
-import { REL_COLORS, type GraphNode, type GraphLink } from './graphDataBuilder';
+import {
+  REL_COLORS,
+  REL_LABELS_PT,
+  type GraphNode,
+  type GraphLink,
+} from './graphDataBuilder';
 
 interface GraphTableViewProps {
   links: GraphLink[];
   allEntities: GraphNode[];
+  onSelectNode?: (id: string) => void;
 }
 
-export function GraphTableView({ links, allEntities }: GraphTableViewProps) {
+export function GraphTableView({
+  links,
+  allEntities,
+  onSelectNode,
+}: GraphTableViewProps) {
   return (
-    <div style={{ padding: 20, overflowY: 'auto', height: '100%', flex: 1 }}>
-      <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#f3f4f6' }}>
+    <div
+      tabIndex={0}
+      role="region"
+      aria-labelledby="graph-table-heading"
+      style={{
+        padding: 20,
+        overflow: 'auto',
+        height: '100%',
+        flex: 1,
+        backgroundColor: 'var(--bg-canvas)',
+        color: 'var(--text-primary)',
+      }}
+    >
+      <h3
+        id="graph-table-heading"
+        style={{
+          margin: '0 0 12px',
+          fontSize: 15,
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+        }}
+      >
         Relacionamentos como Tabela Acessível ({links.length})
       </h3>
       <table
         style={{
           width: '100%',
-          borderCollapse: 'collapse',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
           fontSize: 12.5,
-          color: '#e5e7eb',
+          color: 'var(--text-primary)',
         }}
       >
-        <thead>
-          <tr style={{ borderBottom: '1px solid #242b3d', textAlign: 'left', color: '#9ca3af' }}>
-            <th style={{ padding: '8px 10px' }}>De</th>
-            <th style={{ padding: '8px 10px' }}>Para</th>
-            <th style={{ padding: '8px 10px' }}>Tipo</th>
-            <th style={{ padding: '8px 10px' }}>Descrição do Vínculo</th>
-            <th style={{ padding: '8px 10px' }}>Força (1–10)</th>
+        <caption
+          style={{
+            textAlign: 'left',
+            fontSize: 11.5,
+            color: 'var(--text-muted)',
+            marginBottom: 8,
+          }}
+        >
+          Lista tabular de vínculos ativos no grafo por origem, destino, tipo e força.
+        </caption>
+        <thead
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            backgroundColor: 'var(--bg-surface)',
+          }}
+        >
+          <tr
+            style={{
+              textAlign: 'left',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <th scope="col" style={thStyle}>
+              De
+            </th>
+            <th scope="col" style={thStyle}>
+              Para
+            </th>
+            <th scope="col" style={thStyle}>
+              Tipo
+            </th>
+            <th scope="col" style={thStyle}>
+              Descrição do Vínculo
+            </th>
+            <th scope="col" style={thStyle}>
+              Força (1–10)
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -34,26 +97,66 @@ export function GraphTableView({ links, allEntities }: GraphTableViewProps) {
             const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
             const srcName = allEntities.find((e) => e.id === srcId)?.name ?? srcId;
             const tgtName = allEntities.find((e) => e.id === tgtId)?.name ?? tgtId;
+            const dotColor = REL_COLORS[l.type] ?? 'var(--text-muted)';
             return (
-              <tr key={l.id} style={{ borderBottom: '1px solid #181d29' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>{srcName}</td>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>{tgtName}</td>
-                <td style={{ padding: '8px 10px' }}>
+              <tr key={l.id}>
+                <th scope="row" style={{ ...tdStyle, fontWeight: 600, textAlign: 'left' }}>
+                  {onSelectNode ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectNode(String(srcId))}
+                      style={entityLinkBtnStyle}
+                    >
+                      {srcName}
+                    </button>
+                  ) : (
+                    srcName
+                  )}
+                </th>
+                <td style={{ ...tdStyle, fontWeight: 600 }}>
+                  {onSelectNode ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectNode(String(tgtId))}
+                      style={entityLinkBtnStyle}
+                    >
+                      {tgtName}
+                    </button>
+                  ) : (
+                    tgtName
+                  )}
+                </td>
+                <td style={tdStyle}>
                   <span
                     style={{
-                      padding: '2px 7px',
-                      borderRadius: 4,
-                      backgroundColor: '#182032',
-                      color: REL_COLORS[l.type] ?? '#9ca3af',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-sm, 4px)',
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
                       fontSize: 11,
                       fontWeight: 600,
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {l.type}
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        backgroundColor: dotColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                    {REL_LABELS_PT[l.type] ?? l.type}
                   </span>
                 </td>
-                <td style={{ padding: '8px 10px', color: '#d1d5db' }}>{l.label}</td>
-                <td style={{ padding: '8px 10px' }}>{l.strength}/10</td>
+                <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{l.label}</td>
+                <td style={tdStyle}>{l.strength}/10</td>
               </tr>
             );
           })}
@@ -62,3 +165,24 @@ export function GraphTableView({ links, allEntities }: GraphTableViewProps) {
     </div>
   );
 }
+
+const thStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  borderBottom: '1px solid var(--border-subtle)',
+  fontWeight: 600,
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  borderBottom: '1px solid var(--border-subtle)',
+};
+
+const entityLinkBtnStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  color: 'var(--text-primary)',
+  fontWeight: 600,
+  textAlign: 'left',
+  cursor: 'pointer',
+};

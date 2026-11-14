@@ -21,26 +21,31 @@ export function PlotBoardView({ initialMode = 'board' }: PlotBoardViewProps) {
   }, [initialMode]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', padding: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div>
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              color: 'var(--text-primary, #f8fafc)',
-              margin: 0,
-            }}
-          >
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        height: '100%',
+        padding: 14,
+        minWidth: 0,
+        backgroundColor: 'var(--bg-canvas)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             {mode === 'timeline' ? 'Linha do Tempo' : 'Quadro de Enredo'}
           </h2>
-          <p
-            style={{
-              fontSize: 12,
-              color: 'var(--text-secondary, #94a3b8)',
-              margin: 0,
-            }}
-          >
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
             Estruturação de atos, tela espacial 2D, cronologia e curva de tensão
           </p>
         </div>
@@ -49,10 +54,10 @@ export function PlotBoardView({ initialMode = 'board' }: PlotBoardViewProps) {
           style={{
             display: 'flex',
             gap: 6,
-            backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+            backgroundColor: 'var(--bg-surface)',
             padding: 4,
-            borderRadius: 'var(--radius-md, 8px)',
-            border: '1px solid var(--border-subtle, var(--border, #263046))',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-subtle)',
           }}
         >
           {[
@@ -69,13 +74,11 @@ export function PlotBoardView({ initialMode = 'board' }: PlotBoardViewProps) {
                 alignItems: 'center',
                 gap: 6,
                 padding: '6px 12px',
-                borderRadius: 'var(--radius-sm, 6px)',
+                borderRadius: 'var(--radius-sm)',
                 fontSize: 12,
                 fontWeight: 600,
-                backgroundColor:
-                  mode === id ? 'var(--accent-primary, #6366f1)' : 'transparent',
-                color:
-                  mode === id ? '#ffffff' : 'var(--text-secondary, #94a3b8)',
+                backgroundColor: mode === id ? 'var(--accent-primary)' : 'transparent',
+                color: mode === id ? '#ffffff' : 'var(--text-secondary)',
               }}
             >
               <Icon size={14} /> {label}
@@ -89,7 +92,7 @@ export function PlotBoardView({ initialMode = 'board' }: PlotBoardViewProps) {
         onSelectSubplot={setSelectedSubplotId}
       />
 
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
         {mode === 'board' && <ActSwimlaneBoard selectedSubplotId={selectedSubplotId} />}
         {mode === 'canvas' && <PlotCanvas2D selectedSubplotId={selectedSubplotId} />}
         {mode === 'timeline' && <SceneTimelineBoard selectedSubplotId={selectedSubplotId} />}

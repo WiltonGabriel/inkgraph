@@ -1,82 +1,189 @@
-import { useState } from 'react';
-import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { useId, useMemo, useRef, useState } from 'react';
+import { Activity, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
-
-type BeatOverlay = 'none' | 'three-act' | 'heros-journey' | 'save-the-cat';
-
-const OVERLAY_BEATS: Record<BeatOverlay, { pos: number; label: string }[]> = {
-  none: [],
-  'three-act': [
-    { pos: 0.12, label: 'Incidente Incitante' },
-    { pos: 0.25, label: 'Fim do Ato I' },
-    { pos: 0.5, label: 'Ponto Médio' },
-    { pos: 0.75, label: 'Fim do Ato II' },
-    { pos: 0.9, label: 'Clímax' },
-  ],
-  'heros-journey': [
-    { pos: 0.15, label: 'Chamado à Aventura' },
-    { pos: 0.3, label: 'Travessia do Limiar' },
-    { pos: 0.55, label: 'Provação Suprema' },
-    { pos: 0.85, label: 'Ressurreição' },
-  ],
-  'save-the-cat': [
-    { pos: 0.1, label: 'Catalisador' },
-    { pos: 0.2, label: 'Passagem ao Ato II' },
-    { pos: 0.5, label: 'Ponto Médio' },
-    { pos: 0.75, label: 'Tudo Está Perdido' },
-    { pos: 0.88, label: 'Final' },
-  ],
-};
+import { InteractiveChartStyles } from '../dashboard/InteractiveChartStyles';
+import { FloatingChartTooltip } from '../dashboard/FloatingChartTooltip';
+import { isMotionEnabled } from '../dashboard/dashboardTheme';
+import {
+  TensionCurveSvg,
+  type BeatOverlayMode,
+  type TensionPoint,
+} from '../dashboard/TensionCurveSvg';
+import {
+  TensionTooltipCard,
+  getTensionColor,
+} from '../dashboard/TensionTooltipCard';
 
 export function TensionCurveChart() {
-  const { project, activeSceneId, setActiveSceneId } = useProject();
+  const { project, settings, activeSceneId, setActiveSceneId, setActiveView } =
+    useProject();
   const [collapsed, setCollapsed] = useState(false);
-  const [overlay, setOverlay] = useState<BeatOverlay>('three-act');
+  const [overlay, setOverlay] = useState<BeatOverlayMode>('three-act');
+  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
+  const leaveTimerRef = useRef<number | null>(null);
+
+  const tooltipId = useId();
+  const overlaySelectId = useId();
+  const motionEnabled = isMotionEnabled(settings);
 
   const scenes = project.scenes;
   const width = 900;
-  const height = 105;
+  const height = 112;
 
-  const points = scenes.map((s, idx) => {
-    const x = scenes.length === 1 ? width / 2 : 45 + (idx / (scenes.length - 1)) * (width - 90);
-    const y = height - 18 - (s.tension / 100) * (height - 36);
-    return { x, y, scene: s };
-  });
+  const characterMap = useMemo(
+    () => new Map(project.characters.map((c) => [c.id, c.name])),
+    [project.characters]
+  );
 
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const locationMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const w of project.worlds) {
+      for (const loc of w.locations) {
+        map.set(loc.id, loc.name);
+      }
+    }
+    return map;
+  }, [project.worlds]);
+
+  const points = useMemo<TensionPoint[]>(
+    () =>
+      scenes.map((s, idx) => {
+        const x =
+          scenes.length === 1
+            ? width / 2
+            : 45 + (idx / (scenes.length - 1)) * (width - 90);
+        const clampedTension = Math.max(0, Math.min(100, s.tension));
+        const y = height - 20 - (clampedTension / 100) * (height - 40);
+        return { x, y, scene: s };
+      }),
+    [scenes]
+  );
+
+  const hoveredPoint = points.find((p) => p.scene.id === hoveredSceneId) ?? null;
+  const activeScene = scenes.find((s) => s.id === activeSceneId) ?? null;
+
+  const cancelLeave = () => {
+    if (leaveTimerRef.current !== null) {
+      window.clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  };
+
+  const scheduleLeave = () => {
+    cancelLeave();
+    leaveTimerRef.current = window.setTimeout(() => setHoveredSceneId(null), 100);
+  };
+
+  const openSceneInManuscript = (sceneId: string) => {
+    setActiveSceneId(sceneId);
+    setActiveView('manuscript');
+  };
 
   return (
-    <div
+    <section
       style={{
-        backgroundColor: '#111622',
-        border: '1px solid #242f44',
-        borderRadius: 8,
-        padding: '8px 14px',
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-md, 8px)',
+        padding: '10px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: 8,
+        boxShadow: 'var(--card-shadow, none)',
+        position: 'relative',
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') setHoveredSceneId(null);
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Activity size={15} color="#ef4444" />
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#f1f5f9' }}>
-            Curva de Tensão Narrativa
-          </span>
+      <InteractiveChartStyles />
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Activity size={15} style={{ color: 'var(--danger, #ef4444)' }} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Curva de Tensão Narrativa
+            </span>
+          </div>
+
+          {activeScene && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 999,
+                padding: '2px 4px 2px 9px',
+                fontSize: 11,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                #Cap {activeScene.chapterNumber}
+              </span>
+              <span
+                style={{
+                  maxWidth: 190,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {activeScene.title}
+              </span>
+              <span style={{ color: getTensionColor(activeScene.tension), fontWeight: 700 }}>
+                {activeScene.tension}%
+              </span>
+              <button
+                type="button"
+                onClick={() => openSceneInManuscript(activeScene.id)}
+                style={{
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  borderRadius: 999,
+                  padding: '2px 8px',
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <BookOpen size={10} /> Abrir Cena
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: '#94a3b8' }}>Sobreposição Beat Sheet:</span>
+          <label
+            htmlFor={overlaySelectId}
+            style={{ fontSize: 11, color: 'var(--text-secondary)' }}
+          >
+            Sobreposição Beat Sheet:
+          </label>
           <select
+            id={overlaySelectId}
             value={overlay}
-            onChange={(e) => setOverlay(e.target.value as BeatOverlay)}
+            onChange={(e) => setOverlay(e.target.value as BeatOverlayMode)}
             style={{
-              backgroundColor: '#0a0d14',
-              border: '1px solid #242f44',
-              borderRadius: 5,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm, 6px)',
               padding: '3px 8px',
               fontSize: 11.5,
-              color: '#f1f5f9',
+              color: 'var(--text-primary)',
             }}
           >
             <option value="none">Nenhum</option>
@@ -86,13 +193,16 @@ export function TensionCurveChart() {
           </select>
 
           <button
+            type="button"
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expandir curva de tensão' : 'Recolher curva de tensão'}
             onClick={() => setCollapsed((c) => !c)}
             style={{
-              background: '#182030',
-              border: '1px solid #242f44',
-              borderRadius: 5,
-              padding: '3px 7px',
-              color: '#cbd5e1',
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm, 6px)',
+              padding: '4px 7px',
+              color: 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
             }}
@@ -103,57 +213,69 @@ export function TensionCurveChart() {
       </div>
 
       {!collapsed && (
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 105, overflow: 'visible' }}>
-          {OVERLAY_BEATS[overlay].map((b, i) => {
-            const bx = 45 + b.pos * (width - 90);
-            return (
-              <g key={i}>
-                <line
-                  x1={bx}
-                  y1={8}
-                  x2={bx}
-                  y2={height - 14}
-                  stroke="#334155"
-                  strokeDasharray="3 3"
-                />
-                <text x={bx} y={12} fill="#64748b" fontSize={9.5} textAnchor="middle">
-                  {b.label}
-                </text>
-              </g>
-            );
-          })}
+        <div style={{ position: 'relative' }}>
+          <FloatingChartTooltip
+            id={tooltipId}
+            visible={hoveredPoint !== null}
+            xPercent={hoveredPoint ? (hoveredPoint.x / width) * 100 : 50}
+            placement="top"
+            minWidth={240}
+            maxWidth={310}
+            interactive
+            onMouseEnter={cancelLeave}
+            onMouseLeave={scheduleLeave}
+          >
+            {hoveredPoint && (
+              <TensionTooltipCard
+                scene={hoveredPoint.scene}
+                povName={
+                  hoveredPoint.scene.povCharacterId
+                    ? characterMap.get(hoveredPoint.scene.povCharacterId)
+                    : undefined
+                }
+                locationName={
+                  hoveredPoint.scene.locationId
+                    ? locationMap.get(hoveredPoint.scene.locationId)
+                    : undefined
+                }
+                onOpenScene={openSceneInManuscript}
+              />
+            )}
+          </FloatingChartTooltip>
 
-          {points.length > 1 && (
-            <polyline fill="none" stroke="#ef4444" strokeWidth={2.5} points={polyline} />
+          {scenes.length === 0 ? (
+            <div
+              style={{
+                padding: '14px 12px',
+                textAlign: 'center',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Nenhuma cena registrada para traçar a curva de tensão.
+            </div>
+          ) : (
+            <TensionCurveSvg
+              width={width}
+              height={height}
+              points={points}
+              overlay={overlay}
+              activeSceneId={activeSceneId}
+              hoveredSceneId={hoveredSceneId}
+              tooltipId={tooltipId}
+              motionEnabled={motionEnabled}
+              characterMap={characterMap}
+              onHoverScene={(sceneId) => {
+                cancelLeave();
+                setHoveredSceneId(sceneId);
+              }}
+              onScheduleLeave={scheduleLeave}
+              onSelectScene={setActiveSceneId}
+              onOpenScene={openSceneInManuscript}
+            />
           )}
-
-          {points.map(({ x, y, scene }) => {
-            const active = scene.id === activeSceneId;
-            return (
-              <g
-                key={scene.id}
-                onClick={() => setActiveSceneId(scene.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={active ? 6 : 4.5}
-                  fill={scene.tension > 70 ? '#ef4444' : '#f59e0b'}
-                  stroke="#fff"
-                  strokeWidth={active ? 2 : 1}
-                />
-                <text x={x} y={y - 8} fill="#e2e8f0" fontSize={9.5} textAnchor="middle">
-                  {scene.tension}%
-                </text>
-                <text x={x} y={height - 3} fill="#94a3b8" fontSize={9.5} textAnchor="middle">
-                  C{scene.chapterNumber}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

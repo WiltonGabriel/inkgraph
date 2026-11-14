@@ -26,27 +26,15 @@ export function SceneTimelineBoard({ selectedSubplotId }: SceneTimelineBoardProp
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', overflow: 'hidden' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 10,
-          padding: '8px 14px',
-          backgroundColor: '#111622',
-          border: '1px solid #242f44',
-          borderRadius: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: '#f1f5f9' }}>
-          <Clock size={15} color="#6366f1" /> Auditoria Cronológica das Cenas
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minWidth: 0, overflow: 'hidden' }}>
+      <div style={headerStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <Clock size={15} color="var(--accent-primary)" /> Auditoria Cronológica das Cenas
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
           {missingDatesCount === 0 && overlaps.length === 0 ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#10b981', fontWeight: 600 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--success)', fontWeight: 600 }}>
               <CheckCircle2 size={14} /> Cronologia íntegra
             </span>
           ) : (
@@ -61,23 +49,14 @@ export function SceneTimelineBoard({ selectedSubplotId }: SceneTimelineBoardProp
       </div>
 
       {overlaps.length > 0 && (
-        <div
-          style={{
-            padding: '8px 12px',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: 6,
-            fontSize: 11.5,
-            color: '#fca5a5',
-          }}
-        >
+        <div style={alertBannerStyle}>
           {overlaps.map((msg, i) => (
             <div key={i}>• {msg}</div>
           ))}
         </div>
       )}
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {scenes.map((scene) => {
           const isSelected = scene.id === activeSceneId;
           const missingDate = !scene.sceneStart?.trim();
@@ -87,33 +66,31 @@ export function SceneTimelineBoard({ selectedSubplotId }: SceneTimelineBoardProp
               onClick={() => setActiveSceneId(scene.id)}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 190px 160px',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(145px, 190px) minmax(125px, 160px)',
                 gap: 12,
                 alignItems: 'center',
                 padding: '10px 14px',
-                backgroundColor: isSelected ? '#182030' : '#111622',
-                border: `1px solid ${isSelected ? '#6366f1' : '#242f44'}`,
-                borderRadius: 8,
+                backgroundColor: isSelected ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                borderRadius: 'var(--radius-md)',
                 cursor: 'pointer',
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                     #{scene.chapterNumber} {scene.title}
                   </span>
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Ato {scene.act}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Ato {scene.act}</span>
                   {missingDate && (
                     <span style={{ fontSize: 10.5, color: '#f59e0b', fontWeight: 600 }}>• Data ausente</span>
                   )}
                 </div>
-                <p style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 3 }}>{scene.summary}</p>
+                <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3 }}>{scene.summary}</p>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 10.5, color: '#94a3b8', marginBottom: 3 }}>
-                  Início (ISO / Data)
-                </label>
+              <div style={{ minWidth: 0 }}>
+                <label style={labelStyle}>Início (ISO / Data)</label>
                 <input
                   type="text"
                   placeholder="Ex.: 2026-05-01T08:00"
@@ -124,10 +101,8 @@ export function SceneTimelineBoard({ selectedSubplotId }: SceneTimelineBoardProp
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 10.5, color: '#94a3b8', marginBottom: 3 }}>
-                  Duração
-                </label>
+              <div style={{ minWidth: 0 }}>
+                <label style={labelStyle}>Duração</label>
                 <input
                   type="text"
                   placeholder="Ex.: PT2H, 3 dias"
@@ -145,12 +120,38 @@ export function SceneTimelineBoard({ selectedSubplotId }: SceneTimelineBoardProp
   );
 }
 
+const headerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 10,
+  padding: '8px 14px',
+  backgroundColor: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-md)',
+  boxShadow: 'var(--card-shadow)',
+};
+const alertBannerStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  border: '1px solid rgba(239, 68, 68, 0.35)',
+  borderRadius: 'var(--radius-sm)',
+  fontSize: 11.5,
+  color: 'var(--danger)',
+};
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 10.5,
+  color: 'var(--text-muted)',
+  marginBottom: 3,
+};
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#0a0d14',
-  border: '1px solid #242f44',
-  borderRadius: 5,
+  backgroundColor: 'var(--bg-canvas)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
   padding: '5px 8px',
   fontSize: 11.5,
-  color: '#f1f5f9',
+  color: 'var(--text-primary)',
 };

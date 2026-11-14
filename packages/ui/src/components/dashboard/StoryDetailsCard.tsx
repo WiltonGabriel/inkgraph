@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Wand2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { DASHBOARD_CARD_STYLE, DASHBOARD_SUBCARD_STYLE } from './dashboardTheme';
 
 export function StoryDetailsCard() {
   const { project, updateProject } = useProject();
   const [showLoglineIdeas, setShowLoglineIdeas] = useState(false);
+  const textareaId = useId();
 
   const leadName = project.characters[0]?.name ?? 'o protagonista';
   const secondName = project.characters[1]?.name ?? 'um aliado improvável';
@@ -18,12 +20,10 @@ export function StoryDetailsCard() {
   ];
 
   return (
-    <div
+    <section
+      className="ig-card-interactive"
       style={{
-        backgroundColor: '#121621',
-        border: '1px solid #1f2533',
-        borderRadius: 10,
-        padding: 18,
+        ...DASHBOARD_CARD_STYLE,
         marginBottom: 20,
       }}
     >
@@ -32,23 +32,28 @@ export function StoryDetailsCard() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 10,
           marginBottom: 8,
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>
+        <label
+          htmlFor={textareaId}
+          style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+        >
           Detalhes da História — Linha de Registro (Logline)
-        </span>
+        </label>
         <button
+          type="button"
+          aria-expanded={showLoglineIdeas}
           onClick={() => setShowLoglineIdeas((v) => !v)}
           style={{
-            background: 'rgba(167, 139, 250, 0.12)',
-            border: '1px solid rgba(167, 139, 250, 0.3)',
-            color: '#c4b5fd',
-            borderRadius: 6,
+            backgroundColor: 'var(--accent-soft)',
+            border: '1px solid color-mix(in srgb, var(--accent-primary) 35%, var(--border-subtle))',
+            color: 'var(--accent-primary)',
+            borderRadius: 'var(--radius-sm, 6px)',
             padding: '4px 10px',
             fontSize: 11.5,
             fontWeight: 600,
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -57,7 +62,9 @@ export function StoryDetailsCard() {
           <Wand2 size={12} /> Assistente de Logline
         </button>
       </div>
+
       <textarea
+        id={textareaId}
         value={project.logline}
         onChange={(e) =>
           updateProject((prev) => ({ ...prev, logline: e.target.value }))
@@ -66,35 +73,36 @@ export function StoryDetailsCard() {
         rows={2}
         style={{
           width: '100%',
-          backgroundColor: '#0c0f17',
-          border: '1px solid #242b3b',
-          borderRadius: 7,
+          backgroundColor: 'var(--bg-canvas)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm, 6px)',
           padding: '10px 12px',
-          color: '#e5e7eb',
+          color: 'var(--text-primary)',
           fontSize: 13,
           lineHeight: 1.5,
           resize: 'vertical',
         }}
       />
+
       {showLoglineIdeas && (
         <div
           style={{
+            ...DASHBOARD_SUBCARD_STYLE,
             marginTop: 10,
             padding: 12,
-            backgroundColor: '#0c0f17',
-            border: '1px solid #283044',
-            borderRadius: 8,
             display: 'flex',
             flexDirection: 'column',
             gap: 8,
           }}
         >
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#a78bfa' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent-primary)' }}>
             Sugestões de Logline baseadas nos seus dossiês (clique para aplicar):
           </div>
           {loglineSuggestions.map((sug, idx) => (
             <button
               key={idx}
+              type="button"
+              className="ig-tile-interactive"
               onClick={() => {
                 updateProject((prev) => ({ ...prev, logline: sug }));
                 setShowLoglineIdeas(false);
@@ -102,12 +110,11 @@ export function StoryDetailsCard() {
               style={{
                 textAlign: 'left',
                 padding: '8px 10px',
-                backgroundColor: '#141926',
-                border: '1px solid #232a3c',
-                borderRadius: 6,
-                color: '#d1d5db',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm, 6px)',
+                color: 'var(--text-secondary)',
                 fontSize: 12,
-                cursor: 'pointer',
                 lineHeight: 1.45,
               }}
             >
@@ -116,6 +123,6 @@ export function StoryDetailsCard() {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

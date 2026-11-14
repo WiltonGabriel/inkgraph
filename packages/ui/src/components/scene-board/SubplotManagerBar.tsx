@@ -9,10 +9,7 @@ interface SubplotManagerBarProps {
 
 const PRESET_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#a855f7'];
 
-export function SubplotManagerBar({
-  selectedSubplotId,
-  onSelectSubplot,
-}: SubplotManagerBarProps) {
+export function SubplotManagerBar({ selectedSubplotId, onSelectSubplot }: SubplotManagerBarProps) {
   const { project, upsertSubplot, deleteSubplot } = useProject();
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
@@ -32,44 +29,23 @@ export function SubplotManagerBar({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 10,
-        padding: '8px 14px',
-        backgroundColor: '#111622',
-        border: '1px solid #242f44',
-        borderRadius: 8,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            fontSize: 12,
-            fontWeight: 700,
-            color: '#94a3b8',
-            marginRight: 4,
-          }}
-        >
-          <GitBranch size={14} color="#6366f1" /> Subtramas:
+    <div style={barStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+        <span style={titleStyle}>
+          <GitBranch size={14} color="var(--accent-primary)" /> Subtramas:
         </span>
 
         <button
+          type="button"
           onClick={() => onSelectSubplot(null)}
           style={{
             padding: '4px 10px',
             borderRadius: 999,
             fontSize: 11.5,
             fontWeight: 600,
-            backgroundColor: selectedSubplotId === null ? '#6366f1' : '#182030',
-            color: selectedSubplotId === null ? '#ffffff' : '#cbd5e1',
-            border: '1px solid #2c3852',
+            backgroundColor: selectedSubplotId === null ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+            color: selectedSubplotId === null ? '#ffffff' : 'var(--text-secondary)',
+            border: '1px solid var(--border-subtle)',
           }}
         >
           Todas as Cenas
@@ -86,9 +62,9 @@ export function SubplotManagerBar({
                 gap: 5,
                 padding: '3px 8px 3px 10px',
                 borderRadius: 999,
-                backgroundColor: isActive ? sp.color : '#182030',
+                backgroundColor: isActive ? sp.color : 'var(--bg-elevated)',
                 border: `1px solid ${sp.color}`,
-                color: isActive ? '#ffffff' : '#e2e8f0',
+                color: isActive ? '#ffffff' : 'var(--text-primary)',
                 fontSize: 11.5,
                 fontWeight: 600,
               }}
@@ -108,6 +84,7 @@ export function SubplotManagerBar({
                 {sp.name}
               </span>
               <button
+                type="button"
                 onClick={() => {
                   if (isActive) onSelectSubplot(null);
                   deleteSubplot(sp.id);
@@ -115,7 +92,7 @@ export function SubplotManagerBar({
                 title="Remover subtrama"
                 style={{
                   background: 'transparent',
-                  color: isActive ? '#ffffff' : '#94a3b8',
+                  color: isActive ? '#ffffff' : 'var(--text-muted)',
                   display: 'flex',
                   alignItems: 'center',
                   padding: 2,
@@ -134,7 +111,14 @@ export function SubplotManagerBar({
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
           title="Cor da subtrama"
-          style={{ width: 24, height: 24, border: 'none', cursor: 'pointer' }}
+          style={{
+            width: 24,
+            height: 24,
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 4,
+            cursor: 'pointer',
+            backgroundColor: 'var(--bg-canvas)',
+          }}
         />
         <input
           type="text"
@@ -142,34 +126,55 @@ export function SubplotManagerBar({
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          style={{
-            backgroundColor: '#0a0d14',
-            border: '1px solid #242f44',
-            borderRadius: 6,
-            padding: '4px 8px',
-            fontSize: 12,
-            color: '#f1f5f9',
-            width: 150,
-          }}
+          style={inputStyle}
         />
-        <button
-          onClick={handleAdd}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '5px 10px',
-            borderRadius: 6,
-            backgroundColor: '#1e293b',
-            border: '1px solid #334155',
-            color: '#e2e8f0',
-            fontSize: 11.5,
-            fontWeight: 600,
-          }}
-        >
+        <button type="button" onClick={handleAdd} style={createBtnStyle}>
           <Plus size={13} /> Criar
         </button>
       </div>
     </div>
   );
 }
+
+const barStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 10,
+  padding: '8px 14px',
+  backgroundColor: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-md)',
+  boxShadow: 'var(--card-shadow)',
+};
+const titleStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 5,
+  fontSize: 12,
+  fontWeight: 700,
+  color: 'var(--text-secondary)',
+  marginRight: 4,
+};
+const inputStyle: React.CSSProperties = {
+  backgroundColor: 'var(--bg-canvas)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '4px 8px',
+  fontSize: 12,
+  color: 'var(--text-primary)',
+  width: 150,
+};
+const createBtnStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '5px 10px',
+  borderRadius: 'var(--radius-sm)',
+  backgroundColor: 'var(--bg-elevated)',
+  border: '1px solid var(--border-subtle)',
+  color: 'var(--text-primary)',
+  fontSize: 11.5,
+  fontWeight: 600,
+};
