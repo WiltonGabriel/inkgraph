@@ -83,7 +83,10 @@ export function WorkspaceCatalogView({
         {items.map((ws) => {
           const words = ws.scenes.reduce((acc, s) => acc + countWords(s.content), 0);
           const isCurrent = ws.id === activeWorkspaceId;
-          const accent = ws.accentColor || 'var(--accent-primary, #3b82f6)';
+          const accent =
+          ws.accentColor && ws.accentColor !== '#3b82f6'
+            ? ws.accentColor
+            : 'var(--accent-primary, #3b82f6)';
 
           return (
             <div
@@ -244,7 +247,10 @@ export function WorkspaceCatalogView({
         const goal = Math.max(1, ws.wordCountGoal || 80000);
         const pct = Math.min(100, Math.round((words / goal) * 100));
         const isCurrent = ws.id === activeWorkspaceId;
-        const accent = ws.accentColor || 'var(--accent-primary, #3b82f6)';
+        const accent =
+          ws.accentColor && ws.accentColor !== '#3b82f6'
+            ? ws.accentColor
+            : 'var(--accent-primary, #3b82f6)';
         const updatedDate = ws.updatedAt
           ? new Date(ws.updatedAt).toLocaleDateString(settings.language)
           : '';

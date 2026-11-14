@@ -103,7 +103,7 @@ export function CriticView() {
         </div>
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.9rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}><MessageSquare size={14} /> PROPORÇÃO DE DIÁLOGO</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: '0.3rem', color: '#38bdf8' }}>{metrics.dialogueRatio}%</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: '0.3rem', color: 'var(--accent-primary, #38bdf8)' }}>{metrics.dialogueRatio}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{metrics.words} palavras totais</div>
         </div>
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.9rem' }}>

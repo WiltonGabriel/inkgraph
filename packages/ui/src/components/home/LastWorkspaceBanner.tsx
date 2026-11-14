@@ -6,7 +6,10 @@ export function LastWorkspaceBanner() {
 
   const goal = Math.max(1, project.wordCountGoal || 80000);
   const progressPct = Math.min(100, Math.round((totalWordCount / goal) * 100));
-  const accent = project.accentColor || '#3b82f6';
+  const accent =
+    project.accentColor && project.accentColor !== '#3b82f6'
+      ? project.accentColor
+      : 'var(--accent-primary, #3b82f6)';
 
   const lastScene =
     project.scenes.length > 0
@@ -18,8 +21,8 @@ export function LastWorkspaceBanner() {
   return (
     <section
       style={{
-        backgroundColor: '#121621',
-        border: '1px solid #242b3d',
+        backgroundColor: 'var(--bg-surface, #111623)',
+        border: '1px solid var(--border-subtle, #263046)',
         borderLeft: `4px solid ${accent}`,
         borderRadius: 10,
         padding: '18px 22px',
@@ -55,7 +58,7 @@ export function LastWorkspaceBanner() {
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
-                color: '#60a5fa',
+                color: 'var(--accent-primary, #3b82f6)',
               }}
             >
               {t.home.activeSessionLabel}
@@ -66,9 +69,9 @@ export function LastWorkspaceBanner() {
                   fontSize: 11,
                   padding: '2px 8px',
                   borderRadius: 4,
-                  backgroundColor: '#1b2232',
-                  color: '#d1d5db',
-                  border: '1px solid #2b354b',
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
+                  color: 'var(--text-secondary, #94a3b8)',
+                  border: '1px solid var(--border-subtle, #263046)',
                 }}
               >
                 {project.genre}
@@ -80,9 +83,9 @@ export function LastWorkspaceBanner() {
                   fontSize: 11,
                   padding: '2px 8px',
                   borderRadius: 4,
-                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                  color: '#93c5fd',
-                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  backgroundColor: 'var(--accent-soft, rgba(59, 130, 246, 0.14))',
+                  color: 'var(--accent-primary, #3b82f6)',
+                  border: '1px solid color-mix(in srgb, var(--accent-primary, #3b82f6) 35%, transparent)',
                 }}
               >
                 {project.folderOrTag}
@@ -95,7 +98,7 @@ export function LastWorkspaceBanner() {
               margin: '0 0 4px',
               fontSize: 20,
               fontWeight: 700,
-              color: '#f9fafb',
+              color: 'var(--text-primary, #f1f5f9)',
             }}
           >
             {project.title}
@@ -106,7 +109,7 @@ export function LastWorkspaceBanner() {
               style={{
                 margin: 0,
                 fontSize: 12.5,
-                color: '#9ca3af',
+                color: 'var(--text-secondary, #94a3b8)',
                 lineHeight: 1.5,
                 maxWidth: 740,
               }}
@@ -130,7 +133,7 @@ export function LastWorkspaceBanner() {
             onClick={() => switchWorkspace(project.id, 'dashboard')}
             style={{
               padding: '8px 14px',
-              backgroundColor: '#2563eb',
+              backgroundColor: 'var(--accent-primary, #3b82f6)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 6,
@@ -151,9 +154,9 @@ export function LastWorkspaceBanner() {
             onClick={() => switchWorkspace(project.id, 'manuscript')}
             style={{
               padding: '8px 13px',
-              backgroundColor: '#1a202e',
-              color: '#e5e7eb',
-              border: '1px solid #2e374d',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              color: 'var(--text-primary, #f1f5f9)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 6,
               fontSize: 12,
               fontWeight: 500,
@@ -172,9 +175,9 @@ export function LastWorkspaceBanner() {
             onClick={() => switchWorkspace(project.id, 'graph')}
             style={{
               padding: '8px 12px',
-              backgroundColor: '#161b26',
-              color: '#cbd5e1',
-              border: '1px solid #262e40',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              color: 'var(--text-primary, #f1f5f9)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 6,
               fontSize: 12,
               fontWeight: 500,
@@ -200,9 +203,9 @@ export function LastWorkspaceBanner() {
           flexWrap: 'wrap',
           gap: 16,
           paddingTop: 10,
-          borderTop: '1px solid #1d2331',
+          borderTop: '1px solid var(--border-subtle, #263046)',
           fontSize: 12,
-          color: '#9ca3af',
+          color: 'var(--text-secondary, #94a3b8)',
         }}
       >
         {/* Word Count Progress */}
@@ -225,7 +228,7 @@ export function LastWorkspaceBanner() {
                 marginBottom: 4,
               }}
             >
-              <span style={{ color: '#d1d5db', fontWeight: 600 }}>
+              <span style={{ color: 'var(--text-primary, #f1f5f9)', fontWeight: 600 }}>
                 {totalWordCount.toLocaleString(settings.language)} /{' '}
                 {goal.toLocaleString(settings.language)} {t.common.words}
               </span>
@@ -234,7 +237,7 @@ export function LastWorkspaceBanner() {
             <div
               style={{
                 height: 5,
-                backgroundColor: '#1d2433',
+                backgroundColor: 'var(--bg-hover, #1f273d)',
                 borderRadius: 999,
                 overflow: 'hidden',
               }}
@@ -253,19 +256,19 @@ export function LastWorkspaceBanner() {
         {/* Counts */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span>
-            <strong style={{ color: '#e5e7eb' }}>{project.scenes.length}</strong>{' '}
+            <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>{project.scenes.length}</strong>{' '}
             {t.common.scenes}
           </span>
           <span>
-            <strong style={{ color: '#e5e7eb' }}>{project.characters.length}</strong>{' '}
+            <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>{project.characters.length}</strong>{' '}
             {t.common.characters}
           </span>
           <span>
-            <strong style={{ color: '#e5e7eb' }}>{project.factions.length}</strong>{' '}
+            <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>{project.factions.length}</strong>{' '}
             {t.common.factions}
           </span>
           <span>
-            <strong style={{ color: '#e5e7eb' }}>{project.worlds.length}</strong>{' '}
+            <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>{project.worlds.length}</strong>{' '}
             {t.common.worlds}
           </span>
         </div>
@@ -278,10 +281,10 @@ export function LastWorkspaceBanner() {
               alignItems: 'center',
               gap: 6,
               fontSize: 11.5,
-              color: '#9ca3af',
+              color: 'var(--text-secondary, #94a3b8)',
             }}
           >
-            <Clock size={12} color="#60a5fa" />
+            <Clock size={12} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
             <span>{lastScene.title}</span>
           </div>
         )}

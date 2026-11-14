@@ -41,9 +41,9 @@ export function GlobalCatalogMetricsBar() {
       {/* Active Workspaces */}
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -51,22 +51,22 @@ export function GlobalCatalogMetricsBar() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', marginBottom: 2 }}>
             {t.home.globalSummaryWorkspaces}
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#f3f4f6' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
             {metrics.activeCount}
           </div>
         </div>
-        <FolderKanban size={18} color="#60a5fa" />
+        <FolderKanban size={18} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
       </div>
 
       {/* Total Catalog Words */}
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -74,10 +74,10 @@ export function GlobalCatalogMetricsBar() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', marginBottom: 2 }}>
             {t.home.globalSummaryWords}
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#f3f4f6' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
             {metrics.totalWords.toLocaleString(settings.language)}
           </div>
         </div>
@@ -87,9 +87,9 @@ export function GlobalCatalogMetricsBar() {
       {/* Favorites Count */}
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -97,10 +97,10 @@ export function GlobalCatalogMetricsBar() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', marginBottom: 2 }}>
             {t.common.favorites}
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#f3f4f6' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
             {metrics.favoritesCount}
           </div>
         </div>
@@ -110,9 +110,9 @@ export function GlobalCatalogMetricsBar() {
       {/* Saved Snapshots */}
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -120,10 +120,10 @@ export function GlobalCatalogMetricsBar() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', marginBottom: 2 }}>
             {t.home.globalSummarySnapshots}
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#f3f4f6' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
             {metrics.totalSnapshots}
           </div>
         </div>
@@ -133,9 +133,9 @@ export function GlobalCatalogMetricsBar() {
       {/* Local MCP Status */}
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -143,7 +143,7 @@ export function GlobalCatalogMetricsBar() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', marginBottom: 2 }}>
             {t.home.mcpStatusLabel}
           </div>
           <div
@@ -153,7 +153,7 @@ export function GlobalCatalogMetricsBar() {
               gap: 6,
               fontSize: 13,
               fontWeight: 600,
-              color: '#d1d5db',
+              color: 'var(--text-primary, #f1f5f9)',
             }}
           >
             <span

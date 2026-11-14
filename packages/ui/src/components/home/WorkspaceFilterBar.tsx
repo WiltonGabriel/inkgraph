@@ -52,9 +52,9 @@ export function WorkspaceFilterBar({
         <div
           style={{
             display: 'inline-flex',
-            backgroundColor: '#11151f',
-            border: '1px solid #1f2637',
-            borderRadius: 7,
+            backgroundColor: 'var(--bg-surface, #111623)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-sm, 7px)',
             padding: 3,
             gap: 2,
           }}
@@ -73,8 +73,8 @@ export function WorkspaceFilterBar({
                   borderRadius: 5,
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: active ? '#2563eb' : 'transparent',
-                  color: active ? '#ffffff' : '#9ca3af',
+                  backgroundColor: active ? 'var(--accent-primary, #3b82f6)' : 'transparent',
+                  color: active ? '#ffffff' : 'var(--text-secondary, #94a3b8)',
                 }}
               >
                 {tab.label}
@@ -88,12 +88,12 @@ export function WorkspaceFilterBar({
           value={selectedCategory}
           onChange={(e) => onCategoryChange(e.target.value)}
           style={{
-            backgroundColor: '#11151f',
-            border: '1px solid #1f2637',
-            borderRadius: 7,
+            backgroundColor: 'var(--bg-surface, #111623)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-sm, 7px)',
             padding: '6px 10px',
             fontSize: 12,
-            color: '#d1d5db',
+            color: 'var(--text-primary, #f1f5f9)',
             cursor: 'pointer',
           }}
         >
@@ -122,7 +122,7 @@ export function WorkspaceFilterBar({
               left: 10,
               top: '50%',
               transform: 'translateY(-50%)',
-              color: '#6b7280',
+              color: 'var(--text-muted, #64748b)',
             }}
           />
           <input
@@ -131,12 +131,12 @@ export function WorkspaceFilterBar({
             placeholder={t.home.filterSearchPlaceholder}
             style={{
               width: '100%',
-              backgroundColor: '#11151f',
-              border: '1px solid #1f2637',
-              borderRadius: 7,
+              backgroundColor: 'var(--bg-surface, #111623)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-sm, 7px)',
               padding: '6px 10px 6px 30px',
               fontSize: 12,
-              color: '#f3f4f6',
+              color: 'var(--text-primary, #f1f5f9)',
             }}
           />
         </div>
@@ -145,9 +145,9 @@ export function WorkspaceFilterBar({
         <div
           style={{
             display: 'inline-flex',
-            backgroundColor: '#11151f',
-            border: '1px solid #1f2637',
-            borderRadius: 7,
+            backgroundColor: 'var(--bg-surface, #111623)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-sm, 7px)',
             padding: 2,
             gap: 2,
           }}
@@ -165,8 +165,14 @@ export function WorkspaceFilterBar({
               alignItems: 'center',
               gap: 4,
               fontSize: 11,
-              backgroundColor: viewMode === 'grid' ? '#1f293d' : 'transparent',
-              color: viewMode === 'grid' ? '#f3f4f6' : '#9ca3af',
+              backgroundColor:
+                viewMode === 'grid'
+                  ? 'var(--bg-elevated, #171d2e)'
+                  : 'transparent',
+              color:
+                viewMode === 'grid'
+                  ? 'var(--text-primary, #f1f5f9)'
+                  : 'var(--text-secondary, #94a3b8)',
             }}
           >
             <LayoutGrid size={13} />
@@ -185,8 +191,14 @@ export function WorkspaceFilterBar({
               alignItems: 'center',
               gap: 4,
               fontSize: 11,
-              backgroundColor: viewMode === 'list' ? '#1f293d' : 'transparent',
-              color: viewMode === 'list' ? '#f3f4f6' : '#9ca3af',
+              backgroundColor:
+                viewMode === 'list'
+                  ? 'var(--bg-elevated, #171d2e)'
+                  : 'transparent',
+              color:
+                viewMode === 'list'
+                  ? 'var(--text-primary, #f1f5f9)'
+                  : 'var(--text-secondary, #94a3b8)',
             }}
           >
             <List size={13} />

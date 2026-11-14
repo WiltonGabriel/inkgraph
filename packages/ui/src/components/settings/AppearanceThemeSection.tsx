@@ -10,7 +10,7 @@ import {
 } from './settingsStyles';
 
 const ACCENT_SWATCHES = [
-  { hex: '#3b82f6', labelPt: 'Azul Cobalto (Paleta)', labelEn: 'Cobalt Blue (Palette)' },
+  { hex: '#3b82f6', labelPt: 'Padrão da Paleta', labelEn: 'Palette Default' },
   { hex: '#10b981', labelPt: 'Esmeralda', labelEn: 'Emerald' },
   { hex: '#a855f7', labelPt: 'Ametista', labelEn: 'Amethyst' },
   { hex: '#f59e0b', labelPt: 'Âmbar', labelEn: 'Amber' },

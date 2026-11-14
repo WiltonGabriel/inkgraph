@@ -283,10 +283,10 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                     }}
                     style={{
                       padding: '8px 14px',
-                      backgroundColor: '#2563eb',
+                      backgroundColor: 'var(--accent-primary, #3b82f6)',
                       color: '#fff',
                       border: 'none',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm, 6px)',
                       fontWeight: 600,
                       fontSize: 12,
                       cursor: 'pointer',

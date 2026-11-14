@@ -324,17 +324,18 @@ export function QuickCreationBar() {
           >
             {/* Accent Color Picker */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {ACCENT_COLORS.map((col) => (
+              {ACCENT_COLORS.map((col, idx) => (
                 <button
                   key={col}
                   type="button"
                   onClick={() => setAccentColor(col)}
-                  aria-label={`Cor ${col}`}
+                  aria-label={idx === 0 ? 'Cor padrão do tema' : `Cor ${col}`}
+                  title={idx === 0 ? 'Seguir cor do tema ativo' : col}
                   style={{
                     width: 18,
                     height: 18,
                     borderRadius: '50%',
-                    backgroundColor: col,
+                    backgroundColor: idx === 0 ? 'var(--accent-primary, #3b82f6)' : col,
                     border:
                       accentColor === col
                         ? '2px solid var(--text-primary, #ffffff)'

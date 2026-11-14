@@ -37,10 +37,10 @@ export function WorkspaceTemplatesAndCanonTab() {
     const a = document.createElement('a');
     a.href = url;
     const safeSlug = (templateName || 'modelo').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    a.download = `${safeSlug}.json`;
+    a.download = `${safeSlug}.inktemplate.json`;
     a.click();
     URL.revokeObjectURL(url);
-    notify('Modelo do workspace exportado em .json.', 'success');
+    notify('Modelo do workspace exportado em .inktemplate.json.', 'success');
   };
 
   const handleImportTemplate = (file: File) => {
@@ -68,7 +68,7 @@ export function WorkspaceTemplatesAndCanonTab() {
         }));
         notify(`Modelo "${res.bundle.name}" aplicado ao workspace.`, 'success');
       } catch {
-        notify('Falha ao interpretar o arquivo .json de modelo.', 'warning');
+        notify('Falha ao interpretar o arquivo .inktemplate.json.', 'warning');
       }
     };
     reader.readAsText(file);
@@ -131,7 +131,7 @@ export function WorkspaceTemplatesAndCanonTab() {
       <section style={sectionCardStyle}>
         <div style={sectionHeaderStyle}>
           <Download size={16} style={{ color: THEME_VAR.accentPrimary }} />
-          Exportar & Importar Modelo de Workspace (.json)
+          Exportar & Importar Modelo de Workspace (.inktemplate.json)
         </div>
         <div style={{ fontSize: 12, color: THEME_VAR.textSecondary }}>
           Salve toda a arquitetura deste workspace (atos, tipos de entidades customizados, módulos ativos e plugins) para reutilizar em novos livros ou compartilhar.
@@ -165,7 +165,7 @@ export function WorkspaceTemplatesAndCanonTab() {
 
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
           <button type="button" onClick={handleExportTemplate} style={primaryButtonStyle}>
-            <Download size={14} /> Exportar Modelo (.json)
+            <Download size={14} /> Exportar Modelo (.inktemplate.json)
           </button>
           <input
             ref={importRef}
@@ -183,7 +183,7 @@ export function WorkspaceTemplatesAndCanonTab() {
             onClick={() => importRef.current?.click()}
             style={secondaryButtonStyle}
           >
-            <Upload size={14} /> Importar Modelo (.json)
+            <Upload size={14} /> Importar Modelo para este Workspace
           </button>
         </div>
       </section>

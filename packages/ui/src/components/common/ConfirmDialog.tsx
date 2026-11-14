@@ -68,8 +68,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div
             className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border"
             style={{
-              backgroundColor: isDanger ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
-              borderColor: isDanger ? 'rgba(239,68,68,0.28)' : 'rgba(59,130,246,0.28)',
+              backgroundColor: isDanger ? 'rgba(239,68,68,0.12)' : 'var(--accent-soft, rgba(59,130,246,0.14))',
+              borderColor: isDanger
+                ? 'rgba(239,68,68,0.28)'
+                : 'color-mix(in srgb, var(--accent-primary, #3b82f6) 32%, transparent)',
               color: isDanger ? '#f87171' : 'var(--accent-primary, #60a5fa)',
             }}
           >

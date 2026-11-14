@@ -54,18 +54,18 @@ export function TemplatesView() {
       <div
         style={{
           width: 370,
-          backgroundColor: '#0e1118',
-          borderRight: '1px solid #1b202c',
+          backgroundColor: 'var(--bg-surface, #111623)',
+          borderRight: '1px solid var(--border-subtle, #263046)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
         }}
       >
-        <div style={{ padding: 16, borderBottom: '1px solid #1b202c' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: '#f3f4f6', marginBottom: 6 }}>
-            <LayoutTemplate size={16} color="#f59e0b" /> Biblioteca de Modelos
+        <div style={{ padding: 16, borderBottom: '1px solid var(--border-subtle, #263046)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', marginBottom: 6 }}>
+            <LayoutTemplate size={16} style={{ color: 'var(--accent-primary, #f59e0b)' }} /> Biblioteca de Modelos
           </div>
-          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#9ca3af' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-secondary, #94a3b8)' }}>
             Escolha uma estrutura provada ou remixe as seções antes de aplicar.
           </p>
 
@@ -77,10 +77,10 @@ export function TemplatesView() {
                 style={{
                   flex: 1,
                   padding: '6px 10px',
-                  borderRadius: 6,
-                  border: '1px solid #262e40',
-                  backgroundColor: filter === cat ? '#2563eb' : '#141824',
-                  color: '#fff',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  border: '1px solid var(--border-subtle, #263046)',
+                  backgroundColor: filter === cat ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-elevated, #171d2e)',
+                  color: filter === cat ? '#fff' : 'var(--text-primary, #f1f5f9)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -101,14 +101,14 @@ export function TemplatesView() {
                 onClick={() => handleSelectTemplate(tpl)}
                 style={{
                   padding: 12,
-                  backgroundColor: active ? '#172033' : '#131722',
-                  border: active ? '1px solid #f59e0b' : '1px solid #1f2533',
-                  borderRadius: 8,
+                  backgroundColor: active ? 'var(--accent-soft, rgba(59,130,246,0.14))' : 'var(--bg-elevated, #171d2e)',
+                  border: active ? '1px solid var(--accent-primary, #3b82f6)' : '1px solid var(--border-subtle, #263046)',
+                  borderRadius: 'var(--radius-md, 8px)',
                   cursor: 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
                     {tpl.name}
                   </span>
                   <span
@@ -116,15 +116,15 @@ export function TemplatesView() {
                       fontSize: 10,
                       padding: '2px 7px',
                       borderRadius: 999,
-                      backgroundColor: '#1b2232',
-                      color: tpl.category === 'Estrutura' ? '#60a5fa' : '#34d399',
+                      backgroundColor: 'var(--bg-hover, #1f273d)',
+                      color: tpl.category === 'Estrutura' ? 'var(--accent-primary, #60a5fa)' : '#34d399',
                       fontWeight: 600,
                     }}
                   >
                     {tpl.category} · {tpl.sections.length} seções
                   </span>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#9ca3af', lineHeight: 1.4 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.4 }}>
                   {tpl.description}
                 </div>
               </div>
@@ -144,10 +144,10 @@ export function TemplatesView() {
           }}
         >
           <div>
-            <h2 style={{ margin: '0 0 6px', fontSize: 22, color: '#f9fafb' }}>
+            <h2 style={{ margin: '0 0 6px', fontSize: 22, color: 'var(--text-primary, #f1f5f9)' }}>
               Visualização: {selectedTemplate.name}
             </h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary, #94a3b8)' }}>
               {selectedTemplate.arc}
             </p>
           </div>
@@ -155,9 +155,9 @@ export function TemplatesView() {
             onClick={() => setRemixMode((r) => !r)}
             style={{
               padding: '8px 14px',
-              backgroundColor: remixMode ? '#f59e0b' : '#19202e',
-              color: remixMode ? '#111827' : '#fbbf24',
-              border: '1px solid rgba(245,158,11,0.4)',
+              backgroundColor: remixMode ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-elevated, #171d2e)',
+              color: remixMode ? '#ffffff' : 'var(--accent-primary, #f59e0b)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 7,
               fontSize: 12.5,
               fontWeight: 700,
@@ -172,13 +172,13 @@ export function TemplatesView() {
         <div
           style={{
             padding: 16,
-            backgroundColor: '#121621',
-            border: '1px solid #242c3e',
-            borderRadius: 10,
+            backgroundColor: 'var(--bg-surface, #111623)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-lg, 10px)',
             marginBottom: 20,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: '#c4b5fd', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: 'var(--accent-primary, #c4b5fd)', marginBottom: 6 }}>
             <Sparkles size={15} /> Personalizar com IA (Opcional)
           </div>
           <input
@@ -187,11 +187,11 @@ export function TemplatesView() {
             placeholder="Ex.: Um detetive cego investigando o esgotamento térmico da capital..."
             style={{
               width: '100%',
-              backgroundColor: '#0c0f17',
-              border: '1px solid #262f42',
-              borderRadius: 6,
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-sm, 6px)',
               padding: '8px 12px',
-              color: '#f3f4f6',
+              color: 'var(--text-primary, #f1f5f9)',
               fontSize: 12.5,
               marginBottom: 12,
             }}
@@ -201,10 +201,10 @@ export function TemplatesView() {
               onClick={() => handleApply(false)}
               style={{
                 padding: '9px 16px',
-                backgroundColor: '#2563eb',
+                backgroundColor: 'var(--accent-primary, #3b82f6)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: 7,
+                borderRadius: 'var(--radius-sm, 7px)',
                 fontSize: 12.5,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -222,7 +222,7 @@ export function TemplatesView() {
                 backgroundColor: '#10b981',
                 color: '#052e16',
                 border: 'none',
-                borderRadius: 7,
+                borderRadius: 'var(--radius-sm, 7px)',
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -234,7 +234,7 @@ export function TemplatesView() {
         </div>
 
         {/* Sections List */}
-        <h3 style={{ margin: '0 0 12px', fontSize: 14, color: '#e5e7eb' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--text-primary, #f1f5f9)' }}>
           Seções do Modelo ({remixedSections.length})
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -243,11 +243,11 @@ export function TemplatesView() {
               key={idx}
               style={{
                 padding: 14,
-                backgroundColor: '#121621',
+                backgroundColor: 'var(--bg-surface, #111623)',
                 border: sec.isTwist
-                  ? '1px solid rgba(245, 158, 11, 0.45)'
-                  : '1px solid #1f2533',
-                borderRadius: 8,
+                  ? '1px solid color-mix(in srgb, var(--accent-primary, #f59e0b) 55%, transparent)'
+                  : '1px solid var(--border-subtle, #263046)',
+                borderRadius: 'var(--radius-md, 8px)',
               }}
             >
               {remixMode ? (
@@ -264,11 +264,11 @@ export function TemplatesView() {
                       }
                       style={{
                         flex: 1,
-                        backgroundColor: '#0c0f17',
-                        border: '1px solid #283044',
+                        backgroundColor: 'var(--bg-elevated, #171d2e)',
+                        border: '1px solid var(--border-subtle, #263046)',
                         borderRadius: 5,
                         padding: '6px 8px',
-                        color: '#f3f4f6',
+                        color: 'var(--text-primary, #f1f5f9)',
                         fontSize: 13,
                         fontWeight: 600,
                       }}
@@ -301,11 +301,11 @@ export function TemplatesView() {
                     }
                     style={{
                       width: '100%',
-                      backgroundColor: '#0c0f17',
-                      border: '1px solid #283044',
+                      backgroundColor: 'var(--bg-elevated, #171d2e)',
+                      border: '1px solid var(--border-subtle, #263046)',
                       borderRadius: 5,
                       padding: '6px 8px',
-                      color: '#d1d5db',
+                      color: 'var(--text-secondary, #94a3b8)',
                       fontSize: 12,
                     }}
                   />
@@ -313,7 +313,7 @@ export function TemplatesView() {
               ) : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
                       {sec.title}
                     </span>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -322,12 +322,12 @@ export function TemplatesView() {
                           Reviravolta (Twist)
                         </span>
                       )}
-                      <span style={{ fontSize: 11, color: '#60a5fa', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, color: 'var(--accent-primary, #60a5fa)', fontWeight: 600 }}>
                         Ato {sec.act}
                       </span>
                     </div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#9ca3af', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.45 }}>
                     {sec.description}
                   </div>
                 </>
@@ -349,10 +349,10 @@ export function TemplatesView() {
               }
               style={{
                 padding: 10,
-                backgroundColor: '#151a26',
-                border: '1px dashed #374151',
-                borderRadius: 8,
-                color: '#60a5fa',
+                backgroundColor: 'var(--bg-elevated, #171d2e)',
+                border: '1px dashed var(--border-subtle, #263046)',
+                borderRadius: 'var(--radius-md, 8px)',
+                color: 'var(--accent-primary, #60a5fa)',
                 fontSize: 12.5,
                 fontWeight: 600,
                 cursor: 'pointer',

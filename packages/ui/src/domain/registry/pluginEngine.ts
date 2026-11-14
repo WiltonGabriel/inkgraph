@@ -307,7 +307,7 @@ export function parseWorkspaceTemplateBundle(raw: unknown): {
   if (!isRecord(raw) || raw.format !== 'inkgraph-workspace-template') {
     return {
       ok: false,
-      error: 'Arquivo não reconhecido. Esperado um modelo .json do InkGraph.',
+      error: 'Arquivo não reconhecido. Esperado um modelo .inktemplate.json do InkGraph.',
     };
   }
   if (!isRecord(raw.workspaceConfig)) {

@@ -455,7 +455,7 @@ export function ManuscriptEditorCenter({
                   activeScene.status === 'final'
                     ? '#10b981'
                     : activeScene.status === 'revised'
-                    ? '#38bdf8'
+                    ? 'var(--accent-primary, #38bdf8)'
                     : '#f59e0b',
                 fontSize: 11.5,
                 fontWeight: 600,

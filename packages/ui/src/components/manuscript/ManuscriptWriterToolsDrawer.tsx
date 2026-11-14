@@ -386,7 +386,7 @@ export function ManuscriptWriterToolsDrawer({
                 gap: 5,
               }}
             >
-              <Activity size={12} style={{ color: '#38bdf8' }} />
+              <Activity size={12} style={{ color: 'var(--accent-primary, #38bdf8)' }} />
               Raio-X de Ritmo & Voz
             </span>
             <span
@@ -420,15 +420,15 @@ export function ManuscriptWriterToolsDrawer({
             <div
               style={{
                 width: `${styleMetrics.dialogueRatioPercent}%`,
-                backgroundColor: '#38bdf8',
+                backgroundColor: 'var(--accent-primary, #38bdf8)',
               }}
               title={`Diálogo: ${styleMetrics.dialogueRatioPercent}%`}
             />
             <div
               style={{
                 width: `${styleMetrics.narrationRatioPercent}%`,
-                backgroundColor: 'var(--accent-primary)',
-                opacity: 0.55,
+                backgroundColor: 'var(--text-muted, #64748b)',
+                opacity: 0.45,
               }}
               title={`Narração: ${styleMetrics.narrationRatioPercent}%`}
             />
