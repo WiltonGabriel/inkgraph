@@ -1,5 +1,7 @@
-import { Settings, ArrowLeft, Globe, Layers } from 'lucide-react';
+import { Settings, ArrowLeft, Globe, Layers, FolderKanban } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { BreadcrumbBar } from '../shell/BreadcrumbBar';
+import { SaveVerifyButton } from '../shell/SaveVerifyButton';
 
 interface MySpaceTopBarProps {
   activeMode: 'catalog' | 'settings';
@@ -19,58 +21,135 @@ export function MySpaceTopBar({ activeMode, onToggleMode }: MySpaceTopBarProps) 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '14px 28px',
-        backgroundColor: '#0c0f16',
-        borderBottom: '1px solid #1e2330',
+        padding: '12px 24px',
+        backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+        borderBottom: '1px solid var(--border-subtle, var(--border, #263046))',
         flexWrap: 'wrap',
         gap: 12,
       }}
     >
       {/* Left: Quiet Brand & Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flex: '1 1 280px',
+          minWidth: 0,
+        }}
+      >
         <div
           style={{
             width: 26,
             height: 26,
-            borderRadius: 6,
-            backgroundColor: '#171c28',
-            border: '1px solid #2b3346',
+            borderRadius: 'var(--radius-sm, 6px)',
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#60a5fa',
+            color: 'var(--accent-primary, #3b82f6)',
+            flexShrink: 0,
           }}
         >
           <Layers size={14} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              color: '#f3f4f6',
-            }}
-          >
-            INKGRAPH
-          </span>
-          <span style={{ color: '#4b5563', fontSize: 13 }}>/</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#9ca3af' }}>
-            {t.home.title}
-          </span>
-        </div>
+        <BreadcrumbBar
+          modeLabel={activeMode === 'settings' ? t.views.settings : undefined}
+          onHomeSegmentClick={() => onToggleMode('catalog')}
+        />
       </div>
 
-      {/* Right: Language Pill, Program Settings Toggle, Return to Active Workspace */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Right: Portal Mode Pills, Language Switcher, Save & Verify, Return */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
+          flexShrink: 0,
+        }}
+      >
+        {/* Meu Espaço | Configurações Mode Switcher */}
+        <div
+          role="tablist"
+          aria-label={t.home.title}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
+            borderRadius: 'var(--radius-sm, 6px)',
+            padding: 2,
+            gap: 2,
+          }}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeMode === 'catalog'}
+            onClick={() => onToggleMode('catalog')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              fontSize: 11.5,
+              fontWeight: 600,
+              borderRadius: 4,
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor:
+                activeMode === 'catalog'
+                  ? 'var(--accent-primary, #3b82f6)'
+                  : 'transparent',
+              color:
+                activeMode === 'catalog'
+                  ? '#ffffff'
+                  : 'var(--text-secondary, #94a3b8)',
+            }}
+          >
+            <FolderKanban size={13} />
+            {t.home.title}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeMode === 'settings'}
+            onClick={() => onToggleMode('settings')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              fontSize: 11.5,
+              fontWeight: 600,
+              borderRadius: 4,
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor:
+                activeMode === 'settings'
+                  ? 'var(--accent-primary, #3b82f6)'
+                  : 'transparent',
+              color:
+                activeMode === 'settings'
+                  ? '#ffffff'
+                  : 'var(--text-secondary, #94a3b8)',
+            }}
+          >
+            <Settings size={13} />
+            {t.views.settings}
+          </button>
+        </div>
+
         {/* Language Switcher Pill */}
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            backgroundColor: '#131722',
-            border: '1px solid #242b3b',
-            borderRadius: 6,
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
+            borderRadius: 'var(--radius-sm, 6px)',
             padding: 2,
             gap: 2,
           }}
@@ -78,7 +157,11 @@ export function MySpaceTopBar({ activeMode, onToggleMode }: MySpaceTopBarProps) 
         >
           <Globe
             size={12}
-            style={{ color: '#6b7280', marginLeft: 6, marginRight: 2 }}
+            style={{
+              color: 'var(--text-muted, #64748b)',
+              marginLeft: 6,
+              marginRight: 2,
+            }}
           />
           <button
             type="button"
@@ -91,8 +174,13 @@ export function MySpaceTopBar({ activeMode, onToggleMode }: MySpaceTopBarProps) 
               border: 'none',
               cursor: 'pointer',
               backgroundColor:
-                settings.language === 'pt-BR' ? '#2563eb' : 'transparent',
-              color: settings.language === 'pt-BR' ? '#ffffff' : '#9ca3af',
+                settings.language === 'pt-BR'
+                  ? 'var(--accent-primary, #3b82f6)'
+                  : 'transparent',
+              color:
+                settings.language === 'pt-BR'
+                  ? '#ffffff'
+                  : 'var(--text-secondary, #94a3b8)',
             }}
           >
             PT-BR
@@ -108,41 +196,20 @@ export function MySpaceTopBar({ activeMode, onToggleMode }: MySpaceTopBarProps) 
               border: 'none',
               cursor: 'pointer',
               backgroundColor:
-                settings.language === 'en' ? '#2563eb' : 'transparent',
-              color: settings.language === 'en' ? '#ffffff' : '#9ca3af',
+                settings.language === 'en'
+                  ? 'var(--accent-primary, #3b82f6)'
+                  : 'transparent',
+              color:
+                settings.language === 'en'
+                  ? '#ffffff'
+                  : 'var(--text-secondary, #94a3b8)',
             }}
           >
             EN
           </button>
         </div>
 
-        {/* Program Settings Toggle */}
-        <button
-          type="button"
-          onClick={() =>
-            onToggleMode(activeMode === 'settings' ? 'catalog' : 'settings')
-          }
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor:
-              activeMode === 'settings' ? '#2563eb' : '#151924',
-            color: activeMode === 'settings' ? '#ffffff' : '#d1d5db',
-            border:
-              activeMode === 'settings'
-                ? '1px solid #3b82f6'
-                : '1px solid #262d3d',
-          }}
-        >
-          <Settings size={14} />
-          {t.common.programSettings}
-        </button>
+        <SaveVerifyButton />
 
         {/* Return to Active Workspace */}
         <button
@@ -153,13 +220,13 @@ export function MySpaceTopBar({ activeMode, onToggleMode }: MySpaceTopBarProps) 
             alignItems: 'center',
             gap: 6,
             padding: '6px 12px',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm, 6px)',
             fontSize: 12,
             fontWeight: 500,
             cursor: 'pointer',
-            backgroundColor: '#131722',
-            color: '#9ca3af',
-            border: '1px solid #242b3b',
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            color: 'var(--text-secondary, #94a3b8)',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
           }}
         >
           <ArrowLeft size={14} />

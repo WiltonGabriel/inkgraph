@@ -119,15 +119,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const commitSettingsUpdater = useCallback(
     (updater: (prev: AppSettings) => AppSettings) => {
-      setDraftSettings((prevDraft) => {
-        const next = updater(prevDraft);
-        setCommittedSettings(next);
-        saveSettingsToStorage(next);
-        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-        return next;
-      });
+      const next = updater(draftSettings);
+      setDraftSettings(next);
+      setCommittedSettings(next);
+      saveSettingsToStorage(next);
+      setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
     },
-    []
+    [draftSettings]
   );
 
   const saveSettings = useCallback((): boolean => {
@@ -158,6 +156,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({
       updateDraftSettings,
       updateDraftShortcut,
       commitImmediateSetting,
+      commitSettingsUpdater,
       saveSettings,
       discardSettingsChanges,
       resetDraftToDefaults,
@@ -171,6 +170,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({
       updateDraftSettings,
       updateDraftShortcut,
       commitImmediateSetting,
+      commitSettingsUpdater,
       saveSettings,
       discardSettingsChanges,
       resetDraftToDefaults,

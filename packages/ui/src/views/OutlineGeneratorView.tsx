@@ -8,13 +8,23 @@ import {
   ArrowDown,
   Zap,
   CheckCircle2,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import type { OutlineSection } from '../types/project';
+import type { NarrativeTemplate } from '../data/templatesCatalog';
+import { OutlineTemplateModal } from '../components/outline/OutlineTemplateModal';
 
 export function OutlineGeneratorView() {
-  const { project, setOutline, applyOutlineToManuscript, setActiveView } =
-    useProject();
+  const {
+    project,
+    setOutline,
+    applyOutlineToManuscript,
+    applyTemplateToProject,
+    requestConfirm,
+    notify,
+    setActiveView,
+  } = useProject();
 
   const [prompt, setPrompt] = useState(project.logline);
   const [genre, setGenre] = useState(project.genre);
@@ -22,6 +32,7 @@ export function OutlineGeneratorView() {
   const [pacing, setPacing] = useState<'default' | 'fast' | 'medium' | 'slow'>('default');
   const [includeTwist, setIncludeTwist] = useState(true);
   const [appliedBanner, setAppliedBanner] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   const handleGenerateOutline = () => {
     const baseIdea = prompt.trim() || 'o conflito central';
@@ -61,6 +72,27 @@ export function OutlineGeneratorView() {
     setOutline(generated);
   };
 
+  const handleSelectTemplate = async (
+    template: NarrativeTemplate,
+    replaceManuscript: boolean
+  ) => {
+    if (project.outline.length > 0) {
+      const accepted = await requestConfirm({
+        title: 'Substituir Estrutura do Contorno',
+        message: replaceManuscript
+          ? `O contorno atual possui ${project.outline.length} ${project.outline.length === 1 ? 'seção' : 'seções'}. Aplicar "${template.name}" substituirá o contorno e regenerará as cenas iniciais do manuscrito.`
+          : `O contorno atual possui ${project.outline.length} ${project.outline.length === 1 ? 'seção' : 'seções'}. Deseja substituir pelo modelo "${template.name}"?`,
+        confirmLabel: 'Aplicar Modelo',
+        cancelLabel: 'Cancelar',
+        tone: replaceManuscript ? 'danger' : 'neutral',
+      });
+      if (!accepted) return;
+    }
+
+    applyTemplateToProject(template, replaceManuscript);
+    notify(`Modelo "${template.name}" carregado com sucesso.`, 'success');
+  };
+
   const moveSection = (idx: number, dir: -1 | 1) => {
     const nextIdx = idx + dir;
     if (nextIdx < 0 || nextIdx >= project.outline.length) return;
@@ -70,14 +102,19 @@ export function OutlineGeneratorView() {
     setOutline(copy);
   };
 
+  const sectionCountLabel =
+    project.outline.length === 1
+      ? '1 seção'
+      : `${project.outline.length} seções`;
+
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 46px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Left: Idea & Advanced Options Form */}
       <div
         style={{
-          width: 370,
-          backgroundColor: '#0e1118',
-          borderRight: '1px solid #1b202c',
+          width: 360,
+          backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+          borderRight: '1px solid var(--border-subtle, var(--border, #263046))',
           padding: 18,
           overflowY: 'auto',
           display: 'flex',
@@ -86,11 +123,28 @@ export function OutlineGeneratorView() {
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: '#f3f4f6' }}>
-          <ListTree size={16} color="#60a5fa" /> Gerador de Contorno
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 15,
+            fontWeight: 700,
+            color: 'var(--text-primary, #f1f5f9)',
+          }}
+        >
+          <ListTree size={16} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
+          Gerador de Contorno
         </div>
-        <p style={{ margin: 0, fontSize: 12, color: '#9ca3af', lineHeight: 1.45 }}>
-          Descreva sua ideia de história e gere um esboço estruturado e editável.
+        <p
+          style={{
+            margin: 0,
+            fontSize: 12,
+            color: 'var(--text-secondary, #94a3b8)',
+            lineHeight: 1.45,
+          }}
+        >
+          Descreva sua ideia de história, carregue um modelo narrativo clássico ou edite as seções livremente.
         </p>
 
         <div>
@@ -117,15 +171,21 @@ export function OutlineGeneratorView() {
         <div
           style={{
             padding: 12,
-            backgroundColor: '#131824',
-            border: '1px solid #242c3e',
-            borderRadius: 8,
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
+            borderRadius: 'var(--radius-md, 8px)',
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#e5e7eb' }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--text-primary, #f1f5f9)',
+            }}
+          >
             Opções Avançadas
           </div>
 
@@ -156,7 +216,16 @@ export function OutlineGeneratorView() {
             </div>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#d1d5db', cursor: 'pointer' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 12,
+              color: 'var(--text-primary, #f1f5f9)',
+              cursor: 'pointer',
+            }}
+          >
             <input
               type="checkbox"
               checked={includeTwist}
@@ -167,13 +236,14 @@ export function OutlineGeneratorView() {
         </div>
 
         <button
+          type="button"
           onClick={handleGenerateOutline}
           style={{
             padding: '10px 14px',
-            backgroundColor: '#2563eb',
-            color: '#fff',
+            backgroundColor: 'var(--accent-primary, #3b82f6)',
+            color: '#ffffff',
             border: 'none',
-            borderRadius: 7,
+            borderRadius: 'var(--radius-sm, 6px)',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -185,29 +255,86 @@ export function OutlineGeneratorView() {
         >
           <Sparkles size={15} /> Gerar Esboço Estruturado
         </button>
+
+        <button
+          type="button"
+          onClick={() => setTemplateModalOpen(true)}
+          style={{
+            padding: '9px 14px',
+            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+            color: 'var(--text-primary, #f1f5f9)',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
+            borderRadius: 'var(--radius-sm, 6px)',
+            fontSize: 12.5,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+          }}
+        >
+          <LayoutTemplate size={14} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
+          Carregar Estrutura de Modelo
+        </button>
       </div>
 
       {/* Right: Interactive Outline Editor */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24, maxWidth: 920 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 24, maxWidth: 960 }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
             marginBottom: 16,
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, color: '#f9fafb' }}>
-              Esboço Interativo ({project.outline.length} seções)
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 20,
+                color: 'var(--text-primary, #f1f5f9)',
+              }}
+            >
+              Esboço Interativo ({sectionCountLabel})
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#9ca3af' }}>
-              Edite títulos, marque reviravoltas, reordene e aplique ao manuscrito.
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 12.5,
+                color: 'var(--text-secondary, #94a3b8)',
+              }}
+            >
+              Edite títulos, marque reviravoltas, carregue modelos narrativos e aplique ao manuscrito.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
+              type="button"
+              onClick={() => setTemplateModalOpen(true)}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+                border: '1px solid var(--border-subtle, var(--border, #263046))',
+                borderRadius: 'var(--radius-sm, 6px)',
+                color: 'var(--text-primary, #f1f5f9)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <LayoutTemplate size={14} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
+              Carregar Estrutura de Modelo
+            </button>
+            <button
+              type="button"
               onClick={() =>
                 setOutline([
                   ...project.outline,
@@ -222,10 +349,10 @@ export function OutlineGeneratorView() {
               }
               style={{
                 padding: '8px 12px',
-                backgroundColor: '#19202e',
-                border: '1px solid #2c3548',
-                borderRadius: 6,
-                color: '#e5e7eb',
+                backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+                border: '1px solid var(--border-subtle, var(--border, #263046))',
+                borderRadius: 'var(--radius-sm, 6px)',
+                color: 'var(--text-primary, #f1f5f9)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -237,6 +364,7 @@ export function OutlineGeneratorView() {
               <Plus size={14} /> Nova Seção
             </button>
             <button
+              type="button"
               onClick={() => {
                 applyOutlineToManuscript();
                 setAppliedBanner(true);
@@ -247,7 +375,7 @@ export function OutlineGeneratorView() {
                 backgroundColor: '#10b981',
                 color: '#052e16',
                 border: 'none',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm, 6px)',
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -263,10 +391,10 @@ export function OutlineGeneratorView() {
             style={{
               marginBottom: 14,
               padding: '10px 14px',
-              backgroundColor: 'rgba(16,185,129,0.15)',
-              border: '1px solid rgba(16,185,129,0.35)',
-              borderRadius: 8,
-              color: '#34d399',
+              backgroundColor: 'rgba(16, 185, 129, 0.14)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              borderRadius: 'var(--radius-md, 8px)',
+              color: '#10b981',
               fontSize: 12.5,
               display: 'flex',
               justifyContent: 'space-between',
@@ -277,11 +405,12 @@ export function OutlineGeneratorView() {
               <CheckCircle2 size={15} /> Esboço sincronizado com os capítulos do Manuscrito!
             </span>
             <button
+              type="button"
               onClick={() => setActiveView('manuscript')}
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#6ee7b7',
+                color: '#10b981',
                 fontWeight: 700,
                 cursor: 'pointer',
                 fontSize: 12,
@@ -298,11 +427,11 @@ export function OutlineGeneratorView() {
               key={sec.id}
               style={{
                 padding: 14,
-                backgroundColor: '#121621',
+                backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
                 border: sec.isTwist
-                  ? '1px solid rgba(245,158,11,0.5)'
-                  : '1px solid #1f2533',
-                borderRadius: 8,
+                  ? '1px solid rgba(245, 158, 11, 0.5)'
+                  : '1px solid var(--border-subtle, var(--border, #263046))',
+                borderRadius: 'var(--radius-md, 8px)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -335,6 +464,7 @@ export function OutlineGeneratorView() {
                   <option value={3}>Ato III</option>
                 </select>
                 <button
+                  type="button"
                   onClick={() =>
                     setOutline(
                       project.outline.map((s) =>
@@ -346,11 +476,11 @@ export function OutlineGeneratorView() {
                   style={{
                     padding: '6px 9px',
                     backgroundColor: sec.isTwist
-                      ? 'rgba(245,158,11,0.2)'
-                      : '#181e2c',
-                    border: '1px solid #2a3346',
-                    borderRadius: 6,
-                    color: sec.isTwist ? '#fbbf24' : '#6b7280',
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : 'var(--bg-elevated, var(--bg-card, #171d2e))',
+                    border: '1px solid var(--border-subtle, var(--border, #263046))',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    color: sec.isTwist ? '#f59e0b' : 'var(--text-muted, #64748b)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -362,6 +492,7 @@ export function OutlineGeneratorView() {
                   <Zap size={12} /> Twist
                 </button>
                 <button
+                  type="button"
                   onClick={() => moveSection(idx, -1)}
                   style={iconBtnStyle}
                   title="Mover para cima"
@@ -369,6 +500,7 @@ export function OutlineGeneratorView() {
                   <ArrowUp size={13} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => moveSection(idx, 1)}
                   style={iconBtnStyle}
                   title="Mover para baixo"
@@ -376,6 +508,7 @@ export function OutlineGeneratorView() {
                   <ArrowDown size={13} />
                 </button>
                 <button
+                  type="button"
                   onClick={() =>
                     setOutline(project.outline.filter((s) => s.id !== sec.id))
                   }
@@ -401,6 +534,14 @@ export function OutlineGeneratorView() {
           ))}
         </div>
       </div>
+
+      <OutlineTemplateModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        onSelectTemplate={(tpl, replaceManuscript) => {
+          void handleSelectTemplate(tpl, replaceManuscript);
+        }}
+      />
     </div>
   );
 }
@@ -409,37 +550,37 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 11.5,
   fontWeight: 600,
-  color: '#9ca3af',
+  color: 'var(--text-secondary, #94a3b8)',
   marginBottom: 4,
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+  border: '1px solid var(--border-subtle, var(--border, #263046))',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '7px 10px',
-  color: '#f3f4f6',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 12.5,
 };
 
 const textareaStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+  border: '1px solid var(--border-subtle, var(--border, #263046))',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '8px 10px',
-  color: '#e5e7eb',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 12.5,
   lineHeight: 1.45,
   resize: 'vertical',
 };
 
 const iconBtnStyle: React.CSSProperties = {
-  background: '#171c28',
-  border: '1px solid #262f42',
-  borderRadius: 6,
-  color: '#9ca3af',
+  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+  border: '1px solid var(--border-subtle, var(--border, #263046))',
+  borderRadius: 'var(--radius-sm, 6px)',
+  color: 'var(--text-secondary, #94a3b8)',
   padding: 6,
   cursor: 'pointer',
   display: 'flex',

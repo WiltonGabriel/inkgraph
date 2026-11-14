@@ -1,96 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  LayoutDashboard,
-  BookOpen,
-  Sparkles,
-  LayoutTemplate,
-  ListTree,
-  Kanban,
-  FileText,
-  Users,
-  MessageSquare,
-  Globe,
-  Shield,
-  Network,
-  Package,
-  Share2,
-  ShieldAlert,
-  Feather,
-  Eye,
-  TrendingUp,
-  GitBranch,
-  Download,
   Settings,
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
-import type { ViewId } from '../../types/project';
-
-interface NavGroup {
-  label: string;
-  items: { id: ViewId; label: string; icon: typeof LayoutDashboard; badge?: number }[];
-}
+import { buildSidebarGroups } from './sidebarGroups';
+import { SidebarNavItem } from './SidebarNavItem';
 
 export function Sidebar() {
-  const { activeView, setActiveView, project, settings, t } = useProject();
+  const {
+    activeView,
+    setActiveView,
+    project,
+    settings,
+    toggleSidebarGroup,
+    t,
+  } = useProject();
   const [collapsed, setCollapsed] = useState(() => settings.sidebarDefaultCollapsed);
 
-  const pendingProposals = project.stagingProposals.filter(
-    (p) => p.status === 'pending'
-  ).length;
+  useEffect(() => {
+    setCollapsed(settings.sidebarDefaultCollapsed);
+  }, [settings.sidebarDefaultCollapsed]);
 
-  const groups: NavGroup[] = [
-    {
-      label: t.sidebarGroups.writing,
-      items: [
-        { id: 'dashboard', label: t.views.dashboard, icon: LayoutDashboard },
-        { id: 'manuscript', label: t.views.manuscript, icon: BookOpen, badge: project.scenes.length },
-        { id: 'writer', label: t.views.writer, icon: Sparkles },
-      ],
-    },
-    {
-      label: t.sidebarGroups.planning,
-      items: [
-        { id: 'templates', label: t.views.templates, icon: LayoutTemplate },
-        { id: 'outline', label: t.views.outline, icon: ListTree },
-        { id: 'plotboard', label: t.views.plotboard, icon: Kanban },
-        { id: 'scenario', label: t.views.scenario, icon: FileText },
-      ],
-    },
-    {
-      label: t.sidebarGroups.universe,
-      items: [
-        { id: 'characters', label: t.views.characters, icon: Users, badge: project.characters.length },
-        { id: 'interviews', label: t.views.interviews, icon: MessageSquare },
-        { id: 'factions', label: t.views.factions, icon: Shield, badge: project.factions.length },
-        { id: 'worlds', label: t.views.worlds, icon: Globe },
-        { id: 'graph', label: t.views.graph, icon: Network },
-        { id: 'objects', label: t.views.objects, icon: Package, badge: project.objects.length },
-        { id: 'mindmap', label: t.views.mindmap, icon: Share2 },
-      ],
-    },
-    {
-      label: t.sidebarGroups.review,
-      items: [
-        { id: 'consistency', label: t.views.consistency, icon: ShieldAlert },
-        { id: 'critic', label: t.views.critic, icon: Feather },
-        { id: 'preview', label: t.views.preview, icon: Eye },
-        { id: 'progress', label: t.views.progress, icon: TrendingUp },
-        { id: 'versions', label: t.views.versions, icon: GitBranch, badge: pendingProposals || undefined },
-        { id: 'export', label: t.views.export, icon: Download },
-      ],
-    },
-  ];
+  useEffect(() => {
+    const onShortcut = (ev: Event) => {
+      const custom = ev as CustomEvent<{ action?: string }>;
+      if (custom.detail?.action === 'toggleSidebar') {
+        setCollapsed((prev) => !prev);
+      }
+    };
+    window.addEventListener('inkgraph:shortcut', onShortcut);
+    return () => window.removeEventListener('inkgraph:shortcut', onShortcut);
+  }, []);
+
+  const indicatorStyle = settings.sidebarIndicator ?? 'pill';
+  const groups = buildSidebarGroups(t, project, settings.hiddenSidebarViews ?? []);
 
   return (
     <aside
       aria-label="Barra lateral principal"
       style={{
-        width: collapsed ? 58 : 228,
-        backgroundColor: '#0c0e14',
-        borderRight: '1px solid #1b202c',
+        width: collapsed ? 58 : 232,
+        backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+        borderRight: '1px solid var(--border-subtle, var(--border, #263046))',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -99,12 +55,11 @@ export function Sidebar() {
         userSelect: 'none',
       }}
     >
-      {/* Top Collapse Toggle & Brand */}
       <div
         style={{
           height: 46,
           padding: '0 12px',
-          borderBottom: '1px solid #1b202c',
+          borderBottom: '1px solid var(--border-subtle, var(--border, #263046))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'space-between',
@@ -117,8 +72,8 @@ export function Sidebar() {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: settings.accentColor || '#10b981',
-                boxShadow: `0 0 8px ${settings.accentColor || '#10b981'}`,
+                backgroundColor: 'var(--accent-primary, #3b82f6)',
+                boxShadow: '0 0 8px var(--accent-soft, rgba(59, 130, 246, 0.35))',
               }}
             />
             <span
@@ -126,7 +81,7 @@ export function Sidebar() {
                 fontWeight: 700,
                 fontSize: 13,
                 letterSpacing: '0.05em',
-                color: '#f3f4f6',
+                color: 'var(--text-primary, #f1f5f9)',
               }}
             >
               INKGRAPH
@@ -134,12 +89,14 @@ export function Sidebar() {
           </div>
         )}
         <button
+          type="button"
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+          aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
           style={{
             background: 'none',
             border: 'none',
-            color: '#6b7280',
+            color: 'var(--text-muted, #64748b)',
             cursor: 'pointer',
             padding: 4,
             display: 'flex',
@@ -150,7 +107,6 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Main Navigation */}
       <div
         style={{
           flex: 1,
@@ -158,125 +114,113 @@ export function Sidebar() {
           padding: collapsed ? '8px 6px' : '10px 8px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: collapsed ? 8 : 6,
         }}
       >
-        {groups.map((grp) => (
-          <div key={grp.label}>
-            {!collapsed && (
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: '#4b5563',
-                  padding: '0 8px 4px',
-                }}
-              >
-                {grp.label}
-              </div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {grp.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeView === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    title={item.label}
+        {groups.map((grp, grpIdx) => {
+          const isGroupCollapsed = Boolean(settings.sidebarCollapsedGroups?.[grp.key]);
+          const groupHasActive = grp.items.some((item) => item.id === activeView);
+
+          return (
+            <div key={grp.key}>
+              {collapsed ? (
+                grpIdx > 0 && (
+                  <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: collapsed ? 'center' : 'space-between',
-                      padding: collapsed ? '9px 0' : '7px 10px',
-                      borderRadius: 6,
-                      border: 'none',
-                      backgroundColor: isActive ? '#171f30' : 'transparent',
-                      color: isActive ? '#60a5fa' : '#9ca3af',
-                      fontWeight: isActive ? 600 : 400,
-                      fontSize: 12.5,
-                      cursor: 'pointer',
-                      textAlign: 'left',
+                      height: 1,
+                      backgroundColor: 'var(--border-subtle, var(--border, #263046))',
+                      margin: '0 6px 8px',
                     }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <Icon size={15} />
-                      {!collapsed && <span>{item.label}</span>}
-                    </span>
-                    {!collapsed && item.badge !== undefined && (
+                  />
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleSidebarGroup(grp.key)}
+                  aria-expanded={!isGroupCollapsed}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '5px 8px',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted, #64748b)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.07em',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{grp.label}</span>
+                    {isGroupCollapsed && groupHasActive && (
                       <span
                         style={{
-                          fontSize: 10,
-                          padding: '1px 6px',
-                          borderRadius: 999,
-                          backgroundColor: isActive ? 'rgba(59,130,246,0.2)' : '#161a24',
-                          color: isActive ? '#93c5fd' : '#6b7280',
-                          fontWeight: 600,
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--accent-primary, #3b82f6)',
                         }}
-                      >
-                        {item.badge}
-                      </span>
+                      />
                     )}
-                  </button>
-                );
-              })}
+                  </span>
+                  {isGroupCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                </button>
+              )}
+
+              {(collapsed || !isGroupCollapsed) && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    marginTop: collapsed ? 0 : 2,
+                  }}
+                >
+                  {grp.items.map((item) => (
+                    <SidebarNavItem
+                      key={item.id}
+                      item={item}
+                      isActive={activeView === item.id}
+                      collapsed={collapsed}
+                      indicatorStyle={indicatorStyle}
+                      onSelect={() => setActiveView(item.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Bottom Secondary Nav */}
       <div
         style={{
           padding: collapsed ? '8px 6px' : '8px',
-          borderTop: '1px solid #1b202c',
+          borderTop: '1px solid var(--border-subtle, var(--border, #263046))',
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
         }}
       >
-        <button
-          onClick={() => setActiveView('settings')}
-          title={t.views.settings}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 9,
-            padding: collapsed ? '8px 0' : '7px 10px',
-            borderRadius: 6,
-            border: 'none',
-            backgroundColor: activeView === 'settings' ? '#171f30' : 'transparent',
-            color: activeView === 'settings' ? '#60a5fa' : '#9ca3af',
-            fontSize: 12.5,
-            cursor: 'pointer',
-          }}
-        >
-          <Settings size={15} />
-          {!collapsed && <span>{t.views.settings}</span>}
-        </button>
-        <button
-          onClick={() => setActiveView('help')}
-          title={t.views.help}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 9,
-            padding: collapsed ? '8px 0' : '7px 10px',
-            borderRadius: 6,
-            border: 'none',
-            backgroundColor: activeView === 'help' ? '#171f30' : 'transparent',
-            color: activeView === 'help' ? '#60a5fa' : '#9ca3af',
-            fontSize: 12.5,
-            cursor: 'pointer',
-          }}
-        >
-          <HelpCircle size={15} />
-          {!collapsed && <span>{t.views.help}</span>}
-        </button>
+        <SidebarNavItem
+          item={{ id: 'settings', label: t.views.settings, icon: Settings }}
+          isActive={activeView === 'settings'}
+          collapsed={collapsed}
+          indicatorStyle={indicatorStyle}
+          onSelect={() => setActiveView('settings')}
+        />
+        <SidebarNavItem
+          item={{ id: 'help', label: t.views.help, icon: HelpCircle }}
+          isActive={activeView === 'help'}
+          collapsed={collapsed}
+          indicatorStyle={indicatorStyle}
+          onSelect={() => setActiveView('help')}
+        />
       </div>
     </aside>
   );

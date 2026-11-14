@@ -106,7 +106,7 @@ export function ExportView() {
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <h3 style={{ fontSize: '0.88rem', fontWeight: 700 }}>Seleção de Conteúdo & Formato</h3>
           <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeTitle} onChange={(e) => setIncludeTitle(e.target.checked)} /> Título e Premissa (Logline)</label>
-          <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeManuscript} onChange={(e) => setIncludeManuscript(e.target.checked)} /> Manuscrito ({project.scenes.length} cenas)</label>
+          <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeManuscript} onChange={(e) => setIncludeManuscript(e.target.checked)} /> Manuscrito ({project.scenes.length === 1 ? '1 cena' : `${project.scenes.length} cenas`})</label>
           <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeCharacters} onChange={(e) => setIncludeCharacters(e.target.checked)} /> Personagens ({project.characters.length})</label>
           <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeFactions} onChange={(e) => setIncludeFactions(e.target.checked)} /> Facções ({project.factions.length})</label>
           <label style={{ fontSize: '0.8rem', display: 'flex', gap: '0.45rem' }}><input type="checkbox" checked={includeWorlds} onChange={(e) => setIncludeWorlds(e.target.checked)} /> Mundos ({project.worlds.length})</label>

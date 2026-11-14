@@ -66,9 +66,9 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
           <div
             key={act}
             style={{
-              backgroundColor: '#111622',
-              border: '1px solid #242f44',
-              borderRadius: 8,
+              backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+              border: '1px solid var(--border-subtle, var(--border, #263046))',
+              borderRadius: 'var(--radius-md, 8px)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -77,15 +77,19 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
             <div
               style={{
                 padding: '10px 14px',
-                backgroundColor: '#182030',
-                borderBottom: '1px solid #242f44',
+                backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+                borderBottom: '1px solid var(--border-subtle, var(--border, #263046))',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{label}</span>
-              <span style={{ fontSize: 11.5, color: '#94a3b8' }}>{scenes.length} cenas</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
+                {label}
+              </span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)' }}>
+                {scenes.length === 1 ? '1 cena' : `${scenes.length} cenas`}
+              </span>
             </div>
 
             <div style={{ padding: 10, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -99,9 +103,15 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                     onClick={() => setActiveSceneId(scene.id)}
                     style={{
                       padding: 12,
-                      borderRadius: 7,
-                      backgroundColor: isSelected ? '#182030' : '#0d121d',
-                      border: `1px solid ${isSelected ? '#6366f1' : '#242f44'}`,
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      backgroundColor: isSelected
+                        ? 'var(--bg-elevated, var(--bg-card, #171d2e))'
+                        : 'var(--bg-canvas, var(--bg-primary, #0b0e16))',
+                      border: `1px solid ${
+                        isSelected
+                          ? 'var(--accent-primary, #6366f1)'
+                          : 'var(--border-subtle, var(--border, #263046))'
+                      }`,
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -109,7 +119,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: '#f8fafc' }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary, #f8fafc)' }}>
                         #{scene.chapterNumber} {scene.title}
                       </span>
                       <span
@@ -117,8 +127,8 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                           fontSize: 10.5,
                           padding: '2px 6px',
                           borderRadius: 4,
-                          backgroundColor: '#1e293b',
-                          color: '#93c5fd',
+                          backgroundColor: 'var(--accent-soft, rgba(59, 130, 246, 0.14))',
+                          color: 'var(--accent-primary, #3b82f6)',
                           fontWeight: 600,
                         }}
                       >
@@ -126,9 +136,18 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                       </span>
                     </div>
 
-                    <p style={{ fontSize: 11.5, color: '#94a3b8', lineHeight: 1.4 }}>{scene.summary}</p>
+                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.4 }}>
+                      {scene.summary}
+                    </p>
 
-                    <div style={{ height: 5, backgroundColor: '#1e293b', borderRadius: 999, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: 5,
+                        backgroundColor: 'var(--bg-hover, #1f273d)',
+                        borderRadius: 999,
+                        overflow: 'hidden',
+                      }}
+                    >
                       <div
                         style={{
                           width: `${scene.tension}%`,
@@ -138,7 +157,15 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: 11,
+                        color: 'var(--text-secondary, #94a3b8)',
+                      }}
+                    >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <User size={11} /> {pov ? pov.name : 'Sem POV'}
                       </span>
@@ -152,6 +179,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                           return (
                             <button
                               key={sp.id}
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleSceneSubplot(scene, sp.id);
@@ -163,7 +191,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                                 borderRadius: 999,
                                 backgroundColor: active ? sp.color : 'transparent',
                                 border: `1px solid ${sp.color}`,
-                                color: active ? '#fff' : '#94a3b8',
+                                color: active ? '#fff' : 'var(--text-secondary, #94a3b8)',
                               }}
                             >
                               {sp.name}
@@ -175,24 +203,36 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                       <div style={{ display: 'flex', gap: 4 }}>
                         {act > 1 && (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               upsertScene({ ...scene, act: (act - 1) as 1 | 2 | 3 });
                             }}
                             title="Mover para ato anterior"
-                            style={{ padding: 3, borderRadius: 4, backgroundColor: '#1e293b', color: '#cbd5e1' }}
+                            style={{
+                              padding: 3,
+                              borderRadius: 4,
+                              backgroundColor: 'var(--bg-elevated, #1e293b)',
+                              color: 'var(--text-secondary, #cbd5e1)',
+                            }}
                           >
                             <ArrowLeft size={12} />
                           </button>
                         )}
                         {act < 3 && (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               upsertScene({ ...scene, act: (act + 1) as 1 | 2 | 3 });
                             }}
                             title="Mover para próximo ato"
-                            style={{ padding: 3, borderRadius: 4, backgroundColor: '#1e293b', color: '#cbd5e1' }}
+                            style={{
+                              padding: 3,
+                              borderRadius: 4,
+                              backgroundColor: 'var(--bg-elevated, #1e293b)',
+                              color: 'var(--text-secondary, #cbd5e1)',
+                            }}
                           >
                             <ArrowRight size={12} />
                           </button>
@@ -204,13 +244,14 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
               })}
 
               <button
+                type="button"
                 onClick={() => handleAddScene(act)}
                 style={{
                   padding: '8px',
-                  borderRadius: 6,
-                  border: '1px dashed #334155',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  border: '1px dashed var(--border-subtle, #334155)',
                   backgroundColor: 'transparent',
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary, #94a3b8)',
                   fontSize: 12,
                   display: 'flex',
                   alignItems: 'center',
@@ -218,7 +259,7 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                   gap: 5,
                 }}
               >
-                <Plus size={14} /> + Adicionar Cena
+                <Plus size={14} /> Adicionar Cena
               </button>
             </div>
           </div>

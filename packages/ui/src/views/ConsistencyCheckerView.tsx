@@ -29,7 +29,7 @@ export function ConsistencyCheckerView() {
           <div>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Auditoria de Consistência & Cânone</h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {project.scenes.length} cenas verificadas • {totalSecrets} segredos epistêmicos monitorados
+              {project.scenes.length === 1 ? '1 cena verificada' : `${project.scenes.length} cenas verificadas`} • {totalSecrets === 1 ? '1 segredo epistêmico monitorado' : `${totalSecrets} segredos epistêmicos monitorados`}
             </p>
           </div>
         </div>

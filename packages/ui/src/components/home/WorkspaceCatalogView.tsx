@@ -30,6 +30,17 @@ export function WorkspaceCatalogView({
     t,
   } = useProject();
 
+  const isEn = settings.language === 'en';
+
+  const formatSceneCount = (count: number) =>
+    `${count} ${count === 1 ? (isEn ? 'scene' : 'cena') : t.common.scenes}`;
+
+  const formatCharacterCount = (count: number) =>
+    `${count} ${count === 1 ? (isEn ? 'character' : 'personagem') : t.common.characters}`;
+
+  const formatFactionCount = (count: number) =>
+    `${count} ${count === 1 ? (isEn ? 'faction' : 'facção') : t.common.factions}`;
+
   const handleExportSingle = (ws: ProjectData) => {
     const blob = new Blob([JSON.stringify(ws, null, 2)], {
       type: 'application/json',
@@ -42,27 +53,16 @@ export function WorkspaceCatalogView({
     URL.revokeObjectURL(url);
   };
 
-  const handleDelete = (ws: ProjectData) => {
-    if (settings.confirmDestructiveActions) {
-      const msg =
-        settings.language === 'en'
-          ? `Delete workspace "${ws.title}"?`
-          : `Excluir o workspace "${ws.title}"?`;
-      if (!window.confirm(msg)) return;
-    }
-    deleteWorkspace(ws.id);
-  };
-
   if (items.length === 0) {
     return (
       <div
         style={{
-          backgroundColor: '#11151f',
-          border: '1px solid #1e2433',
-          borderRadius: 10,
+          backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+          border: '1px solid var(--border-subtle, var(--border, #263046))',
+          borderRadius: 'var(--radius-lg, 12px)',
           padding: 32,
           textAlign: 'center',
-          color: '#9ca3af',
+          color: 'var(--text-secondary, #94a3b8)',
           fontSize: 13,
         }}
       >
@@ -83,22 +83,27 @@ export function WorkspaceCatalogView({
         {items.map((ws) => {
           const words = ws.scenes.reduce((acc, s) => acc + countWords(s.content), 0);
           const isCurrent = ws.id === activeWorkspaceId;
-          const accent = ws.accentColor || '#3b82f6';
+          const accent = ws.accentColor || 'var(--accent-primary, #3b82f6)';
 
           return (
             <div
               key={ws.id}
               style={{
-                backgroundColor: isCurrent ? '#151b28' : '#11151f',
-                border: isCurrent ? '1px solid #2e3b56' : '1px solid #1e2433',
+                backgroundColor: isCurrent
+                  ? 'var(--bg-elevated, var(--bg-card, #171d2e))'
+                  : 'var(--bg-surface, var(--bg-secondary, #111623))',
+                border: isCurrent
+                  ? '1px solid var(--accent-primary, #3b82f6)'
+                  : '1px solid var(--border-subtle, var(--border, #263046))',
                 borderLeft: `4px solid ${accent}`,
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md, 8px)',
                 padding: '10px 14px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: 12,
+                boxShadow: 'var(--card-shadow, none)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 260px' }}>
@@ -110,7 +115,7 @@ export function WorkspaceCatalogView({
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: ws.isFavorite ? '#f59e0b' : '#4b5563',
+                    color: ws.isFavorite ? '#f59e0b' : 'var(--text-muted, #64748b)',
                     padding: 2,
                     display: 'flex',
                   }}
@@ -118,8 +123,14 @@ export function WorkspaceCatalogView({
                   <Star size={15} fill={ws.isFavorite ? '#f59e0b' : 'none'} />
                 </button>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: 'var(--text-primary, #f1f5f9)',
+                      }}
+                    >
                       {ws.title}
                     </span>
                     {ws.genre && (
@@ -128,8 +139,8 @@ export function WorkspaceCatalogView({
                           fontSize: 10.5,
                           padding: '1px 6px',
                           borderRadius: 4,
-                          backgroundColor: '#1b2232',
-                          color: '#9ca3af',
+                          backgroundColor: 'var(--bg-hover, #1f273d)',
+                          color: 'var(--text-secondary, #94a3b8)',
                         }}
                       >
                         {ws.genre}
@@ -141,18 +152,24 @@ export function WorkspaceCatalogView({
                           fontSize: 10.5,
                           padding: '1px 6px',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                          color: '#93c5fd',
+                          backgroundColor: 'var(--accent-soft, rgba(59, 130, 246, 0.14))',
+                          color: 'var(--accent-primary, #3b82f6)',
                         }}
                       >
                         {ws.folderOrTag}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 2 }}>
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: 'var(--text-muted, #64748b)',
+                      marginTop: 2,
+                    }}
+                  >
                     {words.toLocaleString(settings.language)} {t.common.words} ·{' '}
-                    {ws.scenes.length} {t.common.scenes} · {ws.characters.length}{' '}
-                    {t.common.characters}
+                    {formatSceneCount(ws.scenes.length)} ·{' '}
+                    {formatCharacterCount(ws.characters.length)}
                   </div>
                 </div>
               </div>
@@ -163,10 +180,10 @@ export function WorkspaceCatalogView({
                   onClick={() => switchWorkspace(ws.id)}
                   style={{
                     padding: '5px 11px',
-                    backgroundColor: '#2563eb',
-                    color: '#fff',
+                    backgroundColor: 'var(--accent-primary, #3b82f6)',
+                    color: '#ffffff',
                     border: 'none',
-                    borderRadius: 5,
+                    borderRadius: 'var(--radius-sm, 6px)',
                     fontSize: 11.5,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -178,14 +195,7 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => duplicateWorkspace(ws.id)}
                   title={t.common.duplicate}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Copy size={13} />
                 </button>
@@ -193,14 +203,7 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => handleExportSingle(ws)}
                   title={t.common.exportJson}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Download size={13} />
                 </button>
@@ -208,29 +211,15 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => toggleArchiveWorkspace(ws.id)}
                   title={ws.isArchived ? t.common.unarchive : t.common.archive}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Archive size={13} />
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(ws)}
+                  onClick={() => deleteWorkspace(ws.id)}
                   title={t.common.delete}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#f87171',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={{ ...iconActionBtnStyle, color: '#ef4444' }}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -255,7 +244,7 @@ export function WorkspaceCatalogView({
         const goal = Math.max(1, ws.wordCountGoal || 80000);
         const pct = Math.min(100, Math.round((words / goal) * 100));
         const isCurrent = ws.id === activeWorkspaceId;
-        const accent = ws.accentColor || '#3b82f6';
+        const accent = ws.accentColor || 'var(--accent-primary, #3b82f6)';
         const updatedDate = ws.updatedAt
           ? new Date(ws.updatedAt).toLocaleDateString(settings.language)
           : '';
@@ -264,15 +253,20 @@ export function WorkspaceCatalogView({
           <div
             key={ws.id}
             style={{
-              backgroundColor: isCurrent ? '#151b28' : '#11151f',
-              border: isCurrent ? '1px solid #31405e' : '1px solid #1e2433',
+              backgroundColor: isCurrent
+                ? 'var(--bg-elevated, var(--bg-card, #171d2e))'
+                : 'var(--bg-surface, var(--bg-secondary, #111623))',
+              border: isCurrent
+                ? '1px solid var(--accent-primary, #3b82f6)'
+                : '1px solid var(--border-subtle, var(--border, #263046))',
               borderTop: `3px solid ${accent}`,
-              borderRadius: 10,
+              borderRadius: 'var(--radius-lg, 12px)',
               padding: 16,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               gap: 12,
+              boxShadow: 'var(--card-shadow, none)',
             }}
           >
             <div>
@@ -291,7 +285,7 @@ export function WorkspaceCatalogView({
                     margin: 0,
                     fontSize: 15.5,
                     fontWeight: 700,
-                    color: '#f9fafb',
+                    color: 'var(--text-primary, #f1f5f9)',
                   }}
                 >
                   {ws.title}
@@ -304,7 +298,7 @@ export function WorkspaceCatalogView({
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: ws.isFavorite ? '#f59e0b' : '#4b5563',
+                    color: ws.isFavorite ? '#f59e0b' : 'var(--text-muted, #64748b)',
                     padding: 2,
                   }}
                 >
@@ -320,8 +314,8 @@ export function WorkspaceCatalogView({
                       fontSize: 10.5,
                       padding: '2px 7px',
                       borderRadius: 4,
-                      backgroundColor: '#1b2232',
-                      color: '#cbd5e1',
+                      backgroundColor: 'var(--bg-hover, #1f273d)',
+                      color: 'var(--text-secondary, #94a3b8)',
                     }}
                   >
                     {ws.genre}
@@ -333,8 +327,8 @@ export function WorkspaceCatalogView({
                       fontSize: 10.5,
                       padding: '2px 7px',
                       borderRadius: 4,
-                      backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                      color: '#93c5fd',
+                      backgroundColor: 'var(--accent-soft, rgba(59, 130, 246, 0.14))',
+                      color: 'var(--accent-primary, #3b82f6)',
                     }}
                   >
                     {ws.folderOrTag}
@@ -348,7 +342,7 @@ export function WorkspaceCatalogView({
                   style={{
                     margin: '0 0 10px',
                     fontSize: 12,
-                    color: '#9ca3af',
+                    color: 'var(--text-secondary, #94a3b8)',
                     lineHeight: 1.45,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
@@ -367,7 +361,7 @@ export function WorkspaceCatalogView({
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: 11,
-                    color: '#9ca3af',
+                    color: 'var(--text-secondary, #94a3b8)',
                     marginBottom: 4,
                   }}
                 >
@@ -379,7 +373,7 @@ export function WorkspaceCatalogView({
                 <div
                   style={{
                     height: 4,
-                    backgroundColor: '#1c2333',
+                    backgroundColor: 'var(--bg-hover, #1f273d)',
                     borderRadius: 999,
                     overflow: 'hidden',
                   }}
@@ -400,12 +394,13 @@ export function WorkspaceCatalogView({
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontSize: 11,
-                  color: '#6b7280',
+                  color: 'var(--text-muted, #64748b)',
                 }}
               >
                 <span>
-                  {ws.scenes.length} {t.common.scenes} · {ws.characters.length}{' '}
-                  {t.common.characters} · {ws.factions.length} {t.common.factions}
+                  {formatSceneCount(ws.scenes.length)} ·{' '}
+                  {formatCharacterCount(ws.characters.length)} ·{' '}
+                  {formatFactionCount(ws.factions.length)}
                 </span>
                 {updatedDate && <span>{updatedDate}</span>}
               </div>
@@ -419,7 +414,7 @@ export function WorkspaceCatalogView({
                 justifyContent: 'space-between',
                 gap: 6,
                 paddingTop: 10,
-                borderTop: '1px solid #1c2230',
+                borderTop: '1px solid var(--border-subtle, var(--border, #263046))',
               }}
             >
               <button
@@ -428,10 +423,10 @@ export function WorkspaceCatalogView({
                 style={{
                   flex: 1,
                   padding: '6px 10px',
-                  backgroundColor: '#2563eb',
+                  backgroundColor: 'var(--accent-primary, #3b82f6)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm, 6px)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -450,14 +445,7 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => duplicateWorkspace(ws.id)}
                   title={t.common.duplicate}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Copy size={13} />
                 </button>
@@ -465,14 +453,7 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => handleExportSingle(ws)}
                   title={t.common.exportJson}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Download size={13} />
                 </button>
@@ -480,29 +461,15 @@ export function WorkspaceCatalogView({
                   type="button"
                   onClick={() => toggleArchiveWorkspace(ws.id)}
                   title={ws.isArchived ? t.common.unarchive : t.common.archive}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#9ca3af',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={iconActionBtnStyle}
                 >
                   <Archive size={13} />
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(ws)}
+                  onClick={() => deleteWorkspace(ws.id)}
                   title={t.common.delete}
-                  style={{
-                    padding: 6,
-                    backgroundColor: '#171c28',
-                    color: '#f87171',
-                    border: '1px solid #262e40',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={{ ...iconActionBtnStyle, color: '#ef4444' }}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -514,3 +481,15 @@ export function WorkspaceCatalogView({
     </div>
   );
 }
+
+const iconActionBtnStyle: React.CSSProperties = {
+  padding: 6,
+  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+  color: 'var(--text-secondary, #94a3b8)',
+  border: '1px solid var(--border-subtle, var(--border, #263046))',
+  borderRadius: 'var(--radius-sm, 6px)',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};

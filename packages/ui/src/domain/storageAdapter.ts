@@ -260,11 +260,43 @@ export function verifyAndReloadStorage(
   }
 }
 
-function openAssetsDb(): Promise<IDBDatabase | null> {
-  if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+interface MiniIDBRequest<T = unknown> {
+  result: T;
+  onsuccess: (() => void) | null;
+  onerror: (() => void) | null;
+  onupgradeneeded?: (() => void) | null;
+}
+
+interface MiniIDBObjectStore {
+  put: (value: unknown) => void;
+  get: (key: string) => MiniIDBRequest<StoredMapRecord | undefined>;
+  delete: (key: string) => void;
+  getAll: () => MiniIDBRequest<StoredMapRecord[]>;
+}
+
+interface MiniIDBTransaction {
+  objectStore: (name: string) => MiniIDBObjectStore;
+  oncomplete: (() => void) | null;
+  onerror: (() => void) | null;
+}
+
+interface MiniIDBDatabase {
+  objectStoreNames: { contains: (name: string) => boolean };
+  createObjectStore: (name: string, options: { keyPath: string }) => void;
+  transaction: (name: string, mode: 'readonly' | 'readwrite') => MiniIDBTransaction;
+  close: () => void;
+}
+
+interface MiniIDBFactory {
+  open: (name: string, version: number) => MiniIDBRequest<MiniIDBDatabase>;
+}
+
+function openAssetsDb(): Promise<MiniIDBDatabase | null> {
+  const idb = (globalThis as { indexedDB?: MiniIDBFactory }).indexedDB;
+  if (!idb) return Promise.resolve(null);
   return new Promise((resolve) => {
     try {
-      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      const req = idb.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains(IDB_STORE_MAPS)) {

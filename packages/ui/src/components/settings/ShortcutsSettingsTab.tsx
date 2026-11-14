@@ -1,176 +1,155 @@
-import { Keyboard, RotateCcw } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useProject } from '../../context/ProjectContext';
+import { useSettings } from '../../context/SettingsContext';
 import { DEFAULT_SETTINGS } from '../../data/defaultSettings';
+import {
+  SHORTCUT_CATEGORY_LABELS,
+  SHORTCUT_DEFINITIONS,
+  countModifiedShortcuts,
+  findShortcutConflicts,
+  normalizeShortcutString,
+  type ShortcutCategoryId,
+} from '../../domain/shortcutManager';
 import type { KeyboardShortcutMap } from '../../types/project';
+import { ShortcutRow } from './ShortcutRow';
+import { ShortcutsFilterBar } from './ShortcutsFilterBar';
+import {
+  THEME_VAR,
+  secondaryButtonStyle,
+  sectionCardStyle,
+  sectionHeaderStyle,
+} from './settingsStyles';
 
-const SHORTCUT_ITEMS: {
-  key: keyof KeyboardShortcutMap;
-  labelPt: string;
-  labelEn: string;
-  descPt: string;
-  descEn: string;
-}[] = [
-  {
-    key: 'commandPalette',
-    labelPt: 'Paleta de Comandos Global',
-    labelEn: 'Global Command Palette',
-    descPt: 'Busca rápida de cenas, entidades de lore e ações.',
-    descEn: 'Quick search across scenes, lore entities, and actions.',
-  },
-  {
-    key: 'openHome',
-    labelPt: 'Abrir Meu Espaço (Catálogo)',
-    labelEn: 'Open My Space (Catalog)',
-    descPt: 'Alterna para a tela inicial de seleção de workspaces.',
-    descEn: 'Switches to the home workspace catalog screen.',
-  },
-  {
-    key: 'openSettings',
-    labelPt: 'Configurações do Programa',
-    labelEn: 'Program Settings',
-    descPt: 'Abre esta visão de preferências globais.',
-    descEn: 'Opens this global preferences view.',
-  },
-  {
-    key: 'toggleCopilot',
-    labelPt: 'Alternar Painel Copiloto',
-    labelEn: 'Toggle Copilot Panel',
-    descPt: 'Exibe ou recolhe o assistente contextual lateral.',
-    descEn: 'Shows or hides the lateral contextual assistant.',
-  },
-  {
-    key: 'toggleZenMode',
-    labelPt: 'Alternar Modo Zen',
-    labelEn: 'Toggle Zen Mode',
-    descPt: 'Oculta barras para foco total no texto literário.',
-    descEn: 'Hides sidebars for distraction-free literary writing.',
-  },
-  {
-    key: 'quickSnapshot',
-    labelPt: 'Criar Snapshot Rápido',
-    labelEn: 'Create Quick Snapshot',
-    descPt: 'Salva imediatamente um ponto de restauração do manuscrito.',
-    descEn: 'Immediately saves a manuscript restore point.',
-  },
-  {
-    key: 'focusManuscript',
-    labelPt: 'Ir para o Manuscrito',
-    labelEn: 'Focus Manuscript',
-    descPt: 'Navega diretamente para a árvore de capítulos e cenas.',
-    descEn: 'Jumps directly to the chapters and scenes tree.',
-  },
-  {
-    key: 'focusGraph',
-    labelPt: 'Ir para o Grafo de Relações',
-    labelEn: 'Focus Relationship Graph',
-    descPt: 'Abre o grafo topológico de personagens e facções.',
-    descEn: 'Opens the character and faction relationship graph.',
-  },
-];
+const CATEGORY_ORDER: ShortcutCategoryId[] = ['navigation', 'views', 'editor', 'canvas'];
 
 export function ShortcutsSettingsTab() {
-  const { settings, updateSettings } = useProject();
-  const isEn = settings.language === 'en';
+  const { draftSettings, updateDraftShortcut, updateDraftSettings } = useSettings();
+  const { requestConfirm, notify } = useProject();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<ShortcutCategoryId | 'all'>('all');
+  const [capturingKey, setCapturingKey] = useState<keyof KeyboardShortcutMap | null>(null);
 
-  const updateShortcut = (key: keyof KeyboardShortcutMap, value: string) => {
-    updateSettings((prev) => ({
-      ...prev,
-      shortcuts: {
-        ...prev.shortcuts,
-        [key]: value,
-      },
-    }));
-  };
+  const isEn = draftSettings.language === 'en';
+  const shortcuts = draftSettings.shortcuts;
 
-  const resetShortcuts = () => {
-    updateSettings((prev) => ({
-      ...prev,
-      shortcuts: { ...DEFAULT_SETTINGS.shortcuts },
-    }));
+  const conflicts = useMemo(() => findShortcutConflicts(shortcuts), [shortcuts]);
+  const conflictCombos = useMemo(() => Object.keys(conflicts), [conflicts]);
+  const modifiedCount = useMemo(
+    () => countModifiedShortcuts(shortcuts, DEFAULT_SETTINGS.shortcuts),
+    [shortcuts]
+  );
+
+  const filteredDefs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return SHORTCUT_DEFINITIONS.filter((def) => {
+      if (categoryFilter !== 'all' && def.category !== categoryFilter) return false;
+      if (!q) return true;
+      const combo = (shortcuts[def.key] || '').toLowerCase();
+      return (
+        def.labelPt.toLowerCase().includes(q) ||
+        def.labelEn.toLowerCase().includes(q) ||
+        def.descPt.toLowerCase().includes(q) ||
+        def.descEn.toLowerCase().includes(q) ||
+        combo.includes(q)
+      );
+    });
+  }, [categoryFilter, searchQuery, shortcuts]);
+
+  const groupedDefs = useMemo(() => {
+    return CATEGORY_ORDER.map((cat) => ({
+      category: cat,
+      items: filteredDefs.filter((d) => d.category === cat),
+    })).filter((group) => group.items.length > 0);
+  }, [filteredDefs]);
+
+  const handleResetAllShortcuts = async () => {
+    setCapturingKey(null);
+    if (modifiedCount > 0) {
+      const ok = await requestConfirm({
+        title: isEn ? 'Restore Default Shortcuts' : 'Restaurar Todos os Atalhos',
+        message: isEn
+          ? `Reset all ${SHORTCUT_DEFINITIONS.length} keyboard shortcuts (${modifiedCount} customized) back to factory defaults?`
+          : `Restaurar todos os ${SHORTCUT_DEFINITIONS.length} atalhos de teclado (${modifiedCount} personalizados) para o padrão?`,
+        confirmLabel: isEn ? 'Restore Shortcuts' : 'Restaurar Atalhos',
+        cancelLabel: isEn ? 'Cancel' : 'Cancelar',
+        tone: 'neutral',
+      });
+      if (!ok) return;
+    }
+    updateDraftSettings({ shortcuts: { ...DEFAULT_SETTINGS.shortcuts } });
+    notify(
+      isEn
+        ? 'All 26 shortcuts restored in draft.'
+        : 'Todos os 26 atalhos restaurados no rascunho.',
+      'info'
+    );
   };
 
   return (
-    <div
-      style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
-        borderRadius: '8px',
-        padding: '1.15rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.9rem',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.88rem' }}>
-          <Keyboard size={16} color="var(--accent)" />
-          <span>{isEn ? 'Keyboard Shortcuts (Niri / Wayland Friendly)' : 'Atalhos de Teclado (Compatível com Niri / Wayland)'}</span>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <ShortcutsFilterBar
+        isEn={isEn}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        modifiedCount={modifiedCount}
+        conflictCombos={conflictCombos}
+        onResetAll={() => void handleResetAllShortcuts()}
+      />
 
-        <button
-          onClick={resetShortcuts}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            padding: '0.38rem 0.75rem',
-            fontSize: '0.76rem',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-          }}
-        >
-          <RotateCcw size={13} />
-          {isEn ? 'Reset Shortcuts' : 'Restaurar Atalhos'}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {SHORTCUT_ITEMS.map((item) => (
-          <div
-            key={item.key}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '0.65rem 0.85rem',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              gap: '1rem',
+      {groupedDefs.length === 0 ? (
+        <section style={{ ...sectionCardStyle, alignItems: 'center', padding: '1.6rem' }}>
+          <span style={{ fontSize: '0.82rem', color: THEME_VAR.textMuted }}>
+            {isEn
+              ? 'No shortcuts match your filter.'
+              : 'Nenhum atalho corresponde ao filtro atual.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setCategoryFilter('all');
             }}
+            style={secondaryButtonStyle}
           >
-            <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {isEn ? item.labelEn : item.labelPt}
-              </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                {isEn ? item.descEn : item.descPt}
-              </div>
+            {isEn ? 'Clear filters' : 'Limpar filtros'}
+          </button>
+        </section>
+      ) : (
+        groupedDefs.map((group) => (
+          <section key={group.category} style={sectionCardStyle}>
+            <div style={{ ...sectionHeaderStyle, fontSize: '0.83rem' }}>
+              <span>{SHORTCUT_CATEGORY_LABELS[group.category][isEn ? 'en' : 'pt']}</span>
+              <span style={{ fontSize: '0.72rem', color: THEME_VAR.textMuted }}>
+                ({group.items.length})
+              </span>
             </div>
 
-            <input
-              value={settings.shortcuts[item.key]}
-              onChange={(e) => updateShortcut(item.key, e.target.value)}
-              aria-label={isEn ? item.labelEn : item.labelPt}
-              style={{
-                width: 135,
-                textAlign: 'center',
-                fontFamily: 'monospace',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                padding: '0.35rem 0.5rem',
-                borderRadius: '5px',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border)',
-                color: 'var(--accent)',
-              }}
-            />
-          </div>
-        ))}
-      </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {group.items.map((def) => {
+                const combo = shortcuts[def.key] || '';
+                const norm = normalizeShortcutString(combo);
+                const colliding = norm ? (conflicts[norm]?.length ?? 0) : 0;
+                return (
+                  <ShortcutRow
+                    key={def.key}
+                    definition={def}
+                    value={combo}
+                    defaultValue={DEFAULT_SETTINGS.shortcuts[def.key]}
+                    isEn={isEn}
+                    isCapturing={capturingKey === def.key}
+                    conflictCount={colliding}
+                    onStartCapture={() => setCapturingKey(def.key)}
+                    onStopCapture={() => setCapturingKey(null)}
+                    onChange={(nextCombo) => updateDraftShortcut(def.key, nextCombo)}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        ))
+      )}
     </div>
   );
 }

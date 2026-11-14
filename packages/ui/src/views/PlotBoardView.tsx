@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Columns, Compass, Clock } from 'lucide-react';
 import { SubplotManagerBar } from '../components/scene-board/SubplotManagerBar';
 import { ActSwimlaneBoard } from '../components/scene-board/ActSwimlaneBoard';
@@ -6,25 +6,55 @@ import { PlotCanvas2D } from '../components/scene-board/PlotCanvas2D';
 import { SceneTimelineBoard } from '../components/scene-board/SceneTimelineBoard';
 import { TensionCurveChart } from '../components/scene-board/TensionCurveChart';
 
-type BoardMode = 'board' | 'canvas' | 'timeline';
+export type BoardMode = 'board' | 'canvas' | 'timeline';
 
-export function PlotBoardView() {
-  const [mode, setMode] = useState<BoardMode>('board');
+interface PlotBoardViewProps {
+  initialMode?: BoardMode;
+}
+
+export function PlotBoardView({ initialMode = 'board' }: PlotBoardViewProps) {
+  const [mode, setMode] = useState<BoardMode>(initialMode);
   const [selectedSubplotId, setSelectedSubplotId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: 'calc(100vh - 64px)', padding: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', padding: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-            Quadro de Enredo
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: 'var(--text-primary, #f8fafc)',
+              margin: 0,
+            }}
+          >
+            {mode === 'timeline' ? 'Linha do Tempo' : 'Quadro de Enredo'}
           </h2>
-          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--text-secondary, #94a3b8)',
+              margin: 0,
+            }}
+          >
             Estruturação de atos, tela espacial 2D, cronologia e curva de tensão
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, backgroundColor: '#111622', padding: 4, borderRadius: 8, border: '1px solid #242f44' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: 6,
+            backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+            padding: 4,
+            borderRadius: 'var(--radius-md, 8px)',
+            border: '1px solid var(--border-subtle, var(--border, #263046))',
+          }}
+        >
           {[
             { id: 'board' as const, label: 'Quadro', icon: Columns },
             { id: 'canvas' as const, label: 'Tela', icon: Compass },
@@ -32,17 +62,20 @@ export function PlotBoardView() {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              type="button"
               onClick={() => setMode(id)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
                 padding: '6px 12px',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm, 6px)',
                 fontSize: 12,
                 fontWeight: 600,
-                backgroundColor: mode === id ? '#6366f1' : 'transparent',
-                color: mode === id ? '#ffffff' : '#94a3b8',
+                backgroundColor:
+                  mode === id ? 'var(--accent-primary, #6366f1)' : 'transparent',
+                color:
+                  mode === id ? '#ffffff' : 'var(--text-secondary, #94a3b8)',
               }}
             >
               <Icon size={14} /> {label}

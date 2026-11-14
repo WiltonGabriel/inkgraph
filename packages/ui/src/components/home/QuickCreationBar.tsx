@@ -22,8 +22,15 @@ const ACCENT_COLORS = [
 type CreationMode = 'none' | 'blank' | 'template' | 'idea';
 
 export function QuickCreationBar() {
-  const { createNewWorkspace, importProjectJson, loadDemoProject, t } =
-    useProject();
+  const {
+    workspaces,
+    createNewWorkspace,
+    importProjectJson,
+    loadDemoProject,
+    requestConfirm,
+    settings,
+    t,
+  } = useProject();
 
   const [mode, setMode] = useState<CreationMode>('none');
   const [title, setTitle] = useState('');
@@ -93,6 +100,24 @@ export function QuickCreationBar() {
     resetForm();
   };
 
+  const handleRestoreDemo = async () => {
+    const existingDemo = workspaces.some((w) => w.title === 'As Cinzas de Vael');
+    if (existingDemo) {
+      const isEn = settings.language === 'en';
+      const accepted = await requestConfirm({
+        title: t.home.restoreDemoBtn,
+        message: isEn
+          ? 'A workspace named "As Cinzas de Vael" already exists. Restoring the demo will replace it with the original template.'
+          : 'Já existe um workspace chamado "As Cinzas de Vael". Restaurar a demonstração substituirá essa cópia pelos dados originais.',
+        confirmLabel: isEn ? 'Restore Demo' : 'Restaurar Demo',
+        cancelLabel: t.common.cancel,
+        tone: 'neutral',
+      });
+      if (!accepted) return;
+    }
+    loadDemoProject();
+  };
+
   const handleFileChange = (file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
@@ -104,14 +129,33 @@ export function QuickCreationBar() {
     reader.readAsText(file);
   };
 
+  const modeBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '7px 12px',
+    borderRadius: 'var(--radius-sm, 6px)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: active
+      ? 'var(--accent-primary, #3b82f6)'
+      : 'var(--bg-elevated, var(--bg-card, #171d2e))',
+    color: active ? '#ffffff' : 'var(--text-primary, #f1f5f9)',
+    border: active
+      ? '1px solid var(--accent-primary, #3b82f6)'
+      : '1px solid var(--border-subtle, var(--border, #263046))',
+  });
+
   return (
     <section
       style={{
-        backgroundColor: '#11151f',
-        border: '1px solid #1f2637',
-        borderRadius: 10,
+        backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+        border: '1px solid var(--border-subtle, var(--border, #263046))',
+        borderRadius: 'var(--radius-lg, 12px)',
         padding: '12px 16px',
         marginBottom: 18,
+        boxShadow: 'var(--card-shadow, none)',
       }}
     >
       {/* Top Action Strip */}
@@ -128,19 +172,7 @@ export function QuickCreationBar() {
           <button
             type="button"
             onClick={() => setMode(mode === 'blank' ? 'none' : 'blank')}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: mode === 'blank' ? '#2563eb' : '#181e2c',
-              color: mode === 'blank' ? '#ffffff' : '#e5e7eb',
-              border: '1px solid #2b3448',
-            }}
+            style={modeBtnStyle(mode === 'blank')}
           >
             <FilePlus size={14} />
             {t.home.newBlankBtn}
@@ -149,19 +181,7 @@ export function QuickCreationBar() {
           <button
             type="button"
             onClick={() => setMode(mode === 'template' ? 'none' : 'template')}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: mode === 'template' ? '#2563eb' : '#181e2c',
-              color: mode === 'template' ? '#ffffff' : '#e5e7eb',
-              border: '1px solid #2b3448',
-            }}
+            style={modeBtnStyle(mode === 'template')}
           >
             <LayoutTemplate size={14} />
             {t.home.fromTemplateBtn}
@@ -170,19 +190,7 @@ export function QuickCreationBar() {
           <button
             type="button"
             onClick={() => setMode(mode === 'idea' ? 'none' : 'idea')}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: mode === 'idea' ? '#2563eb' : '#181e2c',
-              color: mode === 'idea' ? '#ffffff' : '#e5e7eb',
-              border: '1px solid #2b3448',
-            }}
+            style={modeBtnStyle(mode === 'idea')}
           >
             <Sparkles size={14} />
             {t.home.fromOutlineAiBtn}
@@ -202,16 +210,16 @@ export function QuickCreationBar() {
             onClick={() => fileInputRef.current?.click()}
             style={{
               padding: '7px 12px',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm, 6px)',
               fontSize: 12,
               fontWeight: 500,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              backgroundColor: '#151a26',
-              color: '#cbd5e1',
-              border: '1px solid #262e40',
+              backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+              color: 'var(--text-primary, #f1f5f9)',
+              border: '1px solid var(--border-subtle, var(--border, #263046))',
             }}
           >
             <Upload size={13} />
@@ -220,26 +228,26 @@ export function QuickCreationBar() {
 
           <button
             type="button"
-            onClick={loadDemoProject}
+            onClick={() => void handleRestoreDemo()}
             style={{
               padding: '7px 12px',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm, 6px)',
               fontSize: 12,
               fontWeight: 500,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              color: '#34d399',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: '#10b981',
+              border: '1px solid rgba(16, 185, 129, 0.32)',
             }}
           >
             <RotateCcw size={13} />
             {t.home.restoreDemoBtn}
           </button>
           {importStatus && (
-            <span style={{ fontSize: 11, color: '#f87171' }}>{importStatus}</span>
+            <span style={{ fontSize: 11, color: '#ef4444' }}>{importStatus}</span>
           )}
         </div>
       </div>
@@ -250,7 +258,7 @@ export function QuickCreationBar() {
           style={{
             marginTop: 12,
             paddingTop: 12,
-            borderTop: '1px solid #1e2536',
+            borderTop: '1px solid var(--border-subtle, var(--border, #263046))',
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
@@ -267,53 +275,25 @@ export function QuickCreationBar() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t.home.newWorkspaceTitlePlaceholder}
-              style={{
-                backgroundColor: '#0c0f16',
-                border: '1px solid #283044',
-                borderRadius: 6,
-                padding: '7px 10px',
-                color: '#f3f4f6',
-                fontSize: 12,
-              }}
+              style={inputStyle}
             />
             <input
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
               placeholder={t.home.newWorkspaceGenrePlaceholder}
-              style={{
-                backgroundColor: '#0c0f16',
-                border: '1px solid #283044',
-                borderRadius: 6,
-                padding: '7px 10px',
-                color: '#f3f4f6',
-                fontSize: 12,
-              }}
+              style={inputStyle}
             />
             <input
               value={folderOrTag}
               onChange={(e) => setFolderOrTag(e.target.value)}
               placeholder={t.home.newWorkspaceTagPlaceholder}
-              style={{
-                backgroundColor: '#0c0f16',
-                border: '1px solid #283044',
-                borderRadius: 6,
-                padding: '7px 10px',
-                color: '#f3f4f6',
-                fontSize: 12,
-              }}
+              style={inputStyle}
             />
             {mode === 'template' && (
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                style={{
-                  backgroundColor: '#0c0f16',
-                  border: '1px solid #283044',
-                  borderRadius: 6,
-                  padding: '7px 10px',
-                  color: '#f3f4f6',
-                  fontSize: 12,
-                }}
+                style={inputStyle}
               >
                 {NARRATIVE_TEMPLATES.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
@@ -329,14 +309,7 @@ export function QuickCreationBar() {
               value={ideaPrompt}
               onChange={(e) => setIdeaPrompt(e.target.value)}
               placeholder={t.home.ideaPromptPlaceholder}
-              style={{
-                backgroundColor: '#0c0f16',
-                border: '1px solid #283044',
-                borderRadius: 6,
-                padding: '7px 10px',
-                color: '#f3f4f6',
-                fontSize: 12,
-              }}
+              style={inputStyle}
             />
           )}
 
@@ -356,6 +329,7 @@ export function QuickCreationBar() {
                   key={col}
                   type="button"
                   onClick={() => setAccentColor(col)}
+                  aria-label={`Cor ${col}`}
                   style={{
                     width: 18,
                     height: 18,
@@ -363,7 +337,7 @@ export function QuickCreationBar() {
                     backgroundColor: col,
                     border:
                       accentColor === col
-                        ? '2px solid #ffffff'
+                        ? '2px solid var(--text-primary, #ffffff)'
                         : '1px solid transparent',
                     cursor: 'pointer',
                   }}
@@ -378,9 +352,9 @@ export function QuickCreationBar() {
                 style={{
                   padding: '6px 10px',
                   backgroundColor: 'transparent',
-                  color: '#9ca3af',
-                  border: '1px solid #283044',
-                  borderRadius: 6,
+                  color: 'var(--text-secondary, #94a3b8)',
+                  border: '1px solid var(--border-subtle, var(--border, #263046))',
+                  borderRadius: 'var(--radius-sm, 6px)',
                   fontSize: 12,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -402,10 +376,10 @@ export function QuickCreationBar() {
                 }
                 style={{
                   padding: '6px 14px',
-                  backgroundColor: '#2563eb',
+                  backgroundColor: 'var(--accent-primary, #3b82f6)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm, 6px)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -420,3 +394,12 @@ export function QuickCreationBar() {
     </section>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+  border: '1px solid var(--border-subtle, var(--border, #263046))',
+  borderRadius: 'var(--radius-sm, 6px)',
+  padding: '7px 10px',
+  color: 'var(--text-primary, #f1f5f9)',
+  fontSize: 12,
+};

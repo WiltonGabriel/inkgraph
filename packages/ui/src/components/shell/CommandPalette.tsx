@@ -55,8 +55,15 @@ export function CommandPalette() {
         id: 'cmd_ai_outline',
         category: 'Comandos IA',
         label: '/ai outline — Abrir Gerador de Contorno',
-        hint: 'Estruturar capítulos e reviravoltas',
+        hint: 'Estruturar capítulos, modelos e reviravoltas',
         action: () => go('outline'),
+      },
+      {
+        id: 'cmd_canon_radar',
+        category: 'Comandos IA',
+        label: '/radar — Abrir Radar de Cânone',
+        hint: 'Descobertas de texto, fila de staging e escopo IA',
+        action: () => go('canon-radar'),
       },
       {
         id: 'cmd_ai_char',
@@ -88,8 +95,9 @@ export function CommandPalette() {
       // Navegação
       { id: 'nav_dash', category: 'Navegação', label: 'Ir para Painel', action: () => go('dashboard') },
       { id: 'nav_ms', category: 'Navegação', label: 'Ir para Manuscrito & Fichário', action: () => go('manuscript') },
-      { id: 'nav_tpl', category: 'Navegação', label: 'Ir para Modelos Narrativos', action: () => go('templates') },
-      { id: 'nav_plot', category: 'Navegação', label: 'Ir para Quadro de Cenas (Atos / Tela 2D / Linha do Tempo)', action: () => go('plotboard') },
+      { id: 'nav_plot', category: 'Navegação', label: 'Ir para Quadro de Cenas (Atos / Tela 2D)', action: () => go('plotboard') },
+      { id: 'nav_timeline', category: 'Navegação', label: 'Ir para Linha do Tempo (Cronologia)', action: () => go('timeline') },
+      { id: 'nav_radar', category: 'Navegação', label: 'Ir para Radar de Cânone', action: () => go('canon-radar') },
       { id: 'nav_scen', category: 'Navegação', label: 'Ir para Cenário / Roteiro Mestre', action: () => go('scenario') },
       { id: 'nav_fac', category: 'Navegação', label: 'Ir para Facções & Organizações', action: () => go('factions') },
       { id: 'nav_world', category: 'Navegação', label: 'Ir para Construção Mundial & Locais', action: () => go('worlds') },
@@ -116,10 +124,19 @@ export function CommandPalette() {
       {
         id: 'act_portal',
         category: 'Ações Rápidas',
-        label: 'Abrir Portal Inicial / Trocar Projeto',
+        label: 'Abrir Meu Espaço / Trocar Projeto',
         action: () => {
           setShowCommandPalette(false);
           setShowPortal(true);
+        },
+      },
+      {
+        id: 'theme_light',
+        category: 'Aparência & Editor',
+        label: 'Mudar para Modo Claro',
+        action: () => {
+          updateSettings((s) => ({ ...s, theme: 'light', themeBrightness: 'light' }));
+          setShowCommandPalette(false);
         },
       },
       {
@@ -127,7 +144,7 @@ export function CommandPalette() {
         category: 'Aparência & Editor',
         label: 'Mudar para Modo Escuro',
         action: () => {
-          updateSettings((s) => ({ ...s, theme: 'dark' }));
+          updateSettings((s) => ({ ...s, theme: 'dark', themeBrightness: 'dark' }));
           setShowCommandPalette(false);
         },
       },
@@ -136,7 +153,7 @@ export function CommandPalette() {
         category: 'Aparência & Editor',
         label: 'Predefinição de Leitura Sépia',
         action: () => {
-          updateSettings((s) => ({ ...s, theme: 'sepia' }));
+          updateSettings((s) => ({ ...s, theme: 'sepia', themeBrightness: 'sepia' }));
           setShowCommandPalette(false);
         },
       },
@@ -217,7 +234,7 @@ export function CommandPalette() {
         position: 'fixed',
         inset: 0,
         zIndex: 130,
-        backgroundColor: 'rgba(5, 7, 11, 0.78)',
+        backgroundColor: 'rgba(5, 7, 11, 0.56)',
         backdropFilter: 'blur(6px)',
         display: 'flex',
         alignItems: 'flex-start',
@@ -228,15 +245,17 @@ export function CommandPalette() {
       <div
         onClick={(e) => e.stopPropagation()}
         role="dialog"
+        aria-modal="true"
         aria-label="Paleta de comandos"
         style={{
           width: '100%',
           maxWidth: 640,
-          backgroundColor: '#11151f',
-          border: '1px solid #262d3d',
-          borderRadius: 12,
+          backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
+          border: '1px solid var(--border-subtle, var(--border, #263046))',
+          borderRadius: 'var(--radius-lg, 12px)',
           overflow: 'hidden',
-          boxShadow: '0 24px 50px rgba(0,0,0,0.65)',
+          boxShadow: '0 24px 50px rgba(0, 0, 0, 0.45)',
+          color: 'var(--text-primary, #f1f5f9)',
         }}
       >
         {/* Search Input */}
@@ -246,30 +265,38 @@ export function CommandPalette() {
             alignItems: 'center',
             gap: 10,
             padding: '12px 16px',
-            borderBottom: '1px solid #1f2533',
+            borderBottom: '1px solid var(--border-subtle, var(--border, #263046))',
           }}
         >
-          <Search size={16} color="#60a5fa" />
+          <Search size={16} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setShowCommandPalette(false);
+              }
+            }}
             placeholder="Digite um comando (/ai, /export) ou pesquise cenas, personagens e facções..."
             style={{
               flex: 1,
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              color: '#f3f4f6',
+              color: 'var(--text-primary, #f1f5f9)',
               fontSize: 13.5,
             }}
           />
           <button
+            type="button"
             onClick={() => setShowCommandPalette(false)}
+            aria-label="Fechar paleta"
             style={{
               background: 'none',
               border: 'none',
-              color: '#6b7280',
+              color: 'var(--text-muted, #64748b)',
               cursor: 'pointer',
               display: 'flex',
             }}
@@ -296,6 +323,7 @@ export function CommandPalette() {
               {entityResults.map((er) => (
                 <button
                   key={er.id}
+                  type="button"
                   onClick={er.onSelect}
                   style={{
                     width: '100%',
@@ -305,8 +333,8 @@ export function CommandPalette() {
                     padding: '8px 10px',
                     background: 'transparent',
                     border: 'none',
-                    borderRadius: 6,
-                    color: '#e5e7eb',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    color: 'var(--text-primary, #f1f5f9)',
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
@@ -314,13 +342,21 @@ export function CommandPalette() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>
                       {er.title}{' '}
-                      <span style={{ fontSize: 10.5, color: '#60a5fa', fontWeight: 500 }}>
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          color: 'var(--accent-primary, #3b82f6)',
+                          fontWeight: 500,
+                        }}
+                      >
                         [{er.kind}]
                       </span>
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#9ca3af' }}>{er.subtitle}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)' }}>
+                      {er.subtitle}
+                    </div>
                   </div>
-                  <ArrowRight size={13} color="#6b7280" />
+                  <ArrowRight size={13} style={{ color: 'var(--text-muted, #64748b)' }} />
                 </button>
               ))}
             </div>
@@ -331,7 +367,7 @@ export function CommandPalette() {
               fontSize: 10.5,
               fontWeight: 700,
               textTransform: 'uppercase',
-              color: '#6b7280',
+              color: 'var(--text-muted, #64748b)',
               padding: '4px 10px',
             }}
           >
@@ -340,6 +376,7 @@ export function CommandPalette() {
           {filteredCommands.map((cmd) => (
             <button
               key={cmd.id}
+              type="button"
               onClick={cmd.action}
               style={{
                 width: '100%',
@@ -349,8 +386,8 @@ export function CommandPalette() {
                 padding: '8px 10px',
                 background: 'transparent',
                 border: 'none',
-                borderRadius: 6,
-                color: '#d1d5db',
+                borderRadius: 'var(--radius-sm, 6px)',
+                color: 'var(--text-primary, #f1f5f9)',
                 fontSize: 12.5,
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -360,18 +397,27 @@ export function CommandPalette() {
                 {cmd.category === 'Comandos IA' ? (
                   <Sparkles size={13} color="#a78bfa" />
                 ) : cmd.category === 'Navegação' ? (
-                  <BookOpen size={13} color="#60a5fa" />
+                  <BookOpen size={13} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
                 ) : (
-                  <Sun size={13} color="#fbbf24" />
+                  <Sun size={13} color="#f59e0b" />
                 )}
                 <span>{cmd.label}</span>
               </span>
-              <span style={{ fontSize: 11, color: '#6b7280' }}>{cmd.category}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted, #64748b)' }}>
+                {cmd.category}
+              </span>
             </button>
           ))}
 
           {filteredCommands.length === 0 && entityResults.length === 0 && (
-            <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+            <div
+              style={{
+                padding: 24,
+                textAlign: 'center',
+                color: 'var(--text-muted, #64748b)',
+                fontSize: 13,
+              }}
+            >
               Nenhum resultado encontrado para “{query}”.
             </div>
           )}
@@ -381,12 +427,12 @@ export function CommandPalette() {
         <div
           style={{
             padding: '8px 14px',
-            backgroundColor: '#0c0e14',
-            borderTop: '1px solid #1b202c',
+            backgroundColor: 'var(--bg-surface, var(--bg-secondary, #111623))',
+            borderTop: '1px solid var(--border-subtle, var(--border, #263046))',
             display: 'flex',
             justifyContent: 'space-between',
             fontSize: 11,
-            color: '#6b7280',
+            color: 'var(--text-muted, #64748b)',
           }}
         >
           <span>Use Enter para abrir · Esc para fechar</span>
@@ -401,7 +447,7 @@ export function CommandPalette() {
               <Globe size={11} /> {project.worlds.length}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <Moon size={11} /> Local Vault
+              <Moon size={11} /> Cofre Local
             </span>
           </span>
         </div>

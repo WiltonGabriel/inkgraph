@@ -71,7 +71,8 @@ export function HomeMySpaceView() {
         position: 'fixed',
         inset: 0,
         zIndex: 120,
-        backgroundColor: '#090c12',
+        backgroundColor: 'var(--bg-canvas, var(--bg-primary, #0b0e16))',
+        color: 'var(--text-primary, #f1f5f9)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -99,12 +100,18 @@ export function HomeMySpaceView() {
                   margin: 0,
                   fontSize: 22,
                   fontWeight: 700,
-                  color: '#f3f4f6',
+                  color: 'var(--text-primary, #f1f5f9)',
                 }}
               >
                 {t.home.title}
               </h1>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: '#9ca3af' }}>
+              <p
+                style={{
+                  margin: '4px 0 0',
+                  fontSize: 13,
+                  color: 'var(--text-secondary, #94a3b8)',
+                }}
+              >
                 {t.home.subtitle}
               </p>
             </div>

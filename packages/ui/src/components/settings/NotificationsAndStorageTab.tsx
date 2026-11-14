@@ -1,29 +1,40 @@
 import { useRef, useState } from 'react';
-import { Bell, HardDrive, Download, Upload, RotateCcw, Info } from 'lucide-react';
+import { Bell, Download, HardDrive, RotateCcw, Upload } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
-import type { AppSettings } from '../../types/project';
+import { useSettings } from '../../context/SettingsContext';
+import {
+  THEME_VAR,
+  checkboxInputStyle,
+  checkboxLabelStyle,
+  controlInputStyle,
+  fieldColumnStyle,
+  fieldLabelTextStyle,
+  innerCardStyle,
+  primaryButtonStyle,
+  secondaryButtonStyle,
+  sectionCardStyle,
+  sectionHeaderStyle,
+} from './settingsStyles';
 
 export function NotificationsAndStorageTab() {
   const {
-    settings,
-    updateSettings,
-    resetSettingsToDefault,
     workspaces,
     exportAllWorkspacesJson,
     importAllWorkspacesJson,
+    requestConfirm,
+    notify,
   } = useProject();
+  const { draftSettings, updateDraftSetting, resetDraftToDefaults } = useSettings();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
-  const isEn = settings.language === 'en';
+  const isEn = draftSettings.language === 'en';
 
-  const setField = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    updateSettings((prev) => ({ ...prev, [key]: value }));
-  };
-
-  // Approximate storage calculation
   const serializedSizeKb = Math.max(
     1,
-    Math.round((JSON.stringify(workspaces).length + JSON.stringify(settings).length) / 1024)
+    Math.round(
+      (JSON.stringify(workspaces).length + JSON.stringify(draftSettings).length) / 1024
+    )
   );
   const totalScenesCount = workspaces.reduce((acc, w) => acc + w.scenes.length, 0);
   const totalSnapshotsCount = workspaces.reduce((acc, w) => acc + w.snapshots.length, 0);
@@ -37,7 +48,9 @@ export function NotificationsAndStorageTab() {
     a.download = `inkgraph-catalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setFeedbackMsg(isEn ? 'Full catalog exported.' : 'Catálogo completo exportado.');
+    const msg = isEn ? 'Full catalog exported.' : 'Catálogo completo exportado.';
+    setFeedbackMsg(msg);
+    notify(msg, 'success');
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,44 +59,58 @@ export function NotificationsAndStorageTab() {
     const reader = new FileReader();
     reader.onload = () => {
       const ok = importAllWorkspacesJson(String(reader.result || ''));
-      setFeedbackMsg(
-        ok
-          ? isEn
-            ? 'Catalog imported successfully.'
-            : 'Catálogo importado com sucesso.'
-          : isEn
-            ? 'Invalid catalog file format.'
-            : 'Formato de arquivo inválido.'
-      );
+      const msg = ok
+        ? isEn
+          ? 'Catalog imported successfully.'
+          : 'Catálogo importado com sucesso.'
+        : isEn
+          ? 'Invalid catalog file format.'
+          : 'Formato de arquivo inválido.';
+      setFeedbackMsg(msg);
+      notify(msg, ok ? 'success' : 'warning');
     };
     reader.readAsText(file);
     e.target.value = '';
   };
 
+  const handleResetDefaults = async () => {
+    const accepted = await requestConfirm({
+      title: isEn ? 'Restore Default Settings' : 'Restaurar Configurações Padrão',
+      message: isEn
+        ? 'Restore all preferences and shortcuts to factory defaults in draft? Click Save afterwards to persist.'
+        : 'Restaurar todas as preferências e atalhos para o padrão no rascunho? Clique em Salvar em seguida para aplicar.',
+      confirmLabel: isEn ? 'Restore' : 'Restaurar',
+      cancelLabel: isEn ? 'Cancel' : 'Cancelar',
+      tone: 'danger',
+    });
+    if (accepted) {
+      resetDraftToDefaults();
+      const msg = isEn
+        ? 'Default settings loaded in draft.'
+        : 'Configurações padrão carregadas no rascunho.';
+      setFeedbackMsg(msg);
+      notify(msg, 'info');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Avisos Silenciosos & Metas */}
-      <div
-        style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '1.15rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.88rem' }}>
-          <Bell size={16} color="var(--accent)" />
-          <span>{isEn ? 'Silent Alerts & Epistemic Warnings' : 'Avisos Silenciosos & Alertas Epistêmicos'}</span>
+      <section style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>
+          <Bell size={16} color={THEME_VAR.accentPrimary} />
+          <span>
+            {isEn
+              ? 'Silent Alerts & Epistemic Warnings'
+              : 'Avisos Silenciosos & Alertas Epistêmicos'}
+          </span>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+        <label style={checkboxLabelStyle}>
           <input
             type="checkbox"
-            checked={settings.quietNotifications}
-            onChange={(e) => setField('quietNotifications', e.target.checked)}
+            checked={draftSettings.quietNotifications}
+            onChange={(e) => updateDraftSetting('quietNotifications', e.target.checked)}
+            style={checkboxInputStyle}
           />
           <span>
             {isEn
@@ -92,11 +119,14 @@ export function NotificationsAndStorageTab() {
           </span>
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+        <label style={checkboxLabelStyle}>
           <input
             type="checkbox"
-            checked={settings.epistemicAlertsInEditor}
-            onChange={(e) => setField('epistemicAlertsInEditor', e.target.checked)}
+            checked={draftSettings.epistemicAlertsInEditor}
+            onChange={(e) =>
+              updateDraftSetting('epistemicAlertsInEditor', e.target.checked)
+            }
+            style={checkboxInputStyle}
           />
           <span>
             {isEn
@@ -105,11 +135,12 @@ export function NotificationsAndStorageTab() {
           </span>
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+        <label style={checkboxLabelStyle}>
           <input
             type="checkbox"
-            checked={settings.dailyGoalReminder}
-            onChange={(e) => setField('dailyGoalReminder', e.target.checked)}
+            checked={draftSettings.dailyGoalReminder}
+            onChange={(e) => updateDraftSetting('dailyGoalReminder', e.target.checked)}
+            style={checkboxInputStyle}
           />
           <span>
             {isEn
@@ -117,74 +148,82 @@ export function NotificationsAndStorageTab() {
               : 'Exibir indicador discreto da meta diária de palavras no cabeçalho'}
           </span>
         </label>
-      </div>
+      </section>
 
-      {/* Armazenamento Local, Snapshots & Backup do Catálogo */}
-      <div
-        style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '1.15rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.9rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.88rem' }}>
-          <HardDrive size={16} color="var(--accent)" />
-          <span>{isEn ? 'Local Vault Storage & Full Backup' : 'Armazenamento Local & Backup Completo'}</span>
+      <section style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>
+          <HardDrive size={16} color={THEME_VAR.accentPrimary} />
+          <span>
+            {isEn
+              ? 'Local Vault Storage & Full Backup'
+              : 'Armazenamento Local & Backup Completo'}
+          </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.65rem 0.8rem' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '0.65rem',
+          }}
+        >
+          <div style={innerCardStyle}>
+            <div style={{ fontSize: '0.72rem', color: THEME_VAR.textMuted }}>
               {isEn ? 'Local Catalog Footprint' : 'Uso do Catálogo Local'}
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{serializedSizeKb} KB</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: THEME_VAR.textPrimary }}>
+              {serializedSizeKb} KB
+            </div>
           </div>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.65rem 0.8rem' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <div style={innerCardStyle}>
+            <div style={{ fontSize: '0.72rem', color: THEME_VAR.textMuted }}>
               {isEn ? 'Workspaces / Scenes' : 'Workspaces / Cenas'}
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: THEME_VAR.textPrimary }}>
               {workspaces.length} / {totalScenesCount}
             </div>
           </div>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.65rem 0.8rem' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <div style={innerCardStyle}>
+            <div style={{ fontSize: '0.72rem', color: THEME_VAR.textMuted }}>
               {isEn ? 'Saved Snapshots' : 'Snapshots Salvos'}
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{totalSnapshotsCount}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: THEME_VAR.textPrimary }}>
+              {totalSnapshotsCount}
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', alignItems: 'center' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
-            <span style={{ color: 'var(--text-muted)' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '0.85rem',
+            alignItems: 'center',
+          }}
+        >
+          <label htmlFor="ink-max-snaps" style={fieldColumnStyle}>
+            <span style={fieldLabelTextStyle}>
               {isEn ? 'Max Snapshots Kept per Workspace' : 'Limite de Snapshots por Workspace'}
             </span>
             <input
+              id="ink-max-snaps"
               type="number"
               min={5}
               max={100}
-              value={settings.maxSnapshotsPerWorkspace}
-              onChange={(e) => setField('maxSnapshotsPerWorkspace', Number(e.target.value))}
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                padding: '0.45rem 0.65rem',
-                color: 'var(--text-primary)',
-              }}
+              value={draftSettings.maxSnapshotsPerWorkspace}
+              onChange={(e) =>
+                updateDraftSetting('maxSnapshotsPerWorkspace', Number(e.target.value))
+              }
+              style={controlInputStyle}
             />
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.82rem', cursor: 'pointer', paddingTop: '1rem' }}>
+          <label style={{ ...checkboxLabelStyle, paddingTop: '1rem' }}>
             <input
               type="checkbox"
-              checked={settings.autoSnapshotOnClose}
-              onChange={(e) => setField('autoSnapshotOnClose', e.target.checked)}
+              checked={draftSettings.autoSnapshotOnClose}
+              onChange={(e) => updateDraftSetting('autoSnapshotOnClose', e.target.checked)}
+              style={checkboxInputStyle}
             />
             <span>
               {isEn
@@ -195,41 +234,15 @@ export function NotificationsAndStorageTab() {
         </div>
 
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
-          <button
-            onClick={handleExportCatalog}
-            style={{
-              background: 'var(--accent)',
-              border: 'none',
-              borderRadius: 6,
-              padding: '0.5rem 0.9rem',
-              color: '#ffffff',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
+          <button type="button" onClick={handleExportCatalog} style={primaryButtonStyle}>
             <Download size={14} />
             {isEn ? 'Export Full Catalog (.JSON)' : 'Exportar Catálogo Completo (.JSON)'}
           </button>
 
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '0.5rem 0.9rem',
-              color: 'var(--text-primary)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
+            style={secondaryButtonStyle}
           >
             <Upload size={14} />
             {isEn ? 'Import Catalog (.JSON)' : 'Importar Catálogo (.JSON)'}
@@ -243,22 +256,9 @@ export function NotificationsAndStorageTab() {
           />
 
           <button
-            onClick={() => {
-              resetSettingsToDefault();
-              setFeedbackMsg(isEn ? 'Default settings restored.' : 'Configurações padrão restauradas.');
-            }}
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '0.5rem 0.9rem',
-              color: 'var(--text-muted)',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
+            type="button"
+            onClick={() => void handleResetDefaults()}
+            style={{ ...secondaryButtonStyle, color: THEME_VAR.textSecondary }}
           >
             <RotateCcw size={14} />
             {isEn ? 'Restore Default Settings' : 'Restaurar Configurações Padrão'}
@@ -266,37 +266,11 @@ export function NotificationsAndStorageTab() {
         </div>
 
         {feedbackMsg && (
-          <div style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 600 }}>{feedbackMsg}</div>
+          <div role="status" style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 600 }}>
+            {feedbackMsg}
+          </div>
         )}
-      </div>
-
-      {/* Sobre & Arquitetura */}
-      <div
-        style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '1.15rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.45rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.86rem' }}>
-          <Info size={15} color="var(--accent)" />
-          <span>{isEn ? 'System & Architecture' : 'Sistema & Arquitetura'}</span>
-        </div>
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          <div>
-            <strong>InkGraph Studio</strong> • v0.2.0 • Local-First Markdown & YAML Vault (<code>./workspace/</code>)
-          </div>
-          <div>
-            {isEn
-              ? 'Engine: Ephemeral SQLite FTS5 Indexer • Native MCP Server (stdio & HTTP) • Tauri v2 Wayland Ready'
-              : 'Motor: Indexador Efêmero SQLite FTS5 • Servidor MCP Nativo (stdio & HTTP) • Tauri v2 Wayland'}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
