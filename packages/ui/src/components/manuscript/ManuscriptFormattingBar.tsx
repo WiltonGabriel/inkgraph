@@ -72,7 +72,7 @@ function getToggleStyle(active: boolean): CSSProperties {
   return {
     ...baseBtnStyle,
     backgroundColor: 'var(--accent-primary)',
-    borderColor: 'var(--accent-primary)',
+    border: '1px solid var(--accent-primary)',
     color: '#ffffff',
     fontWeight: 600,
   };
@@ -315,7 +315,7 @@ export function ManuscriptFormattingBar({
                 ? {
                     ...baseBtnStyle,
                     backgroundColor: '#10b981',
-                    borderColor: '#10b981',
+                    border: '1px solid #10b981',
                     color: '#052e16',
                     fontWeight: 700,
                   }
@@ -373,7 +373,7 @@ export function ManuscriptFormattingBar({
                 ? {
                     ...baseBtnStyle,
                     backgroundColor: 'var(--success)',
-                    borderColor: 'var(--success)',
+                    border: '1px solid var(--success)',
                     color: '#052e16',
                     fontWeight: 700,
                   }
