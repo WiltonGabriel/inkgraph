@@ -103,6 +103,7 @@ export function GraphCanvas2D({
 
   const [dimensions, setDimensions] = useState({ width: 760, height: 600 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
   const resolvedTheme = useMemo(() => buildThemeCssVars(settings), [settings]);
   const isLightLike = resolvedTheme.mode !== 'dark';
@@ -185,11 +186,11 @@ export function GraphCanvas2D({
     return () => window.removeEventListener('inkgraph:shortcut', onShortcut);
   }, []);
 
-  const focusNodeId = hoveredNodeId ?? (selectedNodeId || null);
-  const selectedNode = useMemo(
-    () => (selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null),
-    [nodes, selectedNodeId]
-  );
+  const focusNodeId = draggedNodeId ?? hoveredNodeId ?? (selectedNodeId || null);
+  const activeBannerNode = useMemo(() => {
+    const targetId = draggedNodeId ?? (selectedNodeId || null);
+    return targetId ? nodes.find((n) => n.id === targetId) ?? null : null;
+  }, [nodes, draggedNodeId, selectedNodeId]);
   const neighborhood = useMemo(() => computeOneHopNeighborhood(links, focusNodeId), [links, focusNodeId]);
   const dimAlpha = Math.max(0.05, Math.min(0.85, settings.graphDimIntensity ?? 0.14));
 
@@ -319,10 +320,20 @@ export function GraphCanvas2D({
         }}
         linkDirectionalArrowLength={5}
         linkDirectionalArrowRelPos={1}
-        onNodeHover={(node) => setHoveredNodeId(node ? String((node as GraphNode).id) : null)}
+        onNodeHover={(node) => {
+          if (draggedNodeId) return;
+          setHoveredNodeId(node ? String((node as GraphNode).id) : null);
+        }}
         onBackgroundClick={() => onSelectNode('')}
+        onNodeDrag={(node) => {
+          const gNode = node as GraphNode;
+          const id = String(gNode.id);
+          setDraggedNodeId((prev) => (prev === id ? prev : id));
+          setHoveredNodeId((prev) => (prev === id ? prev : id));
+        }}
         onNodeDragEnd={(node) => {
           const gNode = node as GraphNode;
+          setDraggedNodeId(null);
           if (gNode.x === undefined || gNode.y === undefined) return;
           gNode.fx = gNode.x;
           gNode.fy = gNode.y;
@@ -353,7 +364,7 @@ export function GraphCanvas2D({
         linkCanvasObject={paintLinkLabel}
       />
 
-      {selectedNode && (
+      {activeBannerNode && (
         <div
           style={{
             position: 'absolute',
@@ -372,11 +383,16 @@ export function GraphCanvas2D({
           }}
         >
           <span>
-            Em foco: <strong>{selectedNode.name}</strong>
+            {draggedNodeId ? 'Arrastando em foco:' : 'Em foco:'}{' '}
+            <strong>{activeBannerNode.name}</strong>
           </span>
           <button
             type="button"
-            onClick={() => onSelectNode('')}
+            onClick={() => {
+              setDraggedNodeId(null);
+              setHoveredNodeId(null);
+              onSelectNode('');
+            }}
             title="Limpar seleção e foco"
             aria-label="Limpar seleção e foco"
             style={{

@@ -55,6 +55,18 @@ export function buildSidebarGroups(
       ],
     },
     {
+      key: 'planning',
+      label: t.sidebarGroups.planning,
+      items: [
+        { id: 'dashboard', label: t.views.dashboard, icon: LayoutDashboard },
+        { id: 'outline', label: t.views.outline, icon: ListTree },
+        { id: 'plotboard', label: t.views.plotboard, icon: Kanban },
+        { id: 'timeline', label: t.views.timeline, icon: Clock },
+        { id: 'scenario', label: t.views.scenario, icon: FileText },
+        { id: 'canon-radar', label: t.views['canon-radar'], icon: Radar },
+      ],
+    },
+    {
       key: 'review',
       label: t.sidebarGroups.review,
       items: [
@@ -69,18 +81,6 @@ export function buildSidebarGroups(
           badge: pendingProposals || undefined,
         },
         { id: 'export', label: t.views.export, icon: Download },
-      ],
-    },
-    {
-      key: 'planning',
-      label: t.sidebarGroups.planning,
-      items: [
-        { id: 'dashboard', label: t.views.dashboard, icon: LayoutDashboard },
-        { id: 'outline', label: t.views.outline, icon: ListTree },
-        { id: 'plotboard', label: t.views.plotboard, icon: Kanban },
-        { id: 'timeline', label: t.views.timeline, icon: Clock },
-        { id: 'scenario', label: t.views.scenario, icon: FileText },
-        { id: 'canon-radar', label: t.views['canon-radar'], icon: Radar },
       ],
     },
     {

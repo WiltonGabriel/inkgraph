@@ -1,6 +1,11 @@
 import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { useProject } from '../context/ProjectContext';
-import { buildFilteredGraphData, type GraphNode, type ScopeFilter } from '../components/graph/graphDataBuilder';
+import {
+  ALL_GRAPH_ENTITY_KINDS,
+  buildFilteredGraphData,
+  type GraphEntityKind,
+  type GraphNode,
+} from '../components/graph/graphDataBuilder';
 import { GraphToolbar } from '../components/graph/GraphToolbar';
 import { GraphCanvas2D } from '../components/graph/GraphCanvas2D';
 import { GraphTableView } from '../components/graph/GraphTableView';
@@ -8,14 +13,35 @@ import { GraphNodeInspector } from '../components/graph/GraphNodeInspector';
 
 export function PhysicsForceGraphView() {
   const { project, setActiveView, setActiveSubPath } = useProject();
-  const [scope, setScope] = useState<ScopeFilter>('all');
+  const [enabledKinds, setEnabledKinds] = useState<GraphEntityKind[]>(() => [
+    ...ALL_GRAPH_ENTITY_KINDS,
+  ]);
   const [viewMode, setViewMode] = useState<'graph' | 'table'>('graph');
   const [repulsionStrength, setRepulsionStrength] = useState<number>(450);
   const [pinnedCount, setPinnedCount] = useState<number>(0);
   const [releaseSignal, setReleaseSignal] = useState<number>(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string>('');
 
-  const { nodes, links, allEntities } = useMemo(() => buildFilteredGraphData(project, scope), [project, scope]);
+  const handleToggleKind = useCallback((kind: GraphEntityKind) => {
+    setEnabledKinds((prev) => {
+      if (prev.includes(kind)) {
+        // Keep at least 1 layer enabled so the canvas isn't accidentally emptied
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== kind);
+      }
+      return [...prev, kind];
+    });
+  }, []);
+
+  const handleSelectAllKinds = useCallback(() => {
+    setEnabledKinds([...ALL_GRAPH_ENTITY_KINDS]);
+  }, []);
+
+  const { nodes, links, allEntities } = useMemo(
+    () => buildFilteredGraphData(project, enabledKinds),
+    [project, enabledKinds]
+  );
+
   const activeNodeId = useMemo(
     () => (allEntities.some((e) => e.id === selectedNodeId) ? selectedNodeId : ''),
     [allEntities, selectedNodeId]
@@ -48,8 +74,9 @@ export function PhysicsForceGraphView() {
         }}
       >
         <GraphToolbar
-          scope={scope}
-          setScope={setScope}
+          enabledKinds={enabledKinds}
+          onToggleKind={handleToggleKind}
+          onSelectAllKinds={handleSelectAllKinds}
           viewMode={viewMode}
           setViewMode={setViewMode}
           nodeCount={nodes.length}
@@ -87,5 +114,18 @@ export function PhysicsForceGraphView() {
   );
 }
 
-const rootStyle: CSSProperties = { display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden', backgroundColor: 'var(--bg-canvas)', color: 'var(--text-primary)' };
-const mainPaneStyle: CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 };
+const rootStyle: CSSProperties = {
+  display: 'flex',
+  height: '100%',
+  minHeight: 0,
+  overflow: 'hidden',
+  backgroundColor: 'var(--bg-canvas)',
+  color: 'var(--text-primary)',
+};
+const mainPaneStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+  minHeight: 0,
+};

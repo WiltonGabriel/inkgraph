@@ -36,6 +36,13 @@ describe('Phase 2 & 3 Engines: 1-Hop Force Graph, Git Branch/Diff/Merge & 4-Laye
         sysObjOnly.nodes.every((n) => n.kind === 'system' || n.kind === 'object')
       ).toBe(true);
 
+      const multiChecked = buildFilteredGraphData(demo, ['character', 'faction']);
+      expect(
+        multiChecked.nodes.every((n) => n.kind === 'character' || n.kind === 'faction')
+      ).toBe(true);
+      expect(multiChecked.nodes.some((n) => n.kind === 'character')).toBe(true);
+      expect(multiChecked.nodes.some((n) => n.kind === 'faction')).toBe(true);
+
       const firstChar = demo.characters[0];
       const hood = computeOneHopNeighborhood(links, firstChar.id);
       expect(hood.incidentLinkIds.size).toBeGreaterThan(0);

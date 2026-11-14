@@ -1,9 +1,26 @@
-import { Network, Table, Shield, Users, MapPin, Cpu, Unlock } from 'lucide-react';
-import type { ScopeFilter } from './graphDataBuilder';
+import { useState } from 'react';
+import {
+  CheckSquare,
+  Cpu,
+  Filter,
+  MapPin,
+  Network,
+  Package,
+  Shield,
+  Square,
+  Table,
+  Unlock,
+  Users,
+} from 'lucide-react';
+import {
+  ALL_GRAPH_ENTITY_KINDS,
+  type GraphEntityKind,
+} from './graphDataBuilder';
 
 interface GraphToolbarProps {
-  scope: ScopeFilter;
-  setScope: (s: ScopeFilter) => void;
+  enabledKinds: GraphEntityKind[];
+  onToggleKind: (kind: GraphEntityKind) => void;
+  onSelectAllKinds: () => void;
   viewMode: 'graph' | 'table';
   setViewMode: (m: 'graph' | 'table') => void;
   nodeCount: number;
@@ -14,22 +31,23 @@ interface GraphToolbarProps {
   onReleasePinnedNodes: () => void;
 }
 
-const SCOPE_OPTIONS: {
-  id: ScopeFilter;
+const FILTER_LAYERS: {
+  kind: GraphEntityKind;
   label: string;
-  icon: typeof Network;
+  icon: typeof Users;
   color: string;
 }[] = [
-  { id: 'all', label: 'Visão Completa', icon: Network, color: '#3b82f6' },
-  { id: 'character', label: 'Só Personagens', icon: Users, color: '#3b82f6' },
-  { id: 'faction', label: 'Só Facções', icon: Shield, color: '#ef4444' },
-  { id: 'location', label: 'Só Locais & Rotas', icon: MapPin, color: '#10b981' },
-  { id: 'system_object', label: 'Sistemas & Objetos', icon: Cpu, color: '#a855f7' },
+  { kind: 'character', label: 'Personagens', icon: Users, color: '#3b82f6' },
+  { kind: 'faction', label: 'Facções', icon: Shield, color: '#ef4444' },
+  { kind: 'location', label: 'Locais', icon: MapPin, color: '#10b981' },
+  { kind: 'system', label: 'Sistemas', icon: Cpu, color: '#a855f7' },
+  { kind: 'object', label: 'Objetos', icon: Package, color: '#f59e0b' },
 ];
 
 export function GraphToolbar({
-  scope,
-  setScope,
+  enabledKinds,
+  onToggleKind,
+  onSelectAllKinds,
   viewMode,
   setViewMode,
   nodeCount,
@@ -39,6 +57,10 @@ export function GraphToolbar({
   pinnedCount,
   onReleasePinnedNodes,
 }: GraphToolbarProps) {
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const enabledSet = new Set(enabledKinds);
+  const allChecked = enabledKinds.length === ALL_GRAPH_ENTITY_KINDS.length;
+
   return (
     <div
       style={{
@@ -52,39 +74,7 @@ export function GraphToolbar({
         gap: 10,
       }}
     >
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {SCOPE_OPTIONS.map((btn) => {
-          const Icon = btn.icon;
-          const active = scope === btn.id;
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setScope(btn.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 11px',
-                borderRadius: 'var(--radius-sm, 6px)',
-                border: active
-                  ? `1px solid ${btn.color}`
-                  : '1px solid var(--border-subtle)',
-                backgroundColor: active ? 'var(--accent-soft)' : 'var(--bg-elevated)',
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: active ? 600 : 500,
-                cursor: 'pointer',
-              }}
-            >
-              <Icon size={13} color={btn.color} aria-hidden="true" />
-              {btn.label}
-            </button>
-          );
-        })}
-      </div>
-
+      {/* Controles físicos à esquerda */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         {viewMode === 'graph' && (
           <>
@@ -156,6 +146,193 @@ export function GraphToolbar({
         <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
           {nodeCount} nós · {linkCount} vínculos
         </span>
+      </div>
+
+      {/* Filtro de camadas marcáveis + Alternância Gráfico / Tabela lado a lado */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div
+          role="group"
+          aria-label="Filtro de camadas do grafo"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            flexWrap: 'wrap',
+            padding: '3px 6px',
+            borderRadius: 'var(--radius-sm, 6px)',
+            backgroundColor: 'var(--bg-elevated)',
+            border: '1px solid var(--border-subtle)',
+            position: 'relative',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setFilterPopoverOpen((prev) => !prev)}
+            aria-expanded={filterPopoverOpen}
+            title="Abrir menu de filtro para marcar ou desmarcar camadas"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 7px',
+              borderRadius: 'var(--radius-sm, 4px)',
+              border: 'none',
+              backgroundColor: filterPopoverOpen ? 'var(--accent-soft)' : 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            <Filter size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+            <span>
+              Filtro ({enabledKinds.length}/{ALL_GRAPH_ENTITY_KINDS.length})
+            </span>
+          </button>
+
+          {FILTER_LAYERS.map((layer) => {
+            const checked = enabledSet.has(layer.kind);
+            const CheckIcon = checked ? CheckSquare : Square;
+            return (
+              <button
+                key={layer.kind}
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                onClick={() => onToggleKind(layer.kind)}
+                title={`${checked ? 'Desmarcar' : 'Marcar'} ${layer.label}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm, 5px)',
+                  border: checked
+                    ? `1px solid ${layer.color}`
+                    : '1px solid var(--border-subtle)',
+                  backgroundColor: checked ? 'var(--bg-surface)' : 'transparent',
+                  color: checked ? 'var(--text-primary)' : 'var(--text-muted)',
+                  opacity: checked ? 1 : 0.6,
+                  fontSize: 11.5,
+                  fontWeight: checked ? 600 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <CheckIcon size={12} color={checked ? layer.color : 'var(--text-muted)'} />
+                <span>{layer.label}</span>
+              </button>
+            );
+          })}
+
+          {!allChecked && (
+            <button
+              type="button"
+              onClick={onSelectAllKinds}
+              title="Marcar todas as camadas (Visão Completa)"
+              style={{
+                padding: '3px 7px',
+                borderRadius: 'var(--radius-sm, 4px)',
+                border: '1px solid var(--accent-primary)',
+                backgroundColor: 'var(--accent-soft)',
+                color: 'var(--accent-primary)',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Marcar Todos
+            </button>
+          )}
+
+          {filterPopoverOpen && (
+            <div
+              role="dialog"
+              aria-label="Selecionar camadas visíveis no grafo"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                zIndex: 80,
+                minWidth: 230,
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md, 8px)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: '0 10px 28px rgba(0, 0, 0, 0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 2,
+                }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  Filtrar Entidades no Grafo
+                </span>
+                <button
+                  type="button"
+                  onClick={onSelectAllKinds}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-primary)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Visão Completa
+                </button>
+              </div>
+              {FILTER_LAYERS.map((layer) => {
+                const checked = enabledSet.has(layer.kind);
+                const Icon = layer.icon;
+                return (
+                  <label
+                    key={layer.kind}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 6px',
+                      borderRadius: 'var(--radius-sm, 5px)',
+                      backgroundColor: checked ? 'var(--bg-elevated)' : 'transparent',
+                      fontSize: 12,
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleKind(layer.kind)}
+                        style={{ accentColor: layer.color, cursor: 'pointer' }}
+                      />
+                      <Icon size={13} color={layer.color} />
+                      <span>{layer.label}</span>
+                    </span>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: layer.color,
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', gap: 5 }}>
           <button

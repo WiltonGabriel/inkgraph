@@ -5,11 +5,20 @@ import type {
 } from '../../types/project';
 
 export type ScopeFilter = 'all' | 'character' | 'faction' | 'location' | 'system_object';
+export type GraphEntityKind = 'character' | 'faction' | 'location' | 'system' | 'object';
+
+export const ALL_GRAPH_ENTITY_KINDS: readonly GraphEntityKind[] = [
+  'character',
+  'faction',
+  'location',
+  'system',
+  'object',
+];
 
 export interface GraphNode {
   id: string;
   name: string;
-  kind: 'character' | 'faction' | 'location' | 'system' | 'object';
+  kind: GraphEntityKind;
   subtitle: string;
   color: string;
   val: number;
@@ -106,7 +115,7 @@ function pairKey(a: string, b: string): string {
 
 export function buildFilteredGraphData(
   project: ProjectData,
-  scope: ScopeFilter
+  scope: ScopeFilter | ReadonlySet<GraphEntityKind> | readonly GraphEntityKind[]
 ): { nodes: GraphNode[]; links: GraphLink[]; allEntities: GraphNode[] } {
   const allLocations = project.worlds.flatMap((w) => w.locations ?? []);
   const allSystems = project.worlds.flatMap((w) => w.systems ?? []);
@@ -154,7 +163,15 @@ export function buildFilteredGraphData(
     })),
   ];
 
+  const kindSet: ReadonlySet<GraphEntityKind> | null =
+    typeof scope === 'string'
+      ? null
+      : scope instanceof Set
+      ? scope
+      : new Set(scope);
+
   const filteredNodes = nodeList.filter((n) => {
+    if (kindSet) return kindSet.has(n.kind);
     if (scope === 'all') return true;
     if (scope === 'system_object') return n.kind === 'system' || n.kind === 'object';
     return n.kind === scope;
