@@ -420,6 +420,7 @@ export interface Branch {
   description: string;
   createdAt: string;
   scenesBackup?: Scene[];
+  snapshotData?: string;
 }
 
 export interface Snapshot {

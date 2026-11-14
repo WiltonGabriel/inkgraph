@@ -25,7 +25,6 @@ import type {
   CharacterInterview,
   MindMap,
   Snapshot,
-  Branch,
 } from '../types/project';
 import { countWords } from '../types/project';
 import {
@@ -47,6 +46,13 @@ import {
 import { cascadeDeleteEntity } from '../domain/entityDirectory';
 import { applyStagingDecision } from '../domain/stagingResolver';
 import { resolveBreadcrumbPathInput } from '../domain/breadcrumbResolver';
+import {
+  checkoutBranchState,
+  createBranchFromActive,
+  deleteBranchSafely,
+  mergeBranchIntoActive,
+  restoreSnapshotWithAutoBackup,
+} from '../domain/gitEngine';
 import type { ConfirmDialogOptions } from '../components/common/ConfirmDialog';
 import type { SilentToastItem } from '../components/common/SilentToast';
 
@@ -132,6 +138,11 @@ interface ProjectContextValue {
   restoreSnapshot: (snapshotId: string) => void;
   createBranch: (name: string, description: string) => void;
   switchBranch: (branchId: string) => void;
+  mergeBranch: (
+    sourceBranchId: string,
+    conflictResolutions?: Record<string, 'ours' | 'theirs'>
+  ) => void;
+  deleteBranch: (branchId: string) => void;
   resolveStagingProposal: (id: string, decision: 'approved' | 'rejected') => void;
   recordWritingSession: (wordsDelta: number, minutesDelta: number) => void;
 }
@@ -910,60 +921,29 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
   };
 
   const restoreSnapshot = (snapshotId: string) => {
-    updateProject((prev) => {
-      const target = prev.snapshots.find((s) => s.id === snapshotId);
-      if (!target || target.scenesBackup.length === 0) return prev;
-      return {
-        ...prev,
-        scenes: JSON.parse(JSON.stringify(target.scenesBackup)) as Scene[],
-      };
-    });
+    const maxSnaps = settings.maxSnapshotsPerWorkspace || 25;
+    updateProject((prev) => restoreSnapshotWithAutoBackup(prev, snapshotId, maxSnaps));
   };
 
   const createBranch = (name: string, description: string) => {
-    updateProject((prev) => {
-      const clonedScenes = JSON.parse(JSON.stringify(prev.scenes)) as Scene[];
-      const updatedBranches = prev.branches.map((b) =>
-        b.id === prev.activeBranchId
-          ? { ...b, scenesBackup: JSON.parse(JSON.stringify(prev.scenes)) as Scene[] }
-          : b
-      );
-      const newBranch: Branch = {
-        id: `branch_${Date.now()}`,
-        name: name.trim() || 'Nova Ramificação',
-        description,
-        createdAt: new Date().toISOString().slice(0, 10),
-        scenesBackup: clonedScenes,
-      };
-      return {
-        ...prev,
-        branches: [...updatedBranches, newBranch],
-        activeBranchId: newBranch.id,
-      };
-    });
+    updateProject((prev) => createBranchFromActive(prev, name, description));
   };
 
   const switchBranch = (branchId: string) => {
-    updateProject((prev) => {
-      if (branchId === prev.activeBranchId) return prev;
-      const targetBranch = prev.branches.find((b) => b.id === branchId);
-      if (!targetBranch) return prev;
-      const updatedBranches = prev.branches.map((b) =>
-        b.id === prev.activeBranchId
-          ? { ...b, scenesBackup: JSON.parse(JSON.stringify(prev.scenes)) as Scene[] }
-          : b
-      );
-      const nextScenes =
-        targetBranch.scenesBackup && targetBranch.scenesBackup.length > 0
-          ? (JSON.parse(JSON.stringify(targetBranch.scenesBackup)) as Scene[])
-          : prev.scenes;
-      return {
-        ...prev,
-        branches: updatedBranches,
-        activeBranchId: branchId,
-        scenes: nextScenes,
-      };
-    });
+    updateProject((prev) => checkoutBranchState(prev, branchId));
+  };
+
+  const mergeBranch = (
+    sourceBranchId: string,
+    conflictResolutions: Record<string, 'ours' | 'theirs'> = {}
+  ) => {
+    updateProject(
+      (prev) => mergeBranchIntoActive(prev, sourceBranchId, conflictResolutions).updatedProject
+    );
+  };
+
+  const deleteBranch = (branchId: string) => {
+    updateProject((prev) => deleteBranchSafely(prev, branchId));
   };
 
   const resolveStagingProposal = (
@@ -1074,6 +1054,8 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
         restoreSnapshot,
         createBranch,
         switchBranch,
+        mergeBranch,
+        deleteBranch,
         resolveStagingProposal,
         recordWritingSession,
       }}
