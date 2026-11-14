@@ -178,7 +178,7 @@ describe('Phase 1 Foundation: Shortcuts, Directory, Staging, Breadcrumb, Storage
 
   describe('storageAdapter & themes', () => {
     const store = new Map<string, string>();
-    const originalStorage = globalThis.localStorage;
+    const originalStorageDesc = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 
     beforeEach(() => {
       store.clear();
@@ -198,10 +198,11 @@ describe('Phase 1 Foundation: Shortcuts, Directory, Staging, Breadcrumb, Storage
     });
 
     afterEach(() => {
-      Object.defineProperty(globalThis, 'localStorage', {
-        configurable: true,
-        value: originalStorage,
-      });
+      if (originalStorageDesc) {
+        Object.defineProperty(globalThis, 'localStorage', originalStorageDesc);
+      } else {
+        delete (globalThis as Record<string, unknown>).localStorage;
+      }
     });
 
     it('writes, reloads, and verifies catalog + settings integrity synchronously', () => {
