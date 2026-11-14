@@ -6,9 +6,9 @@
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-orange.svg)](https://pnpm.io/)
 [![MCP Ready](https://img.shields.io/badge/MCP-Protocolo%20Nativo-emerald.svg)](https://modelcontextprotocol.io/)
 
-O **InkGraph** é um estúdio literário *local-first*, motor de construção de mundos (*worldbuilding*) e gerenciador de lore epistêmica, projetado desde a base como uma plataforma de conhecimento estruturado e um servidor nativo do **Model Context Protocol (MCP)** para agentes de IA e desenvolvedores.
+O **InkGraph** é um estúdio literário *local-first* e multiplataforma (Web/PWA, Desktop via Tauri v2 e Mobile), motor de construção de mundos (*worldbuilding*) e gerenciador de lore epistêmica — utilizável **100% sem IA** ou integrado via **Model Context Protocol (MCP Hub v2)** e modelos locais/nuvem.
 
-Ele une a filosofia *Markdown-first* com um índice efêmero em SQLite/FTS5, grafo de física de relações multicamada, dossiês completos de personagens e facções, quadro de cenas (Board 2D, Atos e Linha do Tempo), análise de curvas de tensão e separação estrita entre o cânone do autor e as propostas da IA via Staging.
+Ele une a filosofia *Markdown-first* com índice efêmero SQLite/FTS5, editor canônico dual-mode (TipTap ↔ CodeMirror 6), grafo de relações multicamada, quadro de cenas, auditoria híbrida de continuidade, sincronização P2P em rede local / Google Drive (`drive.file`), cofre cifrado `.inkpack` e compilação editorial 100% offline para EPUB 3, DOCX, PDF de corte e Lauda padrão.
 
 ---
 
@@ -20,11 +20,11 @@ Ele une a filosofia *Markdown-first* com um índice efêmero em SQLite/FTS5, gra
 - [Como Começar](#como-começar)
   - [Pré-requisitos](#pré-requisitos)
   - [Instalação](#instalação)
-  - [Executando o Estúdio Web](#executando-o-estúdio-web)
-  - [Executando o Servidor MCP](#executando-o-servidor-mcp)
+  - [Executando o Estúdio Web / PWA](#executando-o-estúdio-web--pwa)
+  - [Executando o Servidor MCP Hub v2 e LAN Sync](#executando-o-servidor-mcp-hub-v2-e-lan-sync)
   - [Testes Automatizados e Tipagem](#testes-automatizados-e-tipagem)
 - [Estrutura do Cofre e Contrato de Dados](#estrutura-do-cofre-e-contrato-de-dados)
-- [Ferramentas do Servidor MCP Nativo](#ferramentas-do-servidor-mcp-nativo)
+- [Servidor MCP Nativo (Ferramentas, Recursos e Prompts)](#servidor-mcp-nativo-ferramentas-recursos-e-prompts)
 - [Documentação e Suporte](#documentação-e-suporte)
 - [Contribuição e Manutenção](#contribuição-e-manutenção)
 
@@ -32,47 +32,43 @@ Ele une a filosofia *Markdown-first* com um índice efêmero em SQLite/FTS5, gra
 
 ## O que o InkGraph faz
 
-O InkGraph oferece um ambiente de trabalho completo, sem ruídos e focado na criação literária:
-
-- **Meu Espaço (Home):** Catálogo multi-workspace para gerenciar múltiplos livros e universos. Suporta filtros (todos, favoritos, recentes, arquivados), criação rápida com modelos narrativos clássicos, backup/exportação em JSON e telemetria global.
-- **Grafo de Relações Multicamada:** Visualização interativa com filtros de camadas isoladas (Apenas Personagens, Apenas Facções, Apenas Locais, Apenas Objetos ou Visão Completa) e inspetor lateral com editor de formulação de entidades e criação de vínculos.
-- **Quadro de Cenas v2:** Planejamento flexível em raias de Três Atos, tela 2D livre com conexões visuais e minimapa, e visualização em linha do tempo com curvas de tensão dramática.
-- **Manuscrito e Fichário de Pesquisa:** Painel dividido que combina o editor de capítulos com um fichário de notas, árvore de cenas e inspetor contextual.
-- **Universo & Facções de Primeira Classe:** Dossiês com anéis de completude para personagens, facções e ordens, locais, sistemas de regras (magia, tecnologia, códigos legais), objetos de história e entrevistas com personagens.
-- **Rastreamento Epistêmico e Auditoria de Consistência:** Controle fino sobre segredos e conhecimento: o que o autor sabe, o que o leitor descobriu até o ponto $X$, e quais segredos o personagem $A$ conhece versus o personagem $B$.
-- **Pipeline de Staging e Canonização:** Ferramentas de IA gravam rascunhos em `./workspace/staging/` com diff visual, permitindo ao autor aprovar ou rejeitar alterações antes de contaminar o cânone.
-- **Configurações Gerais do Programa:** Painel desacoplado do workspace para controle de idioma (`pt-BR` e `en`), atalhos de teclado, tipografia do editor, tema e conexão com modelos de IA locais (Ollama) ou em nuvem.
+- **Meu Espaço & Busca Global:** Catálogo multi-workspace com suporte a séries/livros compartilhados (`promoteCharacterToSeriesSiblings`), busca global entre cenas, personagens, facções e mundos, cursor contínuo de leitura/edição ("Continuar de onde parou") e importação com pré-visualização (`.md`, `.docx`, `.json` e Novelcrafter `.zip`).
+- **Editor Dual-Mode Canônico:** Alternância livre entre **Editor Rico (TipTap)** e **Código-Fonte Markdown (CodeMirror 6)** sem perda de dados, com menções `[Nome](kb:id)`, menu `/` (incluindo divisão de cenas), blocos colapsáveis `::beat{...}` e `::epistemic-reveal{...}`, ditado por voz (STT), leitura em voz alta (TTS) e integração opcional com LanguageTool em `localhost`.
+- **Zero-IA por Padrão + Modos Flexíveis:** O InkGraph inicia em `aiMode: 'off'` (todos os painéis de IA ocultos). Quando desejado, suporta os modos `eco`, `local` (Ollama / LM Studio + recuperador BM25 offline, com bloqueio estrito de envio externo), `cloud` (chave BYOK) e `hybrid`.
+- **Multi-Dispositivo & Backups Criptografados:** Funciona offline como PWA (IndexedDB/OPFS), sincroniza deltas Markdown por **LAN P2P** ou **Google Drive** (escopo restrito `drive.file`, sem enviar bancos SQLite e preservando conflitos em `staging/`), além de exportar pacotes `.inkpack` cifrados com `PBKDF2 (600.000 iterações) + AES-256-GCM` sem vazar chaves de API.
+- **Grafo, Quadro de Cenas & Consistência:** Grafo de relações multicamada, quadro em Três Atos / Tela 2D / Linha do Tempo com curva de tensão interativa e duplo-clique direto na cena, 8 heurísticas determinísticas de continuidade, scanner *Auto-Codex* de nomes próprios e auditoria semântica opcional.
+- **Publicação 100% Offline & Preflight Gate:** Exportação nativa sem servidores externos para **EPUB 3** (`.epub`), **Microsoft Word** (`.docx`), **PDF Editorial** (`.pdf` com cortes `6×9`, `5.5×8.5`, `A5` e Carta), **Lauda Padrão 60×30** (`.txt` com `\f`) e **Vault Markdown** (`.zip`), precedida por verificação de preflight.
 
 ---
 
 ## Por que o InkGraph
 
 1. **Local-First com Markdown Autoritativo:**
-   O cofre privado do usuário (`./workspace/`) é a fonte única da verdade. Todas as entidades e cenas são arquivos Markdown com frontmatter YAML padrão. O banco SQLite é derivado e pode ser 100% reconstruído a partir dos arquivos.
-2. **Filosofia do Design Silencioso:**
-   Sem slogans promocionais, banners de marketing ou créditos desnecessários na interface. Termos funcionais, silenciosos e diretos.
-3. **Separação Cânone vs. Rascunhos:**
-   O cânone do autor (`workspace/lore/`, `workspace/manuscript/`) nunca é sobrescrito automaticamente por IA sem revisão humana prévia.
-4. **Nativo para Agentes via MCP:**
-   Assistentes inteligentes interagem com o projeto diretamente através do protocolo MCP (`search_lore`, `get_entity`, `query_epistemic_state`, `propose_lore`, `propose_scene`).
-5. **Clean Architecture e Responsabilidade Única (SRP):**
-   Monorepo modular sem arquivos monolíticos. Calculadores puros desacoplados da interface e componentes enxutos.
+   O cofre privado do usuário (`./workspace/`) é a fonte única da verdade em Markdown + YAML frontmatter. O banco SQLite (`@inkgraph/core`) é derivado e pode ser 100% reconstruído a partir dos arquivos.
+2. **Design Silencioso e Profissional:**
+   Sem anúncios, slogans promocionais ou geração falsa simulada. Menus concisos, alta legibilidade e tutorial guiado opcional em 4 passos (`PT-BR` e `EN`).
+3. **Separação Cânone vs. Staging:**
+   Propostas de IA e capturas rápidas entram em `./workspace/staging/` com diff palavra-a-palavra antes de tocar o cânone. Edições assistidas em modo `draft_copilot` exigem `expected_version` e oferecem reversão em 24h (`undo_change_set`).
+4. **Arquitetura Modular (Clean Architecture / SRP):**
+   Núcleo puro de domínio isomórfico desacoplado de banco, camada de IA, transporte MCP e interface React.
 
 ---
 
 ## Visão Geral da Arquitetura
 
-O InkGraph é estruturado como um monorepo via pnpm:
-
 ```text
 inkgraph/
 ├── packages/
-│   ├── core/         # Parser de frontmatter, schemas Zod, indexador SQLite FTS5 e grafo temporal
-│   ├── mcp/          # Servidor Model Context Protocol (MCP) para agentes de IA
-│   ├── ui/           # Estúdio visual em React + Vite
-│   └── desktop/      # Wrapper desktop nativo em Tauri v2 (Rust)
-├── workspace/        # [Ignorado no Git] Cofre privado local do autor
-└── docs/             # Documentação pública e registros de decisões de arquitetura
+│   ├── domain/        # Lógica pura (Browser + Node): parser YAML/MD, codecs dual-mode,
+│   │                  # heurísticas narrativas, Auto-Codex, métricas e motor de sync delta
+│   ├── capabilities/  # Briefing epistêmico por cena e governança de ChangeSets
+│   ├── ai/            # Gateway de IA com IncarnationTracker, BM25 local e agente ProForge
+│   ├── core/          # Motor Node: indexador SQLite FTS5, sync completo do cofre e watcher
+│   ├── mcp/           # Servidor MCP Hub v2 (stdio + HTTP/SSE + LAN Sync + Bearer Token)
+│   ├── ui/            # Estúdio visual PWA offline-first (React + Vite + TipTap + CodeMirror 6)
+│   └── desktop/       # Scaffold desktop nativo em Tauri v2 (Rust + Webview)
+├── workspace/         # [Ignorado no Git] Cofre privado local do autor
+└── docs/              # Documentação técnica e decisões arquiteturais (ADRs)
 ```
 
 ---
@@ -82,11 +78,10 @@ inkgraph/
 ### Pré-requisitos
 
 - **Node.js**: v18.0.0 ou superior (v20+ recomendado)
-- **pnpm**: v9.0.0 ou superior
+- **pnpm**: v9+ (ou `corepack pnpm`)
+- **Opcional (Desktop Nativo):** Rust + Cargo (`rustup`) para compilar `@inkgraph/desktop` via Tauri v2
 
 ### Instalação
-
-Clone o repositório e instale as dependências:
 
 ```bash
 git clone https://github.com/WiltonGabriel/inkgraph.git
@@ -94,25 +89,27 @@ cd inkgraph
 pnpm install
 ```
 
-### Executando o Estúdio Web
-
-Inicie a interface visual:
+### Executando o Estúdio Web / PWA
 
 ```bash
 pnpm dev
 ```
 
-O estúdio estará disponível em `http://localhost:5173`.
+O estúdio inicia em `http://localhost:5173` com acesso liberado na rede local (`vite --host`) para testes em celular ou tablet.
 
-### Executando o Servidor MCP
+### Executando o Servidor MCP Hub v2 e LAN Sync
 
-Inicie o servidor MCP via stdio:
+Primeiro compile os pacotes base (`pnpm build`) e inicie o servidor MCP:
 
 ```bash
+# Modo stdio (clientes locais como Antigravity / Claude Desktop / Codex)
 pnpm mcp
+
+# Modo HTTP Streamable + SSE + Sync LAN (opcional, via variáveis de ambiente)
+INKGRAPH_MCP_HTTP_PORT=3333 INKGRAPH_MCP_TOKEN="seu-token" node packages/mcp/dist/index.js
 ```
 
-Para conectar assistentes externos (como Google Antigravity ou Claude Desktop), configure o executável:
+Exemplo de configuração para clientes MCP via `stdio`:
 
 ```json
 {
@@ -130,28 +127,28 @@ Para conectar assistentes externos (como Google Antigravity ou Claude Desktop), 
 
 ### Testes Automatizados e Tipagem
 
-Para validar a integridade do código:
+Para validar todo o monorepo em ordem topológica:
 
 ```bash
-# Checagem de tipos TypeScript
+# Build e verificação de tipos
+pnpm build
 pnpm typecheck
 
-# Execução da suíte de testes unitários
+# Suíte completa de testes unitários e de integração (Vitest)
 pnpm test
-
-# Build de produção de todos os pacotes
-pnpm build
 ```
+
+> No Windows sem `pnpm` direto no `PATH` filho, utilize `corepack.cmd pnpm` para os scripts por pacote (`corepack.cmd pnpm --filter @inkgraph/ui test`).
 
 ---
 
 ## Estrutura do Cofre e Contrato de Dados
 
-Os arquivos do usuário ficam armazenados em `./workspace/` (estritamente ignorados pelo Git):
+Os arquivos do usuário ficam em `./workspace/` (estritamente ignorados pelo Git):
 
 - `workspace/lore/`: Dossiês de personagens, facções, locais, objetos e sistemas de regras.
-- `workspace/manuscript/`: Capítulos e cenas estruturadas do manuscrito.
-- `workspace/staging/`: Propostas provisórias e rascunhos aguardando aprovação do autor.
+- `workspace/manuscript/`: Capítulos e cenas estruturadas (compatível com diretivas `::beat` e `::epistemic-reveal`).
+- `workspace/staging/`: Propostas provisórias e capturas aguardando aprovação.
 - `workspace/timeline/`: Marcadores temporais e batidas de enredo.
 - `workspace/assets/`: Mapas, retratos e elementos gráficos.
 
@@ -183,34 +180,46 @@ Comandante exilado após o Cerco de Vael.
 
 ---
 
-## Ferramentas do Servidor MCP Nativo
+## Servidor MCP Nativo (Ferramentas, Recursos e Prompts)
 
-O pacote `@inkgraph/mcp` fornece as ferramentas oficiais de contexto para IA:
+O pacote `@inkgraph/mcp` expõe:
 
 | Ferramenta | Descrição |
 | :--- | :--- |
-| `list_entities` | Lista e filtra itens de lore por tipo, tag ou status. |
+| `list_entities` | Lista e filtra entidades por tipo, tag ou status (`canon`, `provisional`, `draft`). |
 | `get_entity` | Resolve qualquer ID ou alias para o dossiê completo. |
-| `search_lore` | Busca textual completa (FTS5) no cânone, notas e manuscritos. |
+| `search_lore` | Busca textual FTS5 ou exata no cânone, notas e manuscritos. |
 | `query_epistemic_state` | Consulta o que uma entidade sabe ou quais segredos guarda em determinado ponto da história. |
-| `get_timeline` | Retorna a sequência cronológica, valores de tensão e localização de personagens. |
+| `get_timeline` | Retorna sequência causal, localização de personagens e transições de relacionamentos. |
+| `get_relationships` | Retorna o grafo de vínculos entre entidades. |
 | `propose_lore` | Cria rascunhos provisórios em `workspace/staging/` sem afetar o cânone. |
-| `propose_scene` | Propõe novas cenas em `workspace/staging/` respeitando as regras de continuidade. |
+| `propose_scene` | Propõe novas cenas em `workspace/staging/` respeitando regras de continuidade. |
+| `resume_work` | Gera briefing instantâneo do estúdio (cenas, staging pendente, erros e histórico de undo). |
+| `read_manuscript` | Lê cenas com paginação por palavras (`cursor` e `max_words`). |
+| `get_scene_context` | Retorna prosa da cena, POV e briefing epistêmico (`known` vs `withheld`). |
+| `propose_prose_edit` | Edita rascunho ou propõe em staging usando `expected_version` e `dry_run`. |
+| `undo_change_set` | Reverte uma edição direta recente dentro da janela de 24 horas. |
+| `upsert_beat` | Insere ou atualiza diretivas `::beat` ou `::epistemic-reveal` em rascunhos staged. |
+
+- **Recursos (`resources/read`):** `inkgraph://books`, `inkgraph://lore/<id>`, `inkgraph://scene/<id>` e `inkgraph://epistemic/<scene_id>`.
+- **Prompts (`prompts/get`):** `resume`, `draft-scene`, `audit-epistemic` e `canon-check`.
 
 ---
 
 ## Documentação e Suporte
 
-- **Decisões de Arquitetura:** Consulte [docs/architecture/DECISIONS.md](docs/architecture/DECISIONS.md) para detalhes técnicos de arquitetura e decisões de projeto.
-- **Problemas e Sugestões:** Utilize o rastreador de *Issues* do repositório para reportar falhas ou sugerir funcionalidades.
+- **Constituição Operacional de Agentes:** [AGENTS.md](AGENTS.md)
+- **Decisões de Arquitetura (ADR):** [docs/architecture/DECISIONS.md](docs/architecture/DECISIONS.md)
+- **Guia de Contribuição:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Shell Desktop Tauri v2:** [packages/desktop/README.md](packages/desktop/README.md)
 
 ---
 
 ## Contribuição e Manutenção
 
-O InkGraph é distribuído sob a Licença MIT. Contribuições que sigam a privacidade local, a arquitetura limpa (SRP) e a filosofia de design silencioso são bem-vindas.
+O InkGraph é distribuído sob a Licença MIT ([LICENSE](LICENSE)). Contribuições que preservem a privacidade local, a arquitetura limpa (SRP) e a filosofia de design silencioso são bem-vindas.
 
-1. Crie um branch para sua funcionalidade (`git checkout -b feature/minha-feature`).
-2. Garanta que os testes e tipagem passem sem erros (`pnpm typecheck && pnpm test`).
+1. Crie uma branch para sua funcionalidade (`git checkout -b feature/minha-feature`).
+2. Garanta que builds, tipagem e testes passem sem erros (`pnpm build && pnpm typecheck && pnpm test`).
 3. Envie commits claros e semânticos.
 4. Abra um Pull Request descrevendo as modificações.
