@@ -1,43 +1,49 @@
 # Decisões Arquiteturais: InkGraph (ADR 001)
 
-Este documento estabelece a arquitetura do **InkGraph**, voltada para privacidade absoluta do cofre do autor, operação 100% offline/local-first, uso opcional de IA e integração nativa com agentes via MCP Hub v2.
+Este documento registra a arquitetura vigente do **InkGraph**, projetada para privacidade absoluta do cofre local do autor (`./workspace/`), operação *offline/local-first*, separação estrita de Cânone vs. Staging, UI silenciosa e integração nativa com clientes MCP via `stdio`.
 
 ---
 
-## 1. Diretrizes Arquiteturais
+## 1. Visão Geral das Decisões Técnicas
 
-| Critério / Capacidade | Decisão Técnica no InkGraph |
+| Critério / Capacidade | Decisão Arquitetural no InkGraph |
 | :--- | :--- |
-| **Arquitetura Base** | Monorepo TypeScript (`pnpm`) com 7 pacotes (`domain`, `capabilities`, `ai`, `core`, `mcp`, `ui`, `desktop`) |
-| **Fonte Única da Verdade** | Arquivos Markdown puros com YAML Frontmatter em `./workspace/` (espelhados em IndexedDB/OPFS no PWA) |
-| **Editor Canônico** | Dual-mode sem perda entre TipTap (blocos/foco) e CodeMirror 6 (Markdown fonte), menções `[Nome](kb:id)` e diretivas `::beat` / `::epistemic-reveal` |
-| **Modo Sem IA & Modos de IA** | `aiMode: 'off'` como padrão silencioso; suporte a `eco`, `local` (Ollama + BM25 sem egress), `cloud` e `hybrid` com `IncarnationTracker` |
-| **Multi-Dispositivo & Backup** | PWA offline-first, LAN P2P Sync, Google Drive (`drive.file` não sensível) com delta + preservação de conflitos e cofre cifrado `.inkpack` (`PBKDF2 600k + AES-256-GCM`) |
-| **Integração com Agentes** | Servidor MCP Hub v2 (`@inkgraph/mcp`) via `stdio` e HTTP `/mcp` + SSE `/subscriptions/listen` com Bearer Token |
-| **Proteção de Cânone** | Modo padrão `staging_strict` em `./workspace/staging/`; `draft_copilot` opcional apenas em rascunhos com `expected_version`, `dry_run` e `undo_change_set` (24h) |
-| **Publicação Offline** | Geração local de EPUB 3, DOCX, PDF por corte (`6x9`, `5.5x8.5`, `a5`, `manuscript`), Lauda 60×30 (`\f`) e Vault `.zip` com Preflight Gate |
+| **Estrutura de Monorepo** | Workspace `pnpm` com 4 pacotes (`@inkgraph/core`, `@inkgraph/mcp`, `@inkgraph/ui`, `@inkgraph/desktop`) |
+| **Motor Puro Isomórfico** | 12 módulos puros em `packages/ui/src/domain/` sem dependência de DOM direto, permitindo execução e testes em Node (`Vitest`) e Browser |
+| **Persistência Web** | Catálogo e preferências salvos com *debounce* em `localStorage` + binários/mapas pesados em `IndexedDB` (`AssetStore`) atrás de `storageAdapter.ts`, com leitura de verificação imediata |
+| **Cofre em Disco & SQLite** | Arquivos Markdown + YAML frontmatter em `./workspace/` (ignorados no Git) indexados em `@inkgraph/core` com SQLite FTS5 efêmero |
+| **Tematização Dual-Mode** | 6 paletas com suporte a `light`, `dark`, `sepia` e `system` injetando variáveis semânticas `--bg-*`, `--text-*`, `--border-*` e `--accent-*` via `themes.ts` |
+| **Editor Markdown** | **CodeMirror 6 (MIT)** (`@codemirror/{state,view,commands,lang-markdown,search,autocomplete}`) com autocomplete `@`/`#`/`&`/`!`/`/` e 3 modos (`write`, `split`, `read`) |
+| **Controle de Versões** | Motor LCS determinístico (`gitEngine.ts`) com estado completo por ramificação (`Branch.snapshotData`), diff por linha e por palavra, resolução *Ours/Theirs* e auto-backup antes de restaurar snapshots |
+| **Memória & Epistemologia** | Compilador em 4 camadas (`memoryCompiler.ts`) com orçamento de tokens, detecção de vazamentos epistêmicos por POV, resumo de continuidade e bloqueio de egress nos modos `eco`/`local` |
+| **Servidor MCP** | `@inkgraph/mcp` em `stdio` conectado ao `@inkgraph/core` com 8 ferramentas de consulta e propostas confinadas a `./workspace/staging/` |
+| **Empacotamento Desktop** | Scaffold nativo em **Tauri v2** (`@inkgraph/desktop`, Rust + Webview), sem empacotamento Electron |
 
 ---
 
 ## 2. Camadas do Sistema
 
-### A. Núcleo Puro e Capabilities (`@inkgraph/domain`, `@inkgraph/capabilities`)
-- **Isomorfia Browser + Node:** Parser de frontmatter e texto, métricas de legibilidade PT-BR/EN, chaves fracionárias, diff por palavra (LCS), codec dual-mode (`canonicalProseCodec`), 8 heurísticas estruturais (`narrativeHeuristics`), scanner Auto-Codex (`storyCodexScanner`) e motor de delta sync (`syncDeltaEngine`).
-- **Epistêmica e Governança (`@inkgraph/capabilities`):** Briefing epistêmico filtrado por ponto de vista e cena (`buildSceneEpistemicBriefing`) e controle de governança para ChangeSets.
+### A. Núcleo Puro de Domínio (`packages/ui/src/domain/`)
+Todos os cálculos críticos e regras de negócio ficam isolados da camada de visualização React em 12 módulos puros:
+- `storageAdapter.ts`: persistência em `localStorage` + `IndexedDB` (`inkgraph-assets-v1`) com `flush` síncrono e verificação de integridade (`verifyAndReloadStorage`).
+- `entityDirectory.ts`: visão unificada de entidades, vizinhança de vínculos, resolução por alias e exclusão em cascata sem órfãos (`cascadeDeleteEntity`).
+- `stagingResolver.ts`: aplicação de decisões de aprovação ou rejeição (`applyStagingDecision`) para propostas de *Staging*.
+- `shortcutManager.ts`: catálogo dos 26 atalhos personalizáveis, captura de teclado, normalização e detecção de conflitos em tempo real.
+- `breadcrumbResolver.ts`: interpretação e geração de caminhos editáveis (`InkGraph / ...`) e histórico recente de navegação.
+- `themes.ts`: definição das paletas Dual-Mode, fontes tipográficas, cantos, superfícies e geração de tokens CSS.
+- `gitEngine.ts`: algoritmo LCS de diff linha a linha (`computeLineDiff`) e palavra por palavra (`computeWordDiff`), isolamento de estado de ramificações (`createBranchFromActive`, `checkoutBranchState`), diff de workspace (`computeWorkspaceBranchDiff`), mesclagem com resolução de conflitos (`mergeBranchIntoActive`) e restauração segura de snapshots (`restoreSnapshotWithAutoBackup`).
+- `memoryCompiler.ts`: compilação em 4 camadas (*Memória de Trabalho*, *Memória Episódica & Epistêmica*, *Memória Semântica*, *Síntese Contínua & Voz*), estimativa e recorte por orçamento de tokens (`budgetTokens`), detecção de vazamentos de segredos na prosa (`epistemicAlerts`) e portão `cloudAllowed`.
+- `completenessCalculator.ts`, `narrativeHeuristics.ts`, `wordCounter.ts` e `workspaceNormalizer.ts`: métricas de completude, heurísticas narrativas locais, contagem de palavras e sanitização/normalização segura de workspaces JSON (incluindo `sanitizeExternalUrl`).
 
-### B. Gateway de IA e Recuperação Local (`@inkgraph/ai`)
-- Bloqueia tráfego externo automaticamente nos modos `off`, `eco` e `local` (`assertCloudAiAllowed`).
-- Cancela gerações obsoletas por cena/sessão via `IncarnationTracker`.
-- Inclui recuperador léxico local BM25 (`hybridRetriever`) e supervisor estruturado (`ProForgeSupervisorAgent`) com aplicação reversa de patches por offset.
+### B. Motor Node, Parser & SQLite FTS5 (`@inkgraph/core`)
+- **Parser (`markdownParser.ts`):** lê arquivos Markdown com frontmatter YAML e valida contra o esquema Zod de entidades (`entity.ts`).
+- **Indexador SQLite FTS5 (`database.ts`, `sync.ts`, `epistemicQueries.ts`):** projeta entidades e índices full-text no SQLite local e valida caminhos seguros de staging (`resolveSafeStagingPath`) contra travessia de diretórios.
+- **Erros Estruturados (`errors.ts`):** `InkGraphError` com códigos padronizados (`not_found`, `conflict`, `validation`, `ambiguous`, `canon_violation`, `unauthorized`).
 
-### C. Persistência e Indexação (`@inkgraph/core`)
-- **Cofre `./workspace/`:** Todo conteúdo do autor permanece em texto puro legível por humanos e estritamente ignorado pelo Git.
-- **SQLite + FTS5 Derivado:** Mantém tabelas para entidades, documentos completos (`vault_documents`, `vault_documents_fts`) e falhas de leitura (`vault_parse_errors`), além de watcher em tempo real (`WorkspaceVaultWatcher`). Se o banco for apagado, é 100% reconstruído a partir de `./workspace/`.
+### C. Servidor MCP (`@inkgraph/mcp`)
+- Transporta chamadas MCP sobre `stdio` (`packages/mcp/src/index.ts`).
+- Expõe 8 ferramentas (`list_entities`, `get_entity`, `search_lore`, `query_epistemic_state`, `get_timeline`, `propose_lore`, `propose_scene`, `get_relationships`) delegando escrita exclusivamente para `./workspace/staging/`.
 
-### D. Servidor MCP Hub v2 (`@inkgraph/mcp`)
-- Expõe 14 ferramentas (`list_entities`, `get_entity`, `search_lore`, `query_epistemic_state`, `get_timeline`, `get_relationships`, `propose_lore`, `propose_scene`, `resume_work`, `read_manuscript`, `get_scene_context`, `propose_prose_edit`, `undo_change_set`, `upsert_beat`), além de `resources` (`inkgraph://books`, `inkgraph://lore/<id>`, `inkgraph://scene/<id>`, `inkgraph://epistemic/<id>`) e `prompts` (`resume`, `draft-scene`, `audit-epistemic`, `canon-check`).
-- Transporte dual: `stdio` padrão para IDEs/assistentes locais e servidor HTTP opcional (`/mcp`, SSE `/subscriptions/listen`, `/sync/manifest`, `/sync/push`) protegido por Bearer Token para pareamento LAN e clientes remotos.
-
-### E. Estúdio Visual PWA e Shell Nativo (`@inkgraph/ui`, `@inkgraph/desktop`)
-- **PWA Offline-First & Design Silencioso:** Interface responsiva para desktop, tablet e celular, com `QuickCaptureModal`, `GlobalWorkspaceSearch`, tutorial guiado opcional em 4 passos (`PT-BR`/`EN`), importação com preview (`.md`, `.docx`, Novelcrafter `.zip`) e publicação 100% offline.
-- **Tauri v2 (`@inkgraph/desktop`):** Wrapper desktop nativo leve para empacotamento em sistemas operacionais desktop sem sobrecarga de Electron.
+### D. Estúdio Visual & Shell Desktop (`@inkgraph/ui`, `@inkgraph/desktop`)
+- **`@inkgraph/ui`:** Orquestração via `SettingsContext` (`draftSettings` vs `committedSettings`) e `ProjectContext`, views lazy-loaded (`React.lazy`), componentes granulares por domínio em `src/components/{canon-radar,common,dashboard,graph,manuscript,mind-map,publishing,scene-board,settings,shell,ui,world}` e testes cross-package em `packages/core/tests/`.
+- **`@inkgraph/desktop`:** Estrutura nativa em Tauri v2 (`src-tauri/`) pronta para geração de binários desktop leves sem runtime Chromium acoplado.

@@ -6,26 +6,25 @@
 
 ## 1. Missão Central e Filosofia
 
-O **InkGraph** é um estúdio literário open-source *local-first*, motor de construção de mundos (*worldbuilding*) e gerenciador de lore epistêmica, projetado desde a base como um **motor de conhecimento estruturado e servidor nativo do Model Context Protocol (MCP)** para Google Antigravity, Claude, Codex e outros clientes compatíveis — funcionando 100% sem IA por padrão quando o autor preferir escrever manualmente.
+O **InkGraph** é um estúdio literário open-source *local-first*, motor de construção de mundos (*worldbuilding*) e gerenciador de lore epistêmica, projetado com um **motor de conhecimento estruturado e servidor nativo do Model Context Protocol (MCP)** para clientes compatíveis — funcionando 100% offline/sem nuvem quando o autor preferir escrever manualmente ou nos modos locais (`eco`, `local`).
 
 ### Princípios Fundamentais
 1. **Filosofia do Design Silencioso e Minimalista (Regra Absoluta):**
-   - **Zero Ruído / Zero Slogans Promocionais na Interface:** Todo botão, aba e rótulo deve ser conciso, silencioso, funcional e estritamente focado no trabalho criativo. Nunca injete nomes comerciais externos, textos publicitários ou sufixos chamativos em títulos ou cabeçalhos da interface.
-   - Utilize terminologia de domínio limpa e direta: "Grafo", "Personagens", "Mundo", "Linha do Tempo", "Manuscrito", "Revisão".
-   - IA desativada por padrão (`aiMode: 'off'`): modos locais (`off`, `eco`, `local`) nunca devem realizar chamadas de saída para APIs na nuvem (`assertCloudAiAllowed`).
+   - **Zero Ruído / Zero Nomes Comerciais Externos:** Todo botão, aba e rótulo deve ser conciso, silencioso, funcional e estritamente focado no trabalho criativo. Nunca injete nomes comerciais proprietários externos, textos publicitários ou slogans em títulos, código ou cabeçalhos.
+   - Utilize terminologia de domínio limpa e direta: "Painel", "Grafo", "Personagens", "Construção Mundial", "Linha do Tempo", "Manuscrito", "Radar de Cânone", "Revisão".
+   - Créditos Open Source (MIT/ISC), como *CodeMirror 6* e a inspiração arquitetural de memória em camadas no projeto aberto *AI Memory* de Fabio Akita, ficam documentados na aba **Sobre** e na documentação técnica.
 2. **Privacidade Local Absoluta (Fronteira do Cofre):**
    - `./workspace/` é o cofre privado do usuário contendo dados confidenciais do livro, manuscritos, dossiês de personagens, lore e arquivos enviados.
-   - **NUNCA** comite, rastreie ou vaze qualquer arquivo ou diretório dentro de `./workspace/` para o Git ou repositórios remotos. O `.gitignore` deve bloquear estritamente `./workspace/`, bancos SQLite locais e arquivos `.env`.
+   - **NUNCA** comite, rastreie ou vaze qualquer arquivo ou diretório dentro de `./workspace/` para o Git ou repositórios remotos. O `.gitignore` e o CI bloqueiam estritamente `./workspace/`, bancos SQLite locais e arquivos `.env`.
 3. **Markdown-First (Fonte Única da Verdade):**
-   - A fonte autoritativa da verdade para toda lore e manuscrito são arquivos Markdown padrão com frontmatter YAML em `./workspace/` (no desktop/servidor) ou o espelho OPFS/IndexedDB no PWA.
+   - A fonte autoritativa da verdade em disco para lore e manuscrito são arquivos Markdown padrão com frontmatter YAML em `./workspace/` (no estúdio Web, persistidos com *debounce* em `localStorage` + ativos gráficos em `IndexedDB` por trás de `storageAdapter.ts`).
    - O banco SQLite (`@inkgraph/core`) é uma **projeção e índice derivado em tempo real** (usando FTS5 e tabelas relacionais). Se o banco for removido ou corrompido, ele pode ser 100% reconstruído a partir de `./workspace/`.
 4. **Separação Estrita de Cânone e Rastreamento Epistêmico:**
    - **Cânone (`workspace/lore/`, `workspace/manuscript/`):** Fatos e textos confirmados e aprovados pelo autor.
-   - **Staging (`workspace/staging/`):** Propostas de IA, capturas rápidas e rascunhos provisórios aguardando revisão humana (modo padrão `staging_strict`). Em projetos que habilitarem explicitamente `draft_copilot`, edições diretas aplicam-se apenas a rascunhos usando controle de versão otimista (`expected_version`) e janela de reversão em 24h (`undo_change_set`).
-   - **Rastreamento Epistêmico:** O sistema distingue o que o **Autor** sabe, o que o **Leitor** descobriu até a cena $X$ e o que o **Personagem $A$** conhece versus o **Personagem $B$**.
-5. **Leve e Multiplataforma (PWA + Tauri v2, sem Electron):**
-   - Aplicativo web progressivo (PWA) offline-first para navegador, tablet e celular, com sincronização LAN P2P ou Google Drive (`drive.file`, nunca enviando arquivos SQLite) e backups cifrados `.inkpack` (`PBKDF2 600k + AES-256-GCM`).
-   - Shell desktop nativo baseado em **Tauri v2** (`@inkgraph/desktop`), sem empacotar Electron/Chromium.
+   - **Staging (`workspace/staging/` e `project.stagingProposals`):** Propostas da IA, capturas e rascunhos provisórios aguardando revisão humana com diff visual antes de tocar o cânone. No estúdio UI, edições diretas assistidas criam previamente um instantâneo automático de segurança.
+   - **Rastreamento Epistêmico:** O sistema distingue o que o **Autor** sabe, o que o **Leitor** descobriu até a cena X e o que o **Personagem A** conhece versus o **Personagem B**.
+5. **Leve e Multiplataforma (Web/PWA + Tauri v2, sem Electron):**
+   - Estúdio Web responsivo e leve baseado em React + Vite + CodeMirror 6 (`@inkgraph/ui`) e scaffold nativo em **Tauri v2** (`@inkgraph/desktop`), sem empacotar Electron/Chromium.
 
 ---
 
@@ -33,12 +32,15 @@ O **InkGraph** é um estúdio literário open-source *local-first*, motor de con
 
 ```text
 inkgraph/
+├── .github/                   # Workflows CI/CD, template de PR e templates de Issues
 ├── AGENTS.md                  # Esta constituição operacional
-├── README.md                  # Documentação principal e guia de uso
-├── CONTRIBUTING.md            # Diretrizes de contribuição
-├── package.json               # Configuração raiz do workspace
+├── README.md                  # Documentação principal e guia de início rápido
+├── CONTRIBUTING.md            # Diretrizes de contribuição e SRP
+├── SECURITY.md                # Política de segurança e isolamento do cofre local
+├── CODE_OF_CONDUCT.md         # Código de conduta da comunidade
+├── package.json               # Scripts raiz do monorepo (pnpm -r)
 ├── pnpm-workspace.yaml        # Configuração do workspace (somente pnpm)
-├── .gitignore                 # Isolamento estrito de ./workspace/, bancos e builds
+├── .gitignore                 # Isolamento estrito de ./workspace/, bancos, .agents/ e builds
 │
 ├── workspace/                 # [IGNORADO NO GIT] Cofre privado local do autor
 │   ├── uploads/               # Entradas brutas para indexação
@@ -48,18 +50,15 @@ inkgraph/
 │   ├── timeline/              # Marcadores temporais e batidas de enredo
 │   └── assets/                # Mapas, retratos e elementos gráficos
 │
-├── docs/                      # Documentação arquitetural pública
+├── docs/                      # Documentação pública (USER_GUIDE.md + architecture/)
 │   └── architecture/          # Registros de decisões arquiteturais (ADRs)
 │
 └── packages/                  # Pacotes modulares do monorepo
-    ├── domain/                # Lógica pura isomórfica (browser + Node): parser,
-    │                          # codecs dual-mode, heurísticas, Auto-Codex e sync delta
-    ├── capabilities/          # Briefing epistêmico e governança de ChangeSets
-    ├── ai/                    # Gateway de IA, IncarnationTracker, BM25 local e agente ProForge
-    ├── core/                  # Motor Node: indexador SQLite/FTS5, sync completo e watcher
-    ├── mcp/                   # Servidor MCP Hub v2 (stdio + HTTP/SSE + LAN sync + Bearer)
-    ├── ui/                    # Estúdio visual em React + Vite + PWA offline-first
-    └── desktop/               # Shell desktop nativo em Tauri v2 (Rust + Webview)
+    ├── core/                  # Motor Node: parser Markdown/YAML, Zod, indexador SQLite/FTS5 e suíte Vitest
+    ├── mcp/                   # Servidor MCP via stdio expondo ferramentas de leitura e staging
+    ├── ui/                    # Estúdio visual em React + Vite + CodeMirror 6
+    │   └── src/domain/        # Motores puros isomórficos (gitEngine, memoryCompiler, shortcutManager, etc.)
+    └── desktop/               # Scaffold desktop nativo em Tauri v2 (Rust + Webview)
 ```
 
 ---
@@ -72,11 +71,12 @@ inkgraph/
 - Nunca adicione Electron. Utilize Tauri v2 (`packages/desktop/`) para empacotamento desktop.
 - **SRP Estrito e Granularidade de Arquivos:**
   - Cada arquivo, módulo e componente deve ter **uma única razão para mudar** e **uma única responsabilidade**.
-  - **Nunca despeje uma funcionalidade inteira em um arquivo monolítico.** Mantenha lógica pura em `@inkgraph/domain`, políticas em `@inkgraph/capabilities`, orquestração de IA em `@inkgraph/ai`, infraestrutura de banco em `@inkgraph/core`, subcomponentes granulares em `packages/ui/src/components/<contexto>/` e orquestradores enxutos em `packages/ui/src/views/`.
+  - **Nunca despeje uma funcionalidade inteira em um arquivo monolítico.** Mantenha motores puros e isomórficos (sem referências nuas a `window`/`document` para compatibilidade com testes Node no `@inkgraph/core`) em `packages/ui/src/domain/`, infraestrutura SQLite/parser em `@inkgraph/core`, protocolo MCP em `@inkgraph/mcp`, subcomponentes granulares em `packages/ui/src/components/<contexto>/` e orquestradores enxutos em `packages/ui/src/views/`.
 
 ### Regra 2: Operações de Arquivo Não Destrutivas
-- Escritas de lore ou atualizações de manuscrito feitas por ferramentas de IA devem ir para `./workspace/staging/` por padrão (`staging_strict`), respeitando as travas de `draft_copilot` quando configurado pelo usuário.
-- Segurança *preserve-first*: não altere silenciosamente nem exclua notas malformadas em `./workspace/uploads/`; registre erros em `vault_parse_errors` e reporte de forma limpa.
+- Escritas de lore ou atualizações de manuscrito feitas por ferramentas de IA devem ir para `./workspace/staging/` por padrão (ou `project.stagingProposals` no estúdio Web) até revisão humana.
+- Em fluxos diretos no rascunho pelo Copiloto, um snapshot automático prévio deve ser criado antes da alteração.
+- Nunca utilize `window.confirm()` ou `window.alert()` na interface; utilize `requestConfirm` e `notify` via `ProjectContext`.
 
 ### Regra 3: Tratamento de Erros e Respostas Estruturadas
 - Todas as ferramentas MCP e funções do motor central devem lançar ou retornar `InkGraphError` com códigos padronizados:
@@ -111,36 +111,26 @@ epistemic:
 
 ---
 
-## 4. Contrato do Servidor MCP Hub v2 (`@inkgraph/mcp`)
+## 4. Contrato do Servidor MCP (`@inkgraph/mcp`)
 
-O pacote `@inkgraph/mcp` expõe ferramentas, recursos e prompts sobre transporte dual (`stdio` e HTTP `/mcp` com SSE `/subscriptions/listen`, endpoints `/sync/manifest` e `/sync/push` e autenticação Bearer opcional):
+O pacote `@inkgraph/mcp` expõe ferramentas sobre transporte `stdio` (`packages/mcp/src/toolDefinitions.ts`):
 
-### Ferramentas (`tools/call`)
-1. **`list_entities(filter)`**: Lista e filtra itens de lore por `type`, `tag` ou `status`.
-2. **`get_entity(id_or_alias)`**: Resolve qualquer alias, título ou ID para o dossiê completo.
-3. **`search_lore(query, mode, limit)`**: Busca textual completa (FTS5) ou exata no cânone e manuscritos.
+### Ferramentas Implementadas (`tools/call`)
+1. **`list_entities(filter / type / status / tag)`**: Lista e filtra itens de lore por tipo, tag ou status.
+2. **`get_entity(id_or_alias)`**: Resolve qualquer alias, nome exato ou ID para o dossiê completo.
+3. **`search_lore(query, mode, limit)`**: Busca textual completa (`fts` via FTS5) ou exata (`exact`) no lore indexado.
 4. **`query_epistemic_state(entity_id, scene_id)`**: Inspeciona o que uma entidade sabe ou quais segredos estão retidos em determinado ponto da narrativa.
-5. **`get_timeline(from_scene, to_scene)`**: Retorna sequência causal, localização de personagens e transições de vínculos.
-6. **`propose_lore(markdown_content, rationale, filename)`**: Cria um rascunho em `./workspace/staging/` sem contaminar o cânone.
+5. **`get_timeline(from_scene, to_scene)`**: Retorna sequência causal, transições de relacionamentos e revelações entre cenas.
+6. **`propose_lore(markdown_content, rationale, filename)`**: Cria um rascunho em `./workspace/staging/` com validação de path seguro (`resolveSafeStagingPath`) sem contaminar o cânone.
 7. **`propose_scene(outline_ref, scene_data, title, scene_id, rationale)`**: Gera proposta de cena em `./workspace/staging/` respeitando a continuidade.
 8. **`get_relationships()`**: Retorna o grafo de relacionamentos entre entidades (alianças, hostilidades, sentimentos).
-9. **`resume_work()`**: Retorna um briefing instantâneo do estúdio (cenas, staging pendente, erros de parse e histórico de undo ativo).
-10. **`read_manuscript(scene_id, cursor, max_words)`**: Lê cenas do manuscrito com paginação por palavras para respeitar limites de contexto.
-11. **`get_scene_context(scene_id, pov_entity_id)`**: Retorna prosa da cena, POV e briefing epistêmico filtrado (`known` vs `withheld`).
-12. **`propose_prose_edit(scene_id, expected_version, proposed_content, rationale, client_name, dry_run)`**: Edita rascunho ou envia para staging com trava otimista de versão e suporte a `dry_run`.
-13. **`undo_change_set(undo_id)`**: Reverte uma edição direta recente em até 24 horas pelo `undo_id`.
-14. **`upsert_beat(scene_id, beat_id, body, kind, entity_id, secret)`**: Insere ou atualiza diretivas em linha `::beat{...}` ou `::epistemic-reveal{...}` em rascunhos staged.
-
-### Recursos (`resources/read`) e Prompts (`prompts/get`)
-- **Recursos:** `inkgraph://books`, `inkgraph://lore/<id>`, `inkgraph://scene/<id>`, `inkgraph://epistemic/<scene_id>`.
-- **Prompts:** `resume`, `draft-scene`, `audit-epistemic`, `canon-check`.
 
 ---
 
 ## 5. Gate de Desenvolvimento e Verificação de Qualidade
 
 Antes de concluir qualquer alteração relevante:
-- Executar checagem de tipos em todos os pacotes: `corepack pnpm --filter @inkgraph/<pacote> typecheck`
-- Executar builds topológicos (`domain` -> `capabilities` -> `ai` -> `core` -> `mcp` -> `ui`)
-- Executar todas as suítes de testes automatizados (`vitest run` em todos os pacotes)
-- Verificar integridade do `.gitignore`: confirmar que `./workspace/` e bancos locais não estão rastreados no Git.
+- Executar checagem de tipos em todos os pacotes: `pnpm typecheck` (ou `corepack pnpm -r run typecheck`)
+- Executar builds em todos os pacotes: `pnpm build` (ou `corepack pnpm -r run build`)
+- Executar todas as suítes de testes automatizados (`pnpm test`)
+- Verificar integridade do `.gitignore`: confirmar via `git status --ignored -s` que `./workspace/` e bancos locais não estão rastreados no Git.
