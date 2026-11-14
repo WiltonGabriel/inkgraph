@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react';
 import { FileOutput, Copy, Sparkles, Check, Download } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import { CompileWizardModal } from '../components/publishing/CompileWizardModal';
+import { ExportPreflightCard } from '../components/publishing/ExportPreflightCard';
 
 type ExportFormat = 'md' | 'txt' | 'norm_txt' | 'html' | 'json';
 
 export function ExportView() {
-  const { project, updateProject, exportProjectJson } = useProject();
+  const { project, updateProject, exportProjectJson, setActiveView, setActiveSceneId } = useProject();
   const [includeTitle, setIncludeTitle] = useState(true);
   const [includeManuscript, setIncludeManuscript] = useState(true);
   const [includeCharacters, setIncludeCharacters] = useState(true);
@@ -101,6 +102,16 @@ export function ExportView() {
           </button>
         </div>
       </div>
+
+      <ExportPreflightCard
+        project={project}
+        onOpenCanonRadar={() => setActiveView('canon-radar')}
+        onOpenVersions={() => setActiveView('versions')}
+        onOpenManuscriptScene={(sceneId) => {
+          setActiveSceneId(sceneId);
+          setActiveView('manuscript');
+        }}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

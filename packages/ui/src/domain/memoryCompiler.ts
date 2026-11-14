@@ -126,7 +126,7 @@ function collectEntitySecrets(project: ProjectData): {
   return entries;
 }
 
-function detectSceneEpistemicAlerts(
+export function detectSceneEpistemicAlerts(
   project: ProjectData,
   scene: Scene | undefined,
   trackingEnabled: boolean
