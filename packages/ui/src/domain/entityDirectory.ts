@@ -286,11 +286,6 @@ export function cascadeDeleteEntity(
     objectIds: kind === 'object' ? sc.objectIds.filter((oid) => oid !== id) : sc.objectIds,
   }));
 
-  const interviews =
-    kind === 'character'
-      ? project.interviews.filter((iv) => iv.characterId !== id)
-      : project.interviews;
-
   const mindMaps = project.mindMaps.map((mm) => ({
     ...mm,
     nodes: mm.nodes.map((node) =>
@@ -307,7 +302,6 @@ export function cascadeDeleteEntity(
     worlds,
     objects,
     scenes,
-    interviews,
     mindMaps,
   };
 }

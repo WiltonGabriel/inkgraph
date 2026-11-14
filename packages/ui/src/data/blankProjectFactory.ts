@@ -56,7 +56,6 @@ export function createBlankProjectData(title = 'Minha História Sem Título'): P
     subplots: [],
     plotConnections: [],
     binder: [],
-    interviews: [],
     mindMaps: [],
     branches: [
       {

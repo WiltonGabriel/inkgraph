@@ -4,7 +4,6 @@ import type {
   Subplot,
   PlotConnection,
   BinderItem,
-  CharacterInterview,
   MindMap,
   StagingProposal,
   WritingLogEntry,
@@ -231,30 +230,6 @@ export const DEMO_BINDER: BinderItem[] = [
       'Cada cilindro mnemônico de grau real sustenta 12 horas de aquecimento para o Anel Interno. Sem novos cilindros, a geada avança 400 metros por hora.',
     linkedSceneIds: ['scene_02_archive', 'scene_04_throne'],
     createdAt: '2026-11-03',
-  },
-];
-
-export const DEMO_INTERVIEWS: CharacterInterview[] = [
-  {
-    id: 'int_elias_1',
-    characterId: 'char_elias_vance',
-    title: 'Sessão 1: O Peso do Cerco de Vael',
-    archetype: 'hero',
-    updatedAt: 'Hoje, 21:30',
-    messages: [
-      {
-        id: 'm_1',
-        role: 'user',
-        text: 'Qual é a única coisa pela qual você sacrificaria todo o resto?',
-        timestamp: '21:28',
-      },
-      {
-        id: 'm_2',
-        role: 'character',
-        text: 'Que nenhum soldado da Terceira Legião morra acreditando que queimou inocentes por acidente. Eu já perdi meus olhos, meu posto e o sangue do meu irmão Julian. Minha reputação não vale o carvão que queima nas muralhas, mas a verdade sobre a ordem de Morrigan precisa sobreviver a mim.',
-        timestamp: '21:29',
-      },
-    ],
   },
 ];
 

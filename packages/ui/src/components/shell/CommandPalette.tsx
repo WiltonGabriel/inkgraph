@@ -104,7 +104,6 @@ export function CommandPalette() {
       { id: 'nav_graph', category: 'Navegação', label: 'Ir para Grafo de Relações Interativo', action: () => go('graph') },
       { id: 'nav_obj', category: 'Navegação', label: 'Ir para Objetos de História & Grupos', action: () => go('objects') },
       { id: 'nav_mm', category: 'Navegação', label: 'Ir para Mapas Mentais', action: () => go('mindmap') },
-      { id: 'nav_int', category: 'Navegação', label: 'Ir para Entrevistas com Personagens', action: () => go('interviews') },
       { id: 'nav_prev', category: 'Navegação', label: 'Ir para Visualização do Livro', action: () => go('preview') },
       { id: 'nav_prog', category: 'Navegação', label: 'Ir para Rastreador de Progresso', action: () => go('progress') },
       { id: 'nav_vc', category: 'Navegação', label: 'Ir para Controle de Versão & Staging', action: () => go('versions') },

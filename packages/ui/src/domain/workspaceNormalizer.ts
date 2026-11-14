@@ -145,7 +145,6 @@ export function normalizeWorkspaceData(raw: unknown): ProjectData | null {
     subplots: safeArray(obj.subplots, base.subplots),
     plotConnections: safeArray(obj.plotConnections, base.plotConnections),
     binder: normalizedBinder,
-    interviews: safeArray(obj.interviews, base.interviews),
     mindMaps: safeArray(obj.mindMaps, base.mindMaps),
     branches: normalizedBranches.length > 0 ? normalizedBranches : base.branches,
     activeBranchId:

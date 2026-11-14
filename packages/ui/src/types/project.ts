@@ -9,7 +9,6 @@ export type ViewId =
   | 'scenario'
   | 'canon-radar'
   | 'characters'
-  | 'interviews'
   | 'worlds'
   | 'factions'
   | 'graph'
@@ -366,22 +365,6 @@ export interface BinderItem {
   createdAt: string;
 }
 
-export interface InterviewMessage {
-  id: string;
-  role: 'user' | 'character';
-  text: string;
-  timestamp: string;
-}
-
-export interface CharacterInterview {
-  id: string;
-  characterId: string;
-  title: string;
-  archetype: CharacterArchetype;
-  messages: InterviewMessage[];
-  updatedAt: string;
-}
-
 export type MindMapNodeShape = 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'hexagon';
 
 export interface MindMapNode {
@@ -623,7 +606,6 @@ export interface ProjectData {
   subplots: Subplot[];
   plotConnections: PlotConnection[];
   binder: BinderItem[];
-  interviews: CharacterInterview[];
   mindMaps: MindMap[];
   branches: Branch[];
   activeBranchId: string;

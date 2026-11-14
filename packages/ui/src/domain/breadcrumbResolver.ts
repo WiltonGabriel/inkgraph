@@ -50,11 +50,6 @@ export const BREADCRUMB_TARGETS: BreadcrumbTarget[] = [
     aliases: ['personagens', 'characters', 'elenco'],
   },
   {
-    canonicalPath: 'InkGraph / Personagens & Conexões / Entrevistas',
-    view: 'interviews',
-    aliases: ['entrevistas', 'interviews'],
-  },
-  {
     canonicalPath: 'InkGraph / Personagens & Conexões / Grafo de Relações',
     view: 'graph',
     aliases: ['grafo', 'grafo de relacoes', 'grafo de relações', 'graph'],

@@ -38,9 +38,6 @@ const CanonRadarView = lazy(() =>
 const CharacterStudioView = lazy(() =>
   import('./views/CharacterStudioView').then((m) => ({ default: m.CharacterStudioView }))
 );
-const CharacterInterviewsView = lazy(() =>
-  import('./views/CharacterInterviewsView').then((m) => ({ default: m.CharacterInterviewsView }))
-);
 const FactionsStudioView = lazy(() =>
   import('./views/FactionsStudioView').then((m) => ({ default: m.FactionsStudioView }))
 );
@@ -410,7 +407,6 @@ function StudioWorkspace() {
               {activeView === 'scenario' && <ScenarioView />}
               {activeView === 'canon-radar' && <CanonRadarView />}
               {activeView === 'characters' && <CharacterStudioView />}
-              {activeView === 'interviews' && <CharacterInterviewsView />}
               {activeView === 'factions' && <FactionsStudioView />}
               {activeView === 'worlds' && <WorldbuildingStudioView />}
               {activeView === 'graph' && <PhysicsForceGraphView />}

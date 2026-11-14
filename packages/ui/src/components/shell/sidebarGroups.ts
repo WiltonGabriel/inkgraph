@@ -8,7 +8,6 @@ import {
   FileText,
   Radar,
   Users,
-  MessageSquare,
   Globe,
   Shield,
   Network,
@@ -88,7 +87,6 @@ export function buildSidebarGroups(
       label: t.sidebarGroups.charactersNetwork,
       items: [
         { id: 'characters', label: t.views.characters, icon: Users, badge: project.characters.length },
-        { id: 'interviews', label: t.views.interviews, icon: MessageSquare },
         { id: 'graph', label: t.views.graph, icon: Network },
         { id: 'mindmap', label: t.views.mindmap, icon: Share2 },
       ],

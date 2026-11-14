@@ -11,7 +11,6 @@ import {
   DEMO_OUTLINE,
   DEMO_SCENES,
   DEMO_BINDER,
-  DEMO_INTERVIEWS,
   DEMO_MIND_MAPS,
   DEMO_STAGING_PROPOSALS,
   DEMO_WRITING_LOGS,
@@ -39,7 +38,6 @@ export function createDemoProjectData(): ProjectData {
     outline: DEMO_OUTLINE,
     scenes: DEMO_SCENES,
     binder: DEMO_BINDER,
-    interviews: DEMO_INTERVIEWS,
     mindMaps: DEMO_MIND_MAPS,
     branches: [
       {

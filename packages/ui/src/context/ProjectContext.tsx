@@ -22,7 +22,6 @@ import type {
   Subplot,
   PlotConnection,
   BinderItem,
-  CharacterInterview,
   MindMap,
   Snapshot,
 } from '../types/project';
@@ -130,8 +129,6 @@ interface ProjectContextValue {
   deletePlotConnection: (id: string) => void;
   upsertBinderItem: (item: BinderItem) => void;
   deleteBinderItem: (id: string) => void;
-  upsertInterview: (interview: CharacterInterview) => void;
-  deleteInterview: (id: string) => void;
   upsertMindMap: (map: MindMap) => void;
   deleteMindMap: (id: string) => void;
   createSnapshot: (label: string) => void;
@@ -172,9 +169,11 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
     );
   }, [workspaces, activeWorkspaceId]);
 
-  const [activeView, setActiveViewState] = useState<ViewId>(
-    () => settings.defaultOpeningView || 'dashboard'
-  );
+  const [activeView, setActiveViewState] = useState<ViewId>(() => {
+    const opening = settings.defaultOpeningView as string | undefined;
+    if (!opening || opening === 'interviews') return 'dashboard';
+    return opening as ViewId;
+  });
   const [activeSubPath, setActiveSubPath] = useState<string>('');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [showPortal, setShowPortal] = useState<boolean>(
@@ -866,25 +865,6 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
     }));
   };
 
-  const upsertInterview = (interview: CharacterInterview) => {
-    updateProject((prev) => {
-      const exists = prev.interviews.some((i) => i.id === interview.id);
-      return {
-        ...prev,
-        interviews: exists
-          ? prev.interviews.map((i) => (i.id === interview.id ? interview : i))
-          : [...prev.interviews, interview],
-      };
-    });
-  };
-
-  const deleteInterview = (id: string) => {
-    updateProject((prev) => ({
-      ...prev,
-      interviews: prev.interviews.filter((i) => i.id !== id),
-    }));
-  };
-
   const upsertMindMap = (map: MindMap) => {
     updateProject((prev) => {
       const exists = prev.mindMaps.some((m) => m.id === map.id);
@@ -1046,8 +1026,6 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
         deletePlotConnection,
         upsertBinderItem,
         deleteBinderItem,
-        upsertInterview,
-        deleteInterview,
         upsertMindMap,
         deleteMindMap,
         createSnapshot,
