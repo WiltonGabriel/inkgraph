@@ -4,7 +4,7 @@ export interface NarrativeTemplate {
   category: 'Estrutura' | 'Gênero';
   arc: string;
   description: string;
-  sections: { title: string; description: string; act: 1 | 2 | 3; isTwist?: boolean }[];
+  sections: { title: string; description: string; act: number; isTwist?: boolean }[];
 }
 
 export const NARRATIVE_TEMPLATES: NarrativeTemplate[] = [

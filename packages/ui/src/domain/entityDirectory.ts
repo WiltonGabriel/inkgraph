@@ -5,7 +5,7 @@ import type {
   ProjectData,
 } from '../types/project';
 
-export type LoreDirectoryKind = 'character' | 'faction' | 'location' | 'system' | 'object';
+export type LoreDirectoryKind = 'character' | 'faction' | 'location' | 'system' | 'object' | 'custom';
 
 export interface LoreDirectoryEntry {
   id: string;
@@ -115,6 +115,24 @@ export function listDirectoryEntities(project: ProjectData): LoreDirectoryEntry[
       relationships: obj.relationships ?? [],
       epistemicSecrets: obj.epistemicSecrets ?? [],
     });
+  }
+
+  for (const [typeId, records] of Object.entries(project.customEntities ?? {})) {
+    const schema = project.workspaceConfig?.entitySchemas?.[typeId];
+    for (const rec of records) {
+      entries.push({
+        id: rec.id,
+        kind: 'custom',
+        name: rec.name,
+        aliases: rec.aliases ?? [],
+        status: rec.status ?? 'canon',
+        tags: rec.tags ?? [],
+        color: schema?.color || '#06b6d4',
+        subtitle: schema?.label || typeId,
+        relationships: rec.relationships ?? [],
+        epistemicSecrets: rec.epistemicSecrets ?? [],
+      });
+    }
   }
 
   return entries;

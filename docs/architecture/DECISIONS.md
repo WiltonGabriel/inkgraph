@@ -48,5 +48,12 @@ Todos os cálculos críticos e regras de negócio ficam isolados da camada de vi
 - Expõe 8 ferramentas (`list_entities`, `get_entity`, `search_lore`, `query_epistemic_state`, `get_timeline`, `propose_lore`, `propose_scene`, `get_relationships`) delegando escrita exclusivamente para `./workspace/staging/`.
 
 ### D. Estúdio Visual & Shell Desktop (`@inkgraph/ui`, `@inkgraph/desktop`)
-- **`@inkgraph/ui`:** Orquestração via `SettingsContext` (`draftSettings` vs `committedSettings`) e `ProjectContext`, views lazy-loaded (`React.lazy`), componentes granulares por domínio em `src/components/{canon-radar,common,dashboard,graph,manuscript,mind-map,publishing,scene-board,settings,shell,ui,world}` e testes cross-package em `packages/core/tests/`.
+- **`@inkgraph/ui`:** Orquestração via `SettingsContext` (`draftSettings` vs `committedSettings`) e `ProjectContext`, views lazy-loaded (`React.lazy`), componentes granulares por domínio em `src/components/{canon-radar,common,dashboard,graph,manuscript,mind-map,publishing,scene-board,settings,shell,ui,workspaceSettings,world}` e testes cross-package em `packages/core/tests/`.
 - **`@inkgraph/desktop`:** Estrutura nativa em Tauri v2 (`src-tauri/`) pronta para geração de binários desktop leves sem runtime Chromium acoplado.
+
+### E. Núcleo Modular, Configurações do Workspace e Plugins Declarativos
+- **`WorkspaceConfig` (`project.workspaceConfig`):** Armazena configurações exclusivas do livro/workspace — estrutura dinâmica de atos (`acts`), módulos ocultos (`disabledModules`, protegendo módulos essenciais), customizações de esquemas nativos e personalizados (`entitySchemas`), regras de cânone e plugins instalados.
+- **Registry Kernel (`packages/ui/src/domain/registry/`):**
+  - `entitySchemaRegistry.ts`: unifica esquemas nativos (`character`, `faction`, `location`, `rule_system`, `object`), tipos customizados do usuário, tipos introduzidos por plugins ativos e extensões de campos (`customFields` + `hiddenNativeFields`), além de projetar entidades unificadas (`listUnifiedEntities`).
+  - `moduleRegistry.ts`: catálogo canônico de módulos visíveis com filtragem por workspace e registro dinâmico de estúdios genéricos (`custom-entity`).
+  - `pluginEngine.ts`: validação estruturada de manifestos declarativos (`.inkplugin.json`, com esquema Zod espelhado em `@inkgraph/core/domain/pluginManifest.ts`), ativação/desativação sem código arbitrário, coleta de snippets `/` no CodeMirror, avaliação segura de regras regex de consistência e exportação/importação de modelos reutilizáveis (`.inktemplate.json`).

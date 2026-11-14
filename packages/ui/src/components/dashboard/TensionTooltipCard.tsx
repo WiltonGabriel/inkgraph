@@ -21,7 +21,12 @@ export function TensionTooltipCard({
   locationName,
   onOpenScene,
 }: TensionTooltipCardProps) {
-  const actMeta = ACT_META[scene.act];
+  const actMeta = ACT_META[scene.act] ?? {
+    label: `Ato ${scene.act}`,
+    shortLabel: `Ato ${scene.act}`,
+    color: 'var(--accent-primary, #6366f1)',
+    softBg: 'var(--accent-soft, rgba(99, 102, 241, 0.14))',
+  };
   const statusMeta = SCENE_STATUS_META[scene.status];
 
   return (

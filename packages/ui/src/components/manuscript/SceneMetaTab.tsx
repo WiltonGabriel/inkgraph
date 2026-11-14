@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Users } from 'lucide-react';
 import type { ProjectData, Scene, SceneStatus } from '../../types/project';
+import { DEFAULT_ACTS } from '../../data/defaultWorkspaceConfig';
 import { ACT_LABELS, SCENE_STATUS_LABELS } from './manuscriptMentions';
 import { SceneEpistemicChecklist } from './SceneEpistemicChecklist';
 
@@ -86,13 +87,18 @@ export function SceneMetaTab({ project, scene, onUpdateScene }: SceneMetaTabProp
             id="ink-scene-act"
             value={scene.act}
             onChange={(e) =>
-              onUpdateScene({ ...scene, act: Number(e.target.value) as 1 | 2 | 3 })
+              onUpdateScene({ ...scene, act: Number(e.target.value) })
             }
             style={fieldStyle}
           >
-            <option value={1}>{ACT_LABELS[1]}</option>
-            <option value={2}>{ACT_LABELS[2]}</option>
-            <option value={3}>{ACT_LABELS[3]}</option>
+            {(project.workspaceConfig?.acts && project.workspaceConfig.acts.length > 0
+              ? project.workspaceConfig.acts
+              : DEFAULT_ACTS
+            ).map((actDef) => (
+              <option key={actDef.number} value={actDef.number}>
+                {actDef.title || ACT_LABELS[actDef.number] || `Ato ${actDef.number}`}
+              </option>
+            ))}
           </select>
         </div>
       </div>

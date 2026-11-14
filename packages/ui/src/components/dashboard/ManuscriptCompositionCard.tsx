@@ -23,8 +23,8 @@ export function ManuscriptCompositionCard() {
   const readingTimeMinutes = Math.max(1, Math.ceil(totalWordCount / 220));
 
   const actBreakdowns = useMemo(
-    () => buildActBreakdowns(project.scenes, totalWordCount),
-    [project.scenes, totalWordCount]
+    () => buildActBreakdowns(project.scenes, totalWordCount, project.workspaceConfig?.acts),
+    [project.scenes, totalWordCount, project.workspaceConfig?.acts]
   );
   const statusBreakdowns = useMemo(
     () => buildStatusBreakdowns(project.scenes, totalWordCount),

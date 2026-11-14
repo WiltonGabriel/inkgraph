@@ -15,7 +15,7 @@ export const SCENE_STATUS_LABELS: Record<SceneStatus, string> = {
   final: 'Final',
 };
 
-export const ACT_LABELS: Record<1 | 2 | 3, string> = {
+export const ACT_LABELS: Record<number, string> = {
   1: 'Ato I',
   2: 'Ato II',
   3: 'Ato III',

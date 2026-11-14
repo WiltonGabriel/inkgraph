@@ -24,6 +24,8 @@ import type {
   BinderItem,
   MindMap,
   Snapshot,
+  WorkspaceConfig,
+  GenericEntityRecord,
 } from '../types/project';
 import { countWords } from '../types/project';
 import {
@@ -31,6 +33,7 @@ import {
   createBlankProjectData,
   type NarrativeTemplate,
 } from '../data/initialProjectData';
+import { createDefaultWorkspaceConfig } from '../data/defaultWorkspaceConfig';
 import { normalizeWorkspaceData } from '../domain/workspaceNormalizer';
 import { getDictionary, type AppDictionary } from '../i18n/translations';
 import { SettingsProvider, useSettings } from './SettingsContext';
@@ -63,6 +66,9 @@ interface ProjectContextValue {
   t: AppDictionary;
   activeView: ViewId;
   setActiveView: (v: ViewId) => void;
+  activeCustomEntityTypeId: string;
+  setActiveCustomEntityTypeId: (typeId: string) => void;
+  openCustomEntityStudio: (typeId: string) => void;
   activeSubPath: string;
   setActiveSubPath: (sub: string) => void;
   navigationHistory: string[];
@@ -142,6 +148,10 @@ interface ProjectContextValue {
   deleteBranch: (branchId: string) => void;
   resolveStagingProposal: (id: string, decision: 'approved' | 'rejected') => void;
   recordWritingSession: (wordsDelta: number, minutesDelta: number) => void;
+  // Modular Workspace & Custom Entities
+  updateWorkspaceConfig: (updater: (prev: WorkspaceConfig) => WorkspaceConfig) => void;
+  upsertCustomEntity: (record: GenericEntityRecord) => void;
+  deleteCustomEntity: (typeId: string, id: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -175,6 +185,7 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
     return opening as ViewId;
   });
   const [activeSubPath, setActiveSubPath] = useState<string>('');
+  const [activeCustomEntityTypeId, setActiveCustomEntityTypeId] = useState<string>('');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [showPortal, setShowPortal] = useState<boolean>(
     () => settings.startupBehavior === 'home'
@@ -234,6 +245,12 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
   const setActiveView = useCallback((v: ViewId) => {
     setActiveViewState(v);
     setActiveSubPath('');
+  }, []);
+
+  const openCustomEntityStudio = useCallback((typeId: string) => {
+    setActiveCustomEntityTypeId(typeId);
+    setActiveViewState('custom-entity');
+    setActiveSubPath(typeId);
   }, []);
 
   const recordBreadcrumbHistory = useCallback((canonical: string) => {
@@ -959,6 +976,49 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateWorkspaceConfig = useCallback(
+    (updater: (prev: WorkspaceConfig) => WorkspaceConfig) => {
+      updateProject((prev) => ({
+        ...prev,
+        workspaceConfig: updater(prev.workspaceConfig ?? createDefaultWorkspaceConfig()),
+      }));
+    },
+    []
+  );
+
+  const upsertCustomEntity = useCallback((record: GenericEntityRecord) => {
+    updateProject((prev) => {
+      const currentMap = prev.customEntities ?? {};
+      const list = currentMap[record.entityTypeId] ?? [];
+      const exists = list.some((item) => item.id === record.id);
+      const nextList = exists
+        ? list.map((item) => (item.id === record.id ? record : item))
+        : [...list, record];
+      return {
+        ...prev,
+        customEntities: {
+          ...currentMap,
+          [record.entityTypeId]: nextList,
+        },
+      };
+    });
+  }, []);
+
+  const deleteCustomEntity = useCallback((typeId: string, id: string) => {
+    updateProject((prev) => {
+      const currentMap = prev.customEntities ?? {};
+      const list = currentMap[typeId] ?? [];
+      const nextMap = {
+        ...currentMap,
+        [typeId]: list.filter((item) => item.id !== id),
+      };
+      return {
+        ...prev,
+        customEntities: nextMap,
+      };
+    });
+  }, []);
+
   return (
     <ProjectContext.Provider
       value={{
@@ -969,6 +1029,9 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
         t,
         activeView,
         setActiveView,
+        activeCustomEntityTypeId,
+        setActiveCustomEntityTypeId,
+        openCustomEntityStudio,
         activeSubPath,
         setActiveSubPath,
         navigationHistory,
@@ -1036,6 +1099,9 @@ function ProjectProviderInner({ children }: { children: ReactNode }) {
         deleteBranch,
         resolveStagingProposal,
         recordWritingSession,
+        updateWorkspaceConfig,
+        upsertCustomEntity,
+        deleteCustomEntity,
       }}
     >
       {children}

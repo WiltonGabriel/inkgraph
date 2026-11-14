@@ -56,6 +56,7 @@ export const BaseEntitySchema = z.object({
   tags: z.array(z.string()).default([]),
   relationships: z.array(RelationshipSchema).default([]),
   epistemic: EpistemicSchema.default({ secrets_kept: [], known_by: [] }),
+  custom_attributes: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type BaseEntity = z.infer<typeof BaseEntitySchema>;

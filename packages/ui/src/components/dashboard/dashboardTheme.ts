@@ -97,7 +97,7 @@ export const SCENE_STATUS_META: Record<
 };
 
 export const ACT_META: Record<
-  1 | 2 | 3,
+  number,
   { label: string; shortLabel: string; color: string; softBg: string }
 > = {
   1: {

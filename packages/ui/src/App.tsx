@@ -71,6 +71,12 @@ const StagingApprovalView = lazy(() =>
 const ExportView = lazy(() =>
   import('./views/ExportView').then((m) => ({ default: m.ExportView }))
 );
+const WorkspaceSettingsView = lazy(() =>
+  import('./views/WorkspaceSettingsView').then((m) => ({ default: m.WorkspaceSettingsView }))
+);
+const GenericEntityStudioView = lazy(() =>
+  import('./views/GenericEntityStudioView').then((m) => ({ default: m.GenericEntityStudioView }))
+);
 const SettingsView = lazy(() =>
   import('./views/SettingsView').then((m) => ({ default: m.SettingsView }))
 );
@@ -418,6 +424,8 @@ function StudioWorkspace() {
               {activeView === 'progress' && <ProgressTrackerView />}
               {activeView === 'versions' && <StagingApprovalView />}
               {activeView === 'export' && <ExportView />}
+              {activeView === 'custom-entity' && <GenericEntityStudioView />}
+              {activeView === 'workspace-settings' && <WorkspaceSettingsView />}
               {activeView === 'settings' && <SettingsView />}
               {activeView === 'help' && <HelpView />}
             </Suspense>

@@ -1,4 +1,5 @@
-import { countWords, type Scene, type SceneStatus } from '../../types/project';
+import { countWords, type ActDefinition, type Scene, type SceneStatus } from '../../types/project';
+import { DEFAULT_ACTS } from '../../data/defaultWorkspaceConfig';
 import { ACT_META, SCENE_STATUS_META } from './dashboardTheme';
 
 export interface CompositionBreakdownItem {
@@ -24,11 +25,13 @@ const STATUS_ORDER: SceneStatus[] = [
 
 export function buildActBreakdowns(
   scenes: Scene[],
-  totalWordCount: number
+  totalWordCount: number,
+  acts: ActDefinition[] = DEFAULT_ACTS
 ): CompositionBreakdownItem[] {
-  const acts: (1 | 2 | 3)[] = [1, 2, 3];
-  return acts.map((act, idx) => {
-    const filtered = scenes.filter((s) => s.act === act);
+  const orderedActs = [...acts].sort((a, b) => a.number - b.number);
+  const count = Math.max(1, orderedActs.length);
+  return orderedActs.map((actDef, idx) => {
+    const filtered = scenes.filter((s) => s.act === actDef.number);
     const words = filtered.reduce((acc, s) => acc + countWords(s.content), 0);
     const pctManuscript =
       totalWordCount > 0
@@ -36,17 +39,18 @@ export function buildActBreakdowns(
         : scenes.length > 0
           ? Math.round((filtered.length / scenes.length) * 100)
           : 0;
-    const meta = ACT_META[act];
+    const meta = ACT_META[actDef.number as 1 | 2 | 3];
+    const color = actDef.color || meta?.color || '#6366f1';
     return {
-      key: `act-${act}`,
-      title: meta.label,
-      subtitle: `${meta.shortLabel} (${filtered.length})`,
-      color: meta.color,
-      softBg: meta.softBg,
+      key: `act-${actDef.number}`,
+      title: actDef.title || meta?.label || `Ato ${actDef.number}`,
+      subtitle: `${meta?.shortLabel ?? `Ato ${actDef.number}`} (${filtered.length})`,
+      color,
+      softBg: meta?.softBg ?? 'rgba(99, 102, 241, 0.14)',
       scenes: filtered,
       words,
       pctManuscript,
-      xPercent: ((idx + 0.5) / 3) * 100,
+      xPercent: ((idx + 0.5) / count) * 100,
       targetView: 'plotboard',
     };
   });

@@ -27,6 +27,7 @@ const KIND_LABELS: Record<CanonSuggestedEntityKind, string> = {
   location: 'Local',
   object: 'Objeto',
   system: 'Sistema',
+  custom: 'Entidade Customizada',
 };
 
 interface CanonFindingsListCardProps {

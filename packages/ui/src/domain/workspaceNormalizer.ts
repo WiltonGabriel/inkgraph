@@ -1,5 +1,117 @@
-import type { ProjectData } from '../types/project';
+import type {
+  GenericEntityRecord,
+  InkGraphPluginManifest,
+  ProjectData,
+  WorkspaceConfig,
+} from '../types/project';
 import { createBlankProjectData } from '../data/blankProjectFactory';
+import { createDefaultWorkspaceConfig } from '../data/defaultWorkspaceConfig';
+
+function normalizeWorkspaceConfig(raw: unknown): WorkspaceConfig {
+  const defaults = createDefaultWorkspaceConfig();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return defaults;
+  }
+  const cfg = raw as Partial<WorkspaceConfig>;
+  const acts =
+    Array.isArray(cfg.acts) && cfg.acts.length > 0
+      ? cfg.acts
+          .filter((a) => a && typeof a.number === 'number' && typeof a.title === 'string')
+          .map((a, idx) => ({
+            number: a.number > 0 ? a.number : idx + 1,
+            title: a.title.trim() || `Ato ${idx + 1}`,
+            color: typeof a.color === 'string' && a.color ? a.color : '#6366f1',
+            description: typeof a.description === 'string' ? a.description : '',
+          }))
+      : defaults.acts;
+
+  const entitySchemas = { ...defaults.entitySchemas };
+  if (cfg.entitySchemas && typeof cfg.entitySchemas === 'object') {
+    for (const [id, schema] of Object.entries(cfg.entitySchemas)) {
+      if (!schema || typeof schema !== 'object') continue;
+      const base = defaults.entitySchemas[id];
+      entitySchemas[id] = {
+        ...(base ?? {}),
+        ...schema,
+        id,
+        hiddenNativeFields: Array.isArray(schema.hiddenNativeFields)
+          ? schema.hiddenNativeFields
+          : (base?.hiddenNativeFields ?? []),
+        customFields: Array.isArray(schema.customFields)
+          ? schema.customFields
+          : (base?.customFields ?? []),
+      };
+    }
+  }
+
+  const incomingPlugins = Array.isArray(cfg.plugins) ? cfg.plugins : [];
+  const mergedPlugins: InkGraphPluginManifest[] = defaults.plugins.map((sample) => {
+    const existing = incomingPlugins.find((p) => p?.id === sample.id);
+    if (!existing) return sample;
+    return {
+      ...sample,
+      enabled: typeof existing.enabled === 'boolean' ? existing.enabled : sample.enabled,
+      settingsValues:
+        existing.settingsValues && typeof existing.settingsValues === 'object'
+          ? { ...(sample.settingsValues ?? {}), ...existing.settingsValues }
+          : sample.settingsValues,
+    };
+  });
+  for (const p of incomingPlugins) {
+    if (p && typeof p.id === 'string' && !mergedPlugins.some((m) => m.id === p.id)) {
+      mergedPlugins.push(p);
+    }
+  }
+
+  return {
+    schemaVersion: typeof cfg.schemaVersion === 'number' ? cfg.schemaVersion : defaults.schemaVersion,
+    activeTemplateId: typeof cfg.activeTemplateId === 'string' ? cfg.activeTemplateId : undefined,
+    acts,
+    disabledModules: Array.isArray(cfg.disabledModules)
+      ? cfg.disabledModules.filter((id): id is string => typeof id === 'string')
+      : [],
+    entitySchemas,
+    plugins: mergedPlugins,
+    canonSettings: {
+      requireStagingForCopilot:
+        cfg.canonSettings?.requireStagingForCopilot ?? defaults.canonSettings.requireStagingForCopilot,
+      autoTrackEpistemic:
+        cfg.canonSettings?.autoTrackEpistemic ?? defaults.canonSettings.autoTrackEpistemic,
+      strictEntityRefs:
+        cfg.canonSettings?.strictEntityRefs ?? defaults.canonSettings.strictEntityRefs,
+    },
+  };
+}
+
+function normalizeCustomEntities(raw: unknown): Record<string, GenericEntityRecord[]> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+  const result: Record<string, GenericEntityRecord[]> = {};
+  for (const [typeId, list] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(list)) continue;
+    result[typeId] = list
+      .filter((item): item is Partial<GenericEntityRecord> => Boolean(item && typeof item === 'object'))
+      .map((item, idx) => ({
+        id: typeof item.id === 'string' && item.id ? item.id : `ent_${typeId}_${idx + 1}`,
+        entityTypeId: typeId,
+        name: typeof item.name === 'string' ? item.name : 'Sem nome',
+        aliases: Array.isArray(item.aliases) ? item.aliases : [],
+        status: item.status === 'canon' || item.status === 'provisional' || item.status === 'draft' ? item.status : 'draft',
+        summary: typeof item.summary === 'string' ? item.summary : '',
+        notes: typeof item.notes === 'string' ? item.notes : '',
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        customAttributes:
+          item.customAttributes && typeof item.customAttributes === 'object'
+            ? (item.customAttributes as Record<string, unknown>)
+            : {},
+        relationships: Array.isArray(item.relationships) ? item.relationships : [],
+        epistemicSecrets: Array.isArray(item.epistemicSecrets) ? item.epistemicSecrets : [],
+        updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(),
+      }));
+  }
+  return result;
+}
 
 /**
  * Allows only valid http:// or https:// external URLs.
@@ -163,6 +275,8 @@ export function normalizeWorkspaceData(raw: unknown): ProjectData | null {
         typeof rawCompile.acknowledgements === 'string' ? rawCompile.acknowledgements : '',
       imprint: typeof rawCompile.imprint === 'string' ? rawCompile.imprint : '',
     },
+    workspaceConfig: normalizeWorkspaceConfig(obj.workspaceConfig),
+    customEntities: normalizeCustomEntities(obj.customEntities),
     updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : base.updatedAt,
   };
 }

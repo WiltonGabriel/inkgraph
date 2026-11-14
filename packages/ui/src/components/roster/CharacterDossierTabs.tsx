@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Trash2, Lock } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import {
   calculateCharacterCompleteness,
   type Character,
   type CharacterArchetype,
 } from '../../types/project';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 import { CompletenessRing } from '../ui/CompletenessRing';
 
 interface CharacterDossierTabsProps {
@@ -14,6 +16,8 @@ interface CharacterDossierTabsProps {
 
 export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
   const { project, upsertCharacter, deleteCharacter } = useProject();
+  const schema = getEntitySchema(project, 'character');
+  const hiddenFields = new Set(schema?.hiddenNativeFields ?? []);
   const [activeTab, setActiveTab] = useState<
     'profile' | 'arc' | 'relationships' | 'epistemic' | 'notes'
   >('profile');
@@ -205,24 +209,28 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
               </div>
             </div>
 
-            <div>
-              <label style={labelStyle}>Aparência</label>
-              <textarea
-                rows={3}
-                value={selected.appearance}
-                onChange={(e) => upsertCharacter({ ...selected, appearance: e.target.value })}
-                style={textareaStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>História de Fundo (Backstory)</label>
-              <textarea
-                rows={4}
-                value={selected.backstory}
-                onChange={(e) => upsertCharacter({ ...selected, backstory: e.target.value })}
-                style={textareaStyle}
-              />
-            </div>
+            {!hiddenFields.has('appearance') && (
+              <div>
+                <label style={labelStyle}>Aparência</label>
+                <textarea
+                  rows={3}
+                  value={selected.appearance}
+                  onChange={(e) => upsertCharacter({ ...selected, appearance: e.target.value })}
+                  style={textareaStyle}
+                />
+              </div>
+            )}
+            {!hiddenFields.has('backstory') && (
+              <div>
+                <label style={labelStyle}>História de Fundo (Backstory)</label>
+                <textarea
+                  rows={4}
+                  value={selected.backstory}
+                  onChange={(e) => upsertCharacter({ ...selected, backstory: e.target.value })}
+                  style={textareaStyle}
+                />
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Motivação</label>
@@ -254,6 +262,17 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
                 style={textareaStyle}
               />
             </div>
+
+            {schema && schema.customFields.length > 0 && (
+              <DynamicFieldRenderer
+                title={`Campos Personalizados (${schema.label})`}
+                fields={schema.customFields}
+                values={selected.customAttributes ?? {}}
+                onChange={(nextAttrs) =>
+                  upsertCharacter({ ...selected, customAttributes: nextAttrs })
+                }
+              />
+            )}
           </div>
         )}
 

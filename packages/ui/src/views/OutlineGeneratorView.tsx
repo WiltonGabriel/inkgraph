@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
 import type { OutlineSection } from '../types/project';
+import { DEFAULT_ACTS } from '../data/defaultWorkspaceConfig';
 import type { NarrativeTemplate } from '../data/templatesCatalog';
 import { OutlineTemplateModal } from '../components/outline/OutlineTemplateModal';
 import { checkAiAvailability } from '../domain/aiAvailability';
@@ -39,13 +40,21 @@ export function OutlineGeneratorView() {
   const [aiGateOpen, setAiGateOpen] = useState(false);
   const aiStatus = checkAiAvailability(settings);
 
+  const activeActs =
+    project.workspaceConfig?.acts && project.workspaceConfig.acts.length > 0
+      ? [...project.workspaceConfig.acts].sort((a, b) => a.number - b.number)
+      : DEFAULT_ACTS;
+
   const generateLocalOutline = () => {
     const baseIdea = prompt.trim() || 'o conflito central';
     const generated: OutlineSection[] = Array.from(
       { length: Math.max(3, Math.min(20, chapterCount)) },
       (_, idx) => {
-        const ratio = (idx + 1) / chapterCount;
-        const act: 1 | 2 | 3 = ratio <= 0.28 ? 1 : ratio <= 0.78 ? 2 : 3;
+        const actIndex = Math.min(
+          activeActs.length - 1,
+          Math.floor((idx / Math.max(1, chapterCount)) * activeActs.length)
+        );
+        const act = activeActs[actIndex]?.number ?? 1;
         const isTwistBeat =
           includeTwist && idx === Math.floor(chapterCount * 0.65);
 
@@ -486,16 +495,18 @@ export function OutlineGeneratorView() {
                     setOutline(
                       project.outline.map((s) =>
                         s.id === sec.id
-                          ? { ...s, act: Number(e.target.value) as 1 | 2 | 3 }
+                          ? { ...s, act: Number(e.target.value) }
                           : s
                       )
                     )
                   }
-                  style={{ ...inputStyle, width: 95 }}
+                  style={{ ...inputStyle, width: 130 }}
                 >
-                  <option value={1}>Ato I</option>
-                  <option value={2}>Ato II</option>
-                  <option value={3}>Ato III</option>
+                  {activeActs.map((actDef) => (
+                    <option key={actDef.number} value={actDef.number}>
+                      {actDef.title.split('—')[0].trim()}
+                    </option>
+                  ))}
                 </select>
                 <button
                   type="button"

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Cpu, Plus, Trash2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import { useViewport } from '../../hooks/useViewport';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 import { scoreRuleSystemMaturity } from '../../domain/canonScoreCalculator';
 import type { CanonStatus, RuleSystem, World } from '../../types/project';
 import { CanonBadgePill, worldStyles } from './WorldScoreChecklistBanner';
@@ -184,6 +186,19 @@ export function WorldSystemsTab({ world, onUpdateWorld }: { world: World; onUpda
                 </div>
               </div>
             )}
+
+            {(() => {
+              const sysSchema = getEntitySchema(project, 'rule_system');
+              if (!sysSchema || sysSchema.customFields.length === 0) return null;
+              return (
+                <DynamicFieldRenderer
+                  title={`Campos Personalizados (${sysSchema.label})`}
+                  fields={sysSchema.customFields}
+                  values={sys.customAttributes ?? {}}
+                  onChange={(nextAttrs) => handleUpdateSystem(sys.id, { customAttributes: nextAttrs })}
+                />
+              );
+            })()}
           </div>
         );
       })}

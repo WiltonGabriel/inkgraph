@@ -26,7 +26,8 @@ export type CanonSuggestedEntityKind =
   | 'faction'
   | 'location'
   | 'object'
-  | 'system';
+  | 'system'
+  | 'custom';
 
 export interface CanonRadarFinding {
   id: string;
@@ -459,7 +460,7 @@ export function scanProjectCanon(
 function mapSuggestedKindToProposalType(
   kind: CanonSuggestedEntityKind
 ): StagingProposal['entityType'] {
-  if (kind === 'object') return 'item';
+  if (kind === 'object' || kind === 'custom') return 'item';
   return kind;
 }
 

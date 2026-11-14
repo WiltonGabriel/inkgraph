@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Trash2, Lock } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import {
   calculateFactionCompleteness,
   type Faction,
 } from '../../types/project';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 import { CompletenessRing } from '../ui/CompletenessRing';
 
 interface FactionDossierTabsProps {
@@ -12,7 +14,9 @@ interface FactionDossierTabsProps {
 }
 
 export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
-  const { upsertFaction, deleteFaction } = useProject();
+  const { project, upsertFaction, deleteFaction } = useProject();
+  const schema = getEntitySchema(project, 'faction');
+  const hiddenFields = new Set(schema?.hiddenNativeFields ?? []);
   const [activeTab, setActiveTab] = useState<
     'doctrine' | 'hierarchy' | 'diplomacy' | 'secrets'
   >('doctrine');
@@ -122,14 +126,16 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 />
               </div>
             </div>
-            <div>
-              <label style={labelStyle}>Lema Oficial (Motto)</label>
-              <input
-                value={selected.motto}
-                onChange={(e) => upsertFaction({ ...selected, motto: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
+            {!hiddenFields.has('motto') && (
+              <div>
+                <label style={labelStyle}>Lema Oficial (Motto)</label>
+                <input
+                  value={selected.motto}
+                  onChange={(e) => upsertFaction({ ...selected, motto: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Agenda Pública (Propaganda)</label>
@@ -142,27 +148,31 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                   style={textareaStyle}
                 />
               </div>
+              {!hiddenFields.has('secretAgenda') && (
+                <div>
+                  <label style={labelStyle}>Agenda Secreta (Objetivo Real)</label>
+                  <textarea
+                    rows={3}
+                    value={selected.secretAgenda}
+                    onChange={(e) =>
+                      upsertFaction({ ...selected, secretAgenda: e.target.value })
+                    }
+                    style={textareaStyle}
+                  />
+                </div>
+              )}
+            </div>
+            {!hiddenFields.has('doctrine') && (
               <div>
-                <label style={labelStyle}>Agenda Secreta (Objetivo Real)</label>
+                <label style={labelStyle}>Doutrina, Dogmas & Código Interno</label>
                 <textarea
                   rows={3}
-                  value={selected.secretAgenda}
-                  onChange={(e) =>
-                    upsertFaction({ ...selected, secretAgenda: e.target.value })
-                  }
+                  value={selected.doctrine}
+                  onChange={(e) => upsertFaction({ ...selected, doctrine: e.target.value })}
                   style={textareaStyle}
                 />
               </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Doutrina, Dogmas & Código Interno</label>
-              <textarea
-                rows={3}
-                value={selected.doctrine}
-                onChange={(e) => upsertFaction({ ...selected, doctrine: e.target.value })}
-                style={textareaStyle}
-              />
-            </div>
+            )}
             <div>
               <label style={labelStyle}>História de Fundação & Evolução</label>
               <textarea
@@ -172,6 +182,17 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 style={textareaStyle}
               />
             </div>
+
+            {schema && schema.customFields.length > 0 && (
+              <DynamicFieldRenderer
+                title={`Campos Personalizados (${schema.label})`}
+                fields={schema.customFields}
+                values={selected.customAttributes ?? {}}
+                onChange={(nextAttrs) =>
+                  upsertFaction({ ...selected, customAttributes: nextAttrs })
+                }
+              />
+            )}
           </div>
         )}
 

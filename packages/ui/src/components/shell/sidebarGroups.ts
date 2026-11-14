@@ -22,9 +22,16 @@ import {
 } from 'lucide-react';
 import type { AppDictionary } from '../../i18n/translations';
 import type { ProjectData, ViewId } from '../../types/project';
+import {
+  getEffectiveEntitySchemas,
+  isModuleEnabled,
+  listCustomEntitySidebarEntries,
+} from '../../domain/registry';
+import { resolveEntityIcon } from '../common/entityIconResolver';
 
 export interface SidebarNavItemData {
   id: ViewId;
+  customEntityTypeId?: string;
   label: string;
   icon: typeof LayoutDashboard;
   badge?: number;
@@ -43,6 +50,8 @@ export function buildSidebarGroups(
 ): SidebarNavGroup[] {
   const hiddenSet = new Set(hiddenViews);
   const pendingProposals = project.stagingProposals.filter((p) => p.status === 'pending').length;
+  const schemas = getEffectiveEntitySchemas(project);
+  const customEntries = listCustomEntitySidebarEntries(project);
 
   const rawGroups: SidebarNavGroup[] = [
     {
@@ -86,7 +95,12 @@ export function buildSidebarGroups(
       key: 'charactersNetwork',
       label: t.sidebarGroups.charactersNetwork,
       items: [
-        { id: 'characters', label: t.views.characters, icon: Users, badge: project.characters.length },
+        {
+          id: 'characters',
+          label: schemas.character?.pluralLabel || t.views.characters,
+          icon: Users,
+          badge: project.characters.length,
+        },
         { id: 'graph', label: t.views.graph, icon: Network },
         { id: 'mindmap', label: t.views.mindmap, icon: Share2 },
       ],
@@ -96,8 +110,25 @@ export function buildSidebarGroups(
       label: t.sidebarGroups.universe,
       items: [
         { id: 'worlds', label: t.views.worlds, icon: Globe },
-        { id: 'factions', label: t.views.factions, icon: Shield, badge: project.factions.length },
-        { id: 'objects', label: t.views.objects, icon: Package, badge: project.objects.length },
+        {
+          id: 'factions',
+          label: schemas.faction?.pluralLabel || t.views.factions,
+          icon: Shield,
+          badge: project.factions.length,
+        },
+        {
+          id: 'objects',
+          label: schemas.object?.pluralLabel || t.views.objects,
+          icon: Package,
+          badge: project.objects.length,
+        },
+        ...customEntries.map(({ typeDef, count }) => ({
+          id: 'custom-entity' as ViewId,
+          customEntityTypeId: typeDef.id,
+          label: typeDef.pluralLabel || typeDef.label,
+          icon: resolveEntityIcon(typeDef.iconName),
+          badge: count > 0 ? count : undefined,
+        })),
       ],
     },
   ];
@@ -105,7 +136,12 @@ export function buildSidebarGroups(
   return rawGroups
     .map((grp) => ({
       ...grp,
-      items: grp.items.filter((item) => !hiddenSet.has(item.id)),
+      items: grp.items.filter(
+        (item) =>
+          item.customEntityTypeId
+            ? !hiddenSet.has(item.id)
+            : !hiddenSet.has(item.id) && isModuleEnabled(project, item.id)
+      ),
     }))
     .filter((grp) => grp.items.length > 0);
 }

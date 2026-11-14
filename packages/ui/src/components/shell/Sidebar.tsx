@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Settings,
+  SlidersHorizontal,
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -15,6 +16,8 @@ export function Sidebar() {
   const {
     activeView,
     setActiveView,
+    activeCustomEntityTypeId,
+    openCustomEntityStudio,
     project,
     settings,
     toggleSidebarGroup,
@@ -194,16 +197,29 @@ export function Sidebar() {
                     marginTop: collapsed ? 0 : 2,
                   }}
                 >
-                  {grp.items.map((item) => (
-                    <SidebarNavItem
-                      key={item.id}
-                      item={item}
-                      isActive={activeView === item.id}
-                      collapsed={collapsed}
-                      indicatorStyle={indicatorStyle}
-                      onSelect={() => setActiveView(item.id)}
-                    />
-                  ))}
+                  {grp.items.map((item) => {
+                    const isCustom = Boolean(item.customEntityTypeId);
+                    const isActive = isCustom
+                      ? activeView === 'custom-entity' &&
+                        activeCustomEntityTypeId === item.customEntityTypeId
+                      : activeView === item.id;
+                    return (
+                      <SidebarNavItem
+                        key={item.customEntityTypeId ? `custom:${item.customEntityTypeId}` : item.id}
+                        item={item}
+                        isActive={isActive}
+                        collapsed={collapsed}
+                        indicatorStyle={indicatorStyle}
+                        onSelect={() => {
+                          if (item.customEntityTypeId) {
+                            openCustomEntityStudio(item.customEntityTypeId);
+                          } else {
+                            setActiveView(item.id);
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -220,6 +236,17 @@ export function Sidebar() {
           gap: 2,
         }}
       >
+        <SidebarNavItem
+          item={{
+            id: 'workspace-settings',
+            label: t.views['workspace-settings'],
+            icon: SlidersHorizontal,
+          }}
+          isActive={activeView === 'workspace-settings'}
+          collapsed={collapsed}
+          indicatorStyle={indicatorStyle}
+          onSelect={() => setActiveView('workspace-settings')}
+        />
         <SidebarNavItem
           item={{ id: 'settings', label: t.views.settings, icon: Settings }}
           isActive={activeView === 'settings'}

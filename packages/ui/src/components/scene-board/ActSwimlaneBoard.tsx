@@ -1,17 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, ArrowLeft, ArrowRight, User } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { DEFAULT_ACTS } from '../../data/defaultWorkspaceConfig';
 import { countWords, type Scene, type SceneStatus } from '../../types/project';
 
 interface ActSwimlaneBoardProps {
   selectedSubplotId: string | null;
 }
-
-const ACTS: { act: 1 | 2 | 3; label: string }[] = [
-  { act: 1, label: 'Ato 1 – Configuração' },
-  { act: 2, label: 'Ato 2 – Conflito' },
-  { act: 3, label: 'Ato 3 – Resolução' },
-];
 
 const STATUS_LABELS: Record<SceneStatus, string> = {
   outline: 'Esboço',
@@ -26,13 +21,21 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const reducedMotion = settings.reducedMotion || !settings.enableAnimations || settings.lowPowerMode;
 
+  const acts = useMemo(() => {
+    const base =
+      project.workspaceConfig?.acts && project.workspaceConfig.acts.length > 0
+        ? project.workspaceConfig.acts
+        : DEFAULT_ACTS;
+    return [...base].sort((a, b) => a.number - b.number);
+  }, [project.workspaceConfig?.acts]);
+
   const toggleSceneSubplot = (scene: Scene, subplotId: string) => {
     const exists = scene.subplotIds.includes(subplotId);
     const nextIds = exists ? scene.subplotIds.filter((id) => id !== subplotId) : [...scene.subplotIds, subplotId];
     upsertScene({ ...scene, subplotIds: nextIds });
   };
 
-  const handleAddScene = (act: 1 | 2 | 3) => {
+  const handleAddScene = (act: number) => {
     const nextNum = project.scenes.length + 1;
     const newScene: Scene = {
       id: `scene_${Date.now()}`,
@@ -59,14 +62,37 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
 
   return (
     <div style={boardGridStyle}>
-      {ACTS.map(({ act, label }) => {
+      {acts.map((actDef, actIdx) => {
+        const act = actDef.number;
+        const prevAct = actIdx > 0 ? acts[actIdx - 1].number : null;
+        const nextAct = actIdx < acts.length - 1 ? acts[actIdx + 1].number : null;
         const scenes = project.scenes.filter(
           (s) => s.act === act && (!selectedSubplotId || s.subplotIds.includes(selectedSubplotId))
         );
         return (
           <div key={act} style={columnStyle}>
             <div style={columnHeaderStyle}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: actDef.color,
+                    flexShrink: 0,
+                  }}
+                />
+                {actDef.title}
+              </span>
               <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 {scenes.length === 1 ? '1 cena' : `${scenes.length} cenas`}
               </span>
@@ -175,12 +201,12 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                       </div>
 
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                        {act > 1 && (
+                        {prevAct !== null && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              upsertScene({ ...scene, act: (act - 1) as 1 | 2 | 3 });
+                              upsertScene({ ...scene, act: prevAct });
                             }}
                             title="Mover para ato anterior"
                             style={moveBtnStyle}
@@ -188,12 +214,12 @@ export function ActSwimlaneBoard({ selectedSubplotId }: ActSwimlaneBoardProps) {
                             <ArrowLeft size={12} />
                           </button>
                         )}
-                        {act < 3 && (
+                        {nextAct !== null && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              upsertScene({ ...scene, act: (act + 1) as 1 | 2 | 3 });
+                              upsertScene({ ...scene, act: nextAct });
                             }}
                             title="Mover para próximo ato"
                             style={moveBtnStyle}

@@ -84,6 +84,13 @@ export function CommandPalette() {
         action: () => go('critic'),
       },
       {
+        id: 'cmd_workspace_settings',
+        category: 'Workspace & Modelo',
+        label: 'Configurações do Workspace (Atos, Entidades, Módulos & Plugins)',
+        hint: 'Personalizar esquema, campos e plugins deste livro',
+        action: () => go('workspace-settings'),
+      },
+      {
         id: 'cmd_copilot',
         category: 'Comandos IA',
         label: 'Alternar Copiloto Lateral',

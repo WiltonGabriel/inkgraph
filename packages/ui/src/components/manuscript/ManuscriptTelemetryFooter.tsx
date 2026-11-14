@@ -37,7 +37,7 @@ export function ManuscriptTelemetryFooter({
     >
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <span>
-          Capítulo {scene.chapterNumber} · {ACT_LABELS[scene.act]}
+          Capítulo {scene.chapterNumber} · {ACT_LABELS[scene.act] ?? `Ato ${scene.act}`}
         </span>
         <span style={{ color: 'var(--text-muted)' }}>·</span>
         <span>

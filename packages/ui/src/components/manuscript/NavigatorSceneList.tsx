@@ -6,11 +6,13 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { countWords, type Scene } from '../../types/project';
+import { countWords, type ActDefinition, type Scene } from '../../types/project';
+import { DEFAULT_ACTS } from '../../data/defaultWorkspaceConfig';
 import { ACT_LABELS, SCENE_STATUS_LABELS } from './manuscriptMentions';
 
 interface NavigatorSceneListProps {
   scenes: Scene[];
+  acts?: ActDefinition[];
   activeSceneId: string;
   query: string;
   onSelectScene: (id: string) => void;
@@ -18,10 +20,9 @@ interface NavigatorSceneListProps {
   onDeleteScene: (id: string) => void;
 }
 
-const ACTS: (1 | 2 | 3)[] = [1, 2, 3];
-
 export function NavigatorSceneList({
   scenes,
+  acts,
   activeSceneId,
   query,
   onSelectScene,
@@ -30,6 +31,11 @@ export function NavigatorSceneList({
 }: NavigatorSceneListProps) {
   const [collapsedActs, setCollapsedActs] = useState<Record<number, boolean>>({});
   const normalizedQuery = query.trim().toLowerCase();
+
+  const resolvedActs = useMemo(() => {
+    const base = acts && acts.length > 0 ? acts : DEFAULT_ACTS;
+    return [...base].sort((a, b) => a.number - b.number);
+  }, [acts]);
 
   const scenesByAct = useMemo(() => {
     const filtered = normalizedQuery
@@ -41,14 +47,31 @@ export function NavigatorSceneList({
         )
       : scenes;
 
-    return ACTS.map((act) => {
-      const items = filtered.filter((s) => s.act === act);
+    const actGroups = resolvedActs.map((actDef) => {
+      const items = filtered.filter((s) => s.act === actDef.number);
       const totalWords = items.reduce((sum, s) => sum + countWords(s.content), 0);
-      return { act, items, totalWords };
+      return {
+        act: actDef.number,
+        label: actDef.title || ACT_LABELS[actDef.number] || `Ato ${actDef.number}`,
+        items,
+        totalWords,
+      };
     });
-  }, [scenes, normalizedQuery]);
 
-  const toggleAct = (act: 1 | 2 | 3) => {
+    const knownActNumbers = new Set(resolvedActs.map((a) => a.number));
+    const orphanScenes = filtered.filter((s) => !knownActNumbers.has(s.act));
+    if (orphanScenes.length > 0) {
+      actGroups.push({
+        act: 999,
+        label: 'Outros Atos',
+        items: orphanScenes,
+        totalWords: orphanScenes.reduce((sum, s) => sum + countWords(s.content), 0),
+      });
+    }
+    return actGroups;
+  }, [scenes, normalizedQuery, resolvedActs]);
+
+  const toggleAct = (act: number) => {
     setCollapsedActs((prev) => ({ ...prev, [act]: !prev[act] }));
   };
 
@@ -87,12 +110,12 @@ export function NavigatorSceneList({
           gap: 8,
         }}
       >
-        {scenesByAct.map(({ act, items, totalWords }) => {
+        {scenesByAct.map(({ act, label, items, totalWords }) => {
           if (items.length === 0 && normalizedQuery) return null;
           const isCollapsed = Boolean(collapsedActs[act]);
 
           return (
-            <section key={act} aria-label={ACT_LABELS[act]}>
+            <section key={act} aria-label={label}>
               <button
                 type="button"
                 onClick={() => toggleAct(act)}
@@ -118,7 +141,7 @@ export function NavigatorSceneList({
                   ) : (
                     <ChevronDown size={12} aria-hidden="true" />
                   )}
-                  {ACT_LABELS[act]}
+                  {label}
                 </span>
                 <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>
                   {items.length} · {totalWords.toLocaleString('pt-BR')} pal.

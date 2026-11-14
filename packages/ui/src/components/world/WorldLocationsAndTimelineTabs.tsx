@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { Image as ImageIcon, Link2, MapPin, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import { useViewport } from '../../hooks/useViewport';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 import { scoreLocationMaturity } from '../../domain/canonScoreCalculator';
 import { deleteMapAssetData, getMapAssetDataUrl, saveMapAssetDataUrl } from '../../domain/storageAdapter';
 import type { Faction, World, WorldLocation, WorldMapAssetMeta, WorldTimelineEvent } from '../../types/project';
@@ -75,7 +77,7 @@ export function WorldLocationsTab({
   onUpdateWorld: (next: World) => void;
   onOpenAtlas?: () => void;
 }) {
-  const { requestConfirm, notify } = useProject();
+  const { project, requestConfirm, notify } = useProject();
   const { width } = useViewport();
   const isNarrow = width < 960;
 
@@ -576,6 +578,19 @@ export function WorldLocationsTab({
               </div>
             )}
           </div>
+
+          {(() => {
+            const locSchema = getEntitySchema(project, 'location');
+            if (!locSchema || locSchema.customFields.length === 0) return null;
+            return (
+              <DynamicFieldRenderer
+                title={`Campos Personalizados (${locSchema.label})`}
+                fields={locSchema.customFields}
+                values={selectedLoc.customAttributes ?? {}}
+                onChange={(nextAttrs) => updateLocation(selectedLoc.id, { customAttributes: nextAttrs })}
+              />
+            );
+          })()}
         </div>
       )}
     </div>

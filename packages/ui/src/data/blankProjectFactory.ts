@@ -1,4 +1,5 @@
 import type { ProjectData } from '../types/project';
+import { createDefaultWorkspaceConfig } from './defaultWorkspaceConfig';
 
 export function createBlankProjectData(title = 'Minha História Sem Título'): ProjectData {
   return {
@@ -76,5 +77,7 @@ export function createBlankProjectData(title = 'Minha História Sem Título'): P
       acknowledgements: '',
       imprint: '',
     },
+    workspaceConfig: createDefaultWorkspaceConfig(),
+    customEntities: {},
   };
 }

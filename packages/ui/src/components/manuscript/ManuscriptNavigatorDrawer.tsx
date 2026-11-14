@@ -209,6 +209,7 @@ export function ManuscriptNavigatorDrawer({
       {tab === 'indice' ? (
         <NavigatorSceneList
           scenes={project.scenes}
+          acts={project.workspaceConfig?.acts}
           activeSceneId={activeSceneId}
           query={query}
           onSelectScene={setActiveSceneId}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Package, Plus, Trash2 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { getEntitySchema } from '../../domain/registry';
 import type { StoryObject, StoryObjectType } from '../../types/project';
+import { DynamicFieldRenderer } from '../common/DynamicFieldRenderer';
 
 interface ObjectDetailEditorProps {
   selectedGroupId: string | null;
@@ -19,6 +21,8 @@ const OBJECT_TYPE_LABELS: Record<StoryObjectType, string> = {
 
 export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps) {
   const { project, upsertObject, deleteObject } = useProject();
+  const schema = getEntitySchema(project, 'object');
+  const hiddenFields = new Set(schema?.hiddenNativeFields ?? []);
   const filtered = project.objects.filter(
     (o) => !selectedGroupId || o.groupId === selectedGroupId
   );
@@ -214,25 +218,38 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
               </div>
             </div>
 
-            <div>
-              <label style={lbl}>Significado Narrativo</label>
-              <textarea
-                rows={2}
-                value={selectedObj.significance}
-                onChange={(e) => updateField({ significance: e.target.value })}
-                style={inp}
-              />
-            </div>
+            {!hiddenFields.has('significance') && (
+              <div>
+                <label style={lbl}>Significado Narrativo</label>
+                <textarea
+                  rows={2}
+                  value={selectedObj.significance}
+                  onChange={(e) => updateField({ significance: e.target.value })}
+                  style={inp}
+                />
+              </div>
+            )}
 
-            <div>
-              <label style={lbl}>Regras e Capacidades</label>
-              <textarea
-                rows={2}
-                value={selectedObj.rulesOrCapabilities}
-                onChange={(e) => updateField({ rulesOrCapabilities: e.target.value })}
-                style={inp}
+            {!hiddenFields.has('rulesOrCapabilities') && (
+              <div>
+                <label style={lbl}>Regras e Capacidades</label>
+                <textarea
+                  rows={2}
+                  value={selectedObj.rulesOrCapabilities}
+                  onChange={(e) => updateField({ rulesOrCapabilities: e.target.value })}
+                  style={inp}
+                />
+              </div>
+            )}
+
+            {schema && schema.customFields.length > 0 && (
+              <DynamicFieldRenderer
+                title={`Campos Personalizados (${schema.label})`}
+                fields={schema.customFields}
+                values={selectedObj.customAttributes ?? {}}
+                onChange={(nextAttrs) => updateField({ customAttributes: nextAttrs })}
               />
-            </div>
+            )}
 
             <div>
               <label style={lbl}>Cenas Vinculadas</label>

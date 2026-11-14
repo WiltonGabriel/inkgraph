@@ -7,6 +7,7 @@ import type {
   Scene,
   ViewId,
 } from '../types/project';
+import { getEffectiveEntitySchemas } from './registry';
 
 export type MemoryLayerId =
   | 'immediate'
@@ -302,6 +303,29 @@ function buildWorldCanonLayer(
         title: `Objeto: ${obj.name}`,
         summary: summarizeText(obj.significance || obj.description, 130),
         status: obj.canonStatus ?? 'canon',
+      });
+    }
+  }
+
+  // Modular custom entities & plugin-contributed attributes marked includeInMemory
+  const effectiveSchemas = getEffectiveEntitySchemas(project);
+  for (const [typeId, records] of Object.entries(project.customEntities ?? {})) {
+    const schema = effectiveSchemas[typeId];
+    const memoryKeys = new Set(
+      (schema?.customFields ?? []).filter((f) => f.includeInMemory).map((f) => f.key)
+    );
+    for (const rec of records) {
+      const relevant = proseLower.includes(rec.name.toLowerCase()) || items.length < 10;
+      if (!relevant) continue;
+      const customSummary = Object.entries(rec.customAttributes ?? {})
+        .filter(([k, v]) => (memoryKeys.size === 0 || memoryKeys.has(k)) && v !== undefined && v !== '')
+        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`)
+        .join(' · ');
+      items.push({
+        id: `canon_custom_${rec.id}`,
+        title: `${schema?.label ?? typeId}: ${rec.name}`,
+        summary: summarizeText([rec.summary, customSummary].filter(Boolean).join(' | '), 150),
+        status: rec.status,
       });
     }
   }

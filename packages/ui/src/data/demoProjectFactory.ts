@@ -1,4 +1,5 @@
 import type { ProjectData } from '../types/project';
+import { createDefaultWorkspaceConfig } from './defaultWorkspaceConfig';
 import { DEMO_CHARACTERS, DEMO_FACTIONS } from './seeds/demoCastAndFactions';
 import {
   DEMO_WORLDS,
@@ -75,5 +76,7 @@ export function createDemoProjectData(): ProjectData {
       acknowledgements: 'Manuscrito estruturado e indexado localmente.',
       imprint: 'Edição do Autor · Cofre Local',
     },
+    workspaceConfig: createDefaultWorkspaceConfig(),
+    customEntities: {},
   };
 }

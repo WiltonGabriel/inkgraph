@@ -189,6 +189,18 @@ export const BREADCRUMB_TARGETS: BreadcrumbTarget[] = [
     aliases: ['configuracoes/sobre', 'config/sobre', 'sobre', 'about', 'settings/about'],
   },
   {
+    canonicalPath: 'InkGraph / Configurações do Workspace',
+    view: 'workspace-settings',
+    aliases: [
+      'configuracoes do workspace',
+      'workspace',
+      'workspace-settings',
+      'modelo',
+      'plugins',
+      'entidades',
+    ],
+  },
+  {
     canonicalPath: 'InkGraph / Ajuda',
     view: 'help',
     aliases: ['ajuda', 'help', 'docs'],

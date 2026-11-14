@@ -20,6 +20,8 @@ export type ViewId =
   | 'progress'
   | 'versions'
   | 'export'
+  | 'custom-entity'
+  | 'workspace-settings'
   | 'settings'
   | 'help';
 
@@ -97,6 +99,7 @@ export interface Character {
   tags: string[];
   relationships: EntityRelationship[];
   epistemicSecrets: EpistemicSecret[];
+  customAttributes?: Record<string, unknown>;
 }
 
 export interface FactionRank {
@@ -129,6 +132,7 @@ export interface Faction {
   tags: string[];
   relationships: EntityRelationship[];
   epistemicSecrets: EpistemicSecret[];
+  customAttributes?: Record<string, unknown>;
 }
 
 export type CanonStatus = 'canon' | 'provisional' | 'draft';
@@ -155,6 +159,7 @@ export interface WorldLocation {
   memberOf?: string[];
   relationships?: EntityRelationship[];
   epistemicSecrets?: EpistemicSecret[];
+  customAttributes?: Record<string, unknown>;
 }
 
 export interface WorldTimelineEvent {
@@ -189,6 +194,7 @@ export interface RuleSystem {
   memberOf?: string[];
   relationships?: EntityRelationship[];
   epistemicSecrets?: EpistemicSecret[];
+  customAttributes?: Record<string, unknown>;
 }
 
 export interface WorldPoliticsProfile {
@@ -277,6 +283,7 @@ export interface StoryObject {
   memberOf?: string[];
   relationships?: EntityRelationship[];
   epistemicSecrets?: EpistemicSecret[];
+  customAttributes?: Record<string, unknown>;
 }
 
 export interface SceneComment {
@@ -304,7 +311,7 @@ export interface Scene {
   title: string;
   summary: string;
   content: string;
-  act: 1 | 2 | 3;
+  act: number;
   status: SceneStatus;
   povCharacterId?: string;
   locationId?: string;
@@ -320,13 +327,14 @@ export interface Scene {
   comments: SceneComment[];
   revisions: SceneRevision[];
   lastEditedAt: string;
+  customAttributes?: Record<string, unknown>;
 }
 
 export interface OutlineSection {
   id: string;
   title: string;
   description: string;
-  act: 1 | 2 | 3;
+  act: number;
   isTwist?: boolean;
   targetWords?: number;
 }
@@ -582,6 +590,138 @@ export interface AppSettings {
   maxSnapshotsPerWorkspace: number;
 }
 
+export interface ActDefinition {
+  number: number;
+  title: string;
+  color: string;
+  description?: string;
+}
+
+export type CustomFieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'select'
+  | 'boolean'
+  | 'tags'
+  | 'entity_ref';
+
+export interface CustomFieldSchema {
+  key: string;
+  label: string;
+  type: CustomFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  targetEntityType?: string;
+  group?: string;
+  completenessWeight?: number;
+  includeInMemory?: boolean;
+}
+
+export interface EntityTypeDefinition {
+  id: string;
+  label: string;
+  pluralLabel: string;
+  iconName: string;
+  color: string;
+  isBuiltin: boolean;
+  builtinTarget?: 'character' | 'faction' | 'location' | 'rule_system' | 'object';
+  mentionPrefix?: string;
+  hiddenNativeFields: string[];
+  customFields: CustomFieldSchema[];
+  sourcePluginId?: string;
+}
+
+export interface PluginSnippetDefinition {
+  id: string;
+  label: string;
+  description?: string;
+  markdown: string;
+}
+
+export interface PluginConsistencyRule {
+  id: string;
+  title: string;
+  severity: 'info' | 'warning' | 'error';
+  pattern: string;
+  flags?: string;
+  message: string;
+  target?: 'scenes' | 'entities' | 'all';
+}
+
+export interface InkGraphPluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author?: string;
+  enabled: boolean;
+  isBuiltinSample?: boolean;
+  entityTypes?: EntityTypeDefinition[];
+  fieldExtensions?: {
+    targetType: string;
+    fields: CustomFieldSchema[];
+  }[];
+  narrativeTemplates?: {
+    id: string;
+    name: string;
+    genre: string;
+    description: string;
+    acts: ActDefinition[];
+    sections: {
+      title: string;
+      description: string;
+      act: number;
+      isTwist?: boolean;
+    }[];
+  }[];
+  snippets?: PluginSnippetDefinition[];
+  consistencyRules?: PluginConsistencyRule[];
+  settingsSchema?: CustomFieldSchema[];
+  settingsValues?: Record<string, unknown>;
+}
+
+export interface GenericEntityRecord {
+  id: string;
+  entityTypeId: string;
+  name: string;
+  aliases: string[];
+  status: CanonStatus;
+  summary: string;
+  notes: string;
+  tags: string[];
+  customAttributes: Record<string, unknown>;
+  relationships: EntityRelationship[];
+  epistemicSecrets: EpistemicSecret[];
+  updatedAt: string;
+}
+
+export interface WorkspaceConfig {
+  schemaVersion: number;
+  activeTemplateId?: string;
+  acts: ActDefinition[];
+  disabledModules: string[];
+  entitySchemas: Record<string, EntityTypeDefinition>;
+  plugins: InkGraphPluginManifest[];
+  canonSettings: {
+    requireStagingForCopilot: boolean;
+    autoTrackEpistemic: boolean;
+    strictEntityRefs: boolean;
+  };
+}
+
+export interface WorkspaceTemplateBundle {
+  format: 'inkgraph-workspace-template';
+  schemaVersion: number;
+  name: string;
+  description: string;
+  exportedAt: string;
+  genre: string;
+  workspaceConfig: WorkspaceConfig;
+  compileProfile: CompileProfile;
+}
+
 export interface ProjectData {
   id: string;
   title: string;
@@ -613,6 +753,8 @@ export interface ProjectData {
   stagingProposals: StagingProposal[];
   writingLogs: WritingLogEntry[];
   compileProfile: CompileProfile;
+  workspaceConfig?: WorkspaceConfig;
+  customEntities?: Record<string, GenericEntityRecord[]>;
   updatedAt: string;
 }
 

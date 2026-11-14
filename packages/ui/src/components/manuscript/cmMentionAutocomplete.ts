@@ -6,6 +6,10 @@ import type {
 } from '@codemirror/autocomplete';
 import type { EditorView } from '@codemirror/view';
 import type { ProjectData } from '../../types/project';
+import {
+  collectPluginSnippets,
+  getEffectiveEntitySchemas,
+} from '../../domain/registry';
 
 const SLASH_COMMANDS: readonly Completion[] = [
   { label: '/h1', detail: 'Título Principal (#)', type: 'keyword', apply: '# ' },
@@ -37,12 +41,23 @@ interface EntityCandidate {
 
 function getEntityCandidates(trigger: string, project: ProjectData): EntityCandidate[] {
   if (trigger === '@') {
-    return project.characters.map((c) => ({
+    const chars = project.characters.map((c) => ({
       label: `@${c.name}`,
       detail: c.role || 'Personagem',
       aliases: c.aliases,
       type: 'variable',
     }));
+    const schemas = getEffectiveEntitySchemas(project);
+    const custom = Object.entries(project.customEntities ?? {}).flatMap(([typeId, recs]) => {
+      const schema = schemas[typeId];
+      return recs.map((r) => ({
+        label: `@${r.name}`,
+        detail: schema?.label ?? typeId,
+        aliases: r.aliases ?? [],
+        type: 'variable',
+      }));
+    });
+    return [...chars, ...custom];
   }
   if (trigger === '#') {
     return project.worlds
@@ -95,7 +110,15 @@ export function createInkGraphCompletionSource(
     if (slashMatch) {
       const token = slashMatch[1];
       const query = token.slice(1).toLowerCase();
-      const options = SLASH_COMMANDS.filter(
+      const pluginSlashCommands: Completion[] = collectPluginSnippets(getProject()).map(
+        ({ pluginName, snippet }) => ({
+          label: `/${snippet.id}`,
+          detail: `${snippet.label} (${pluginName})`,
+          type: 'keyword',
+          apply: snippet.markdown,
+        })
+      );
+      const options = [...SLASH_COMMANDS, ...pluginSlashCommands].filter(
         (cmd) =>
           cmd.label.slice(1).toLowerCase().includes(query) ||
           (cmd.detail ?? '').toLowerCase().includes(query)
