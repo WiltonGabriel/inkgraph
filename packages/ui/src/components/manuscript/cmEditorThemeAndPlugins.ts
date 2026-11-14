@@ -44,13 +44,22 @@ function resolveIsDark(settings: AppSettings): boolean {
 }
 
 /** Builds CodeMirror theme bindings synchronized with InkGraph typography and CSS tokens. */
-export function buildInkGraphEditorTheme(settings: AppSettings): Extension {
-  const maxWidth = settings.zenMode ? '760px' : `${settings.editorMaxWidthCh || 74}ch`;
-  const fontFamily = EDITOR_FONT_STACKS[settings.editorFont] ?? EDITOR_FONT_STACKS.serif;
-  const fontSize = `${settings.editorFontSize || 17}px`;
-  const lineHeight = String(settings.editorLineHeight || 1.8);
-  const paragraphSpacing = `${settings.editorParagraphSpacingPx ?? 10}px`;
-  const verticalPad = settings.typewriterMode ? '38vh' : '28px';
+export function buildInkGraphEditorTheme(
+  settings: AppSettings,
+  codeMode = false
+): Extension {
+  const maxWidth = codeMode
+    ? '96ch'
+    : settings.zenMode
+    ? '760px'
+    : `${settings.editorMaxWidthCh || 74}ch`;
+  const fontFamily = codeMode
+    ? EDITOR_FONT_STACKS.mono
+    : EDITOR_FONT_STACKS[settings.editorFont] ?? EDITOR_FONT_STACKS.serif;
+  const fontSize = codeMode ? '13.5px' : `${settings.editorFontSize || 17}px`;
+  const lineHeight = codeMode ? '1.65' : String(settings.editorLineHeight || 1.8);
+  const paragraphSpacing = codeMode ? '2px' : `${settings.editorParagraphSpacingPx ?? 10}px`;
+  const verticalPad = settings.typewriterMode ? '38vh' : '24px';
 
   return EditorView.theme(
     {
@@ -76,13 +85,31 @@ export function buildInkGraphEditorTheme(settings: AppSettings): Extension {
         margin: '0 auto',
         padding: `${verticalPad} 32px`,
         caretColor: 'var(--accent-primary)',
-        textAlign: settings.editorTextAlign || 'left',
+        textAlign: codeMode ? 'left' : settings.editorTextAlign || 'left',
         minHeight: '100%',
+        counterReset: codeMode ? 'cm-line-counter' : 'none',
       },
       '.cm-line': {
         padding: `0 0 ${paragraphSpacing} 0`,
-        textIndent: settings.paragraphIndent ? '2em' : '0',
+        textIndent: !codeMode && settings.paragraphIndent ? '2em' : '0',
+        position: 'relative',
       },
+      ...(codeMode
+        ? {
+            '.cm-line::before': {
+              counterIncrement: 'cm-line-counter',
+              content: 'counter(cm-line-counter)',
+              display: 'inline-block',
+              width: '2.6em',
+              marginRight: '1em',
+              textAlign: 'right',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+              opacity: '0.65',
+              userSelect: 'none',
+            },
+          }
+        : {}),
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: 'var(--accent-primary)',
         borderLeftWidth: '2px',

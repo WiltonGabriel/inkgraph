@@ -116,7 +116,11 @@ export function EditorSettingsTab() {
               }
               style={controlInputStyle}
             >
-              <option value="write">{isEn ? 'Write (Prose)' : 'Escrever (Prosa)'}</option>
+              <option value="visual">
+                {isEn ? 'Visual Interface (Blocks)' : 'Interface Visual (Blocos sem Código)'}
+              </option>
+              <option value="write">{isEn ? 'Markdown (Prose)' : 'Markdown Literário'}</option>
+              <option value="code">{isEn ? 'Source Code + YAML' : 'Código-Fonte + YAML'}</option>
               <option value="split">{isEn ? 'Split (Editor + Preview)' : 'Dividido (Editor + Leitura)'}</option>
               <option value="read">{isEn ? 'Formatted Reading' : 'Leitura Formatada'}</option>
             </select>

@@ -4,8 +4,12 @@ import type { EditorView } from '@codemirror/view';
 export type MarkdownFormatCommand =
   | 'h1'
   | 'h2'
+  | 'h3'
   | 'bold'
   | 'italic'
+  | 'strikethrough'
+  | 'dialogue'
+  | 'quotes'
   | 'epigraph'
   | 'checklist'
   | 'divider'
@@ -57,7 +61,7 @@ export function toggleLinePrefix(view: EditorView, prefix: string): boolean {
   const line = state.doc.lineAt(state.selection.main.head);
   const text = line.text;
 
-  if (prefix === '# ' || prefix === '## ') {
+  if (prefix === '# ' || prefix === '## ' || prefix === '### ') {
     const headingMatch = text.match(/^(#{1,3}\s+)/);
     if (headingMatch) {
       const existing = headingMatch[1];
@@ -114,11 +118,23 @@ export function runMarkdownFormatCommand(
     case 'h2':
       toggleLinePrefix(view, '## ');
       break;
+    case 'h3':
+      toggleLinePrefix(view, '### ');
+      break;
     case 'bold':
       toggleWrapSelection(view, '**', '**', 'texto em negrito');
       break;
     case 'italic':
       toggleWrapSelection(view, '*', '*', 'texto em itálico');
+      break;
+    case 'strikethrough':
+      toggleWrapSelection(view, '~~', '~~', 'trecho cortado');
+      break;
+    case 'dialogue':
+      toggleLinePrefix(view, '— ');
+      break;
+    case 'quotes':
+      toggleWrapSelection(view, '“', '”', 'fala ou destaque');
       break;
     case 'epigraph':
       toggleLinePrefix(view, '> ');

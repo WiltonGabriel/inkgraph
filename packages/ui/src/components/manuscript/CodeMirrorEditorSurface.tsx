@@ -27,6 +27,7 @@ interface CodeMirrorEditorSurfaceProps {
   onChange: (nextValue: string) => void;
   project: ProjectData;
   settings: AppSettings;
+  codeMode?: boolean;
   placeholderText?: string;
   onViewReady?: (view: EditorView | null) => void;
 }
@@ -37,6 +38,7 @@ export function CodeMirrorEditorSurface({
   onChange,
   project,
   settings,
+  codeMode = false,
   placeholderText = 'Escreva a prosa da cena... Use @Personagem, #Local, &Facção, !Objeto ou / para comandos rápidos.',
   onViewReady,
 }: CodeMirrorEditorSurfaceProps) {
@@ -53,6 +55,9 @@ export function CodeMirrorEditorSurface({
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
+  const codeModeRef = useRef(codeMode);
+  codeModeRef.current = codeMode;
+
   const onViewReadyRef = useRef(onViewReady);
   onViewReadyRef.current = onViewReady;
 
@@ -63,7 +68,7 @@ export function CodeMirrorEditorSurface({
     typewriter: new Compartment(),
   });
 
-  const buildExtensions = (cfg: AppSettings): Extension[] => {
+  const buildExtensions = (cfg: AppSettings, isCode = false): Extension[] => {
     const comps = compartmentsRef.current;
     const completionSource = createInkGraphCompletionSource(() => projectRef.current);
 
@@ -97,7 +102,7 @@ export function CodeMirrorEditorSurface({
         ...defaultKeymap,
       ]),
       createProseHighlightExtension(),
-      comps.theme.of(buildInkGraphEditorTheme(cfg)),
+      comps.theme.of(buildInkGraphEditorTheme(cfg, isCode)),
       comps.spellcheck.of(
         EditorView.contentAttributes.of({
           spellcheck: cfg.spellcheck ? 'true' : 'false',
@@ -123,7 +128,7 @@ export function CodeMirrorEditorSurface({
 
     const state = EditorState.create({
       doc: value,
-      extensions: buildExtensions(settingsRef.current),
+      extensions: buildExtensions(settingsRef.current, codeModeRef.current),
     });
 
     const view = new EditorView({ state, parent: host });
@@ -147,7 +152,7 @@ export function CodeMirrorEditorSurface({
 
     view.dispatch({
       effects: [
-        comps.theme.reconfigure(buildInkGraphEditorTheme(settings)),
+        comps.theme.reconfigure(buildInkGraphEditorTheme(settings, codeMode)),
         comps.spellcheck.reconfigure(
           EditorView.contentAttributes.of({
             spellcheck: settings.spellcheck ? 'true' : 'false',
@@ -160,7 +165,7 @@ export function CodeMirrorEditorSurface({
         ),
       ],
     });
-  }, [settings]);
+  }, [settings, codeMode]);
 
   // Sync scene switches (reset undo history) and external document changes without disturbing cursor.
   useEffect(() => {
@@ -171,7 +176,7 @@ export function CodeMirrorEditorSurface({
       prevSceneIdRef.current = sceneId;
       const nextState = EditorState.create({
         doc: value,
-        extensions: buildExtensions(settingsRef.current),
+        extensions: buildExtensions(settingsRef.current, codeModeRef.current),
       });
       view.setState(nextState);
       view.scrollDOM.scrollTop = 0;

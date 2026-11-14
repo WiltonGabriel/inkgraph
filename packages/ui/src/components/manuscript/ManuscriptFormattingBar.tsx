@@ -4,32 +4,41 @@ import {
   Bold,
   Camera,
   CheckSquare,
+  Code2,
   Columns,
   Eye,
   Focus,
   Heading1,
   Heading2,
+  Heading3,
   Italic,
+  LayoutList,
   Lock,
   Maximize2,
+  MessageSquare,
   MessageSquareCode,
   Minus,
   PenLine,
   Quote,
   Search,
   StickyNote,
+  Strikethrough,
   Volume2,
   VolumeX,
+  Wrench,
 } from 'lucide-react';
 import type { MarkdownFormatCommand } from './cmMarkdownCommands';
 
-export type ManuscriptEditorMode = 'write' | 'split' | 'read';
+export type ManuscriptEditorMode = 'visual' | 'write' | 'code' | 'split' | 'read';
 
 interface ManuscriptFormattingBarProps {
   editorMode: ManuscriptEditorMode;
   onChangeEditorMode: (mode: ManuscriptEditorMode) => void;
   onFormatCommand: (command: MarkdownFormatCommand) => void;
   onOpenSearch: () => void;
+  writerToolsOpen: boolean;
+  onToggleWriterTools: () => void;
+  sprintBadge?: { active: boolean; formattedTime: string; deltaWords: number };
   typewriterMode: boolean;
   onToggleTypewriter: () => void;
   focusMode: boolean;
@@ -89,6 +98,9 @@ export function ManuscriptFormattingBar({
   onChangeEditorMode,
   onFormatCommand,
   onOpenSearch,
+  writerToolsOpen,
+  onToggleWriterTools,
+  sprintBadge,
   typewriterMode,
   onToggleTypewriter,
   focusMode,
@@ -102,7 +114,6 @@ export function ManuscriptFormattingBar({
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const isReadOnlyMode = editorMode === 'read';
 
-  // Roving-tabindex fallback only when native focusgroup is unsupported.
   useEffect(() => {
     const bar = toolbarRef.current;
     if (!bar || 'focusGroup' in HTMLElement.prototype) return;
@@ -160,20 +171,56 @@ export function ManuscriptFormattingBar({
   }[] = [
     { cmd: 'h1', label: 'Título H1', shortLabel: 'H1', icon: Heading1 },
     { cmd: 'h2', label: 'Subtítulo H2', shortLabel: 'H2', icon: Heading2 },
-    { cmd: 'bold', label: 'Negrito', icon: Bold },
-    { cmd: 'italic', label: 'Itálico', icon: Italic },
-    { cmd: 'epigraph', label: 'Epígrafe', icon: Quote },
+    { cmd: 'h3', label: 'Seção H3', shortLabel: 'H3', icon: Heading3 },
+    { cmd: 'bold', label: 'Negrito (Ctrl+B)', icon: Bold },
+    { cmd: 'italic', label: 'Itálico (Ctrl+I)', icon: Italic },
+    { cmd: 'strikethrough', label: 'Tachado / Corte', icon: Strikethrough },
+    { cmd: 'dialogue', label: 'Travessão de Diálogo (—)', shortLabel: '—', icon: MessageSquare },
+    { cmd: 'quotes', label: 'Aspas Tipográficas (“ ”)', shortLabel: '“ ”', icon: Quote },
+    { cmd: 'epigraph', label: 'Epígrafe (>)', icon: Quote },
     { cmd: 'checklist', label: 'Checklist', icon: CheckSquare },
-    { cmd: 'divider', label: 'Divisor ***', shortLabel: '***', icon: Minus },
+    { cmd: 'divider', label: 'Quebra de Cena ***', shortLabel: '***', icon: Minus },
     { cmd: 'noteCallout', label: 'Inserir [!NOTA]', shortLabel: '[!NOTA]', icon: StickyNote },
     { cmd: 'secretCallout', label: 'Inserir [!SEGREDO]', shortLabel: '[!SEGREDO]', icon: Lock },
     { cmd: 'comment', label: 'Comentário %%', shortLabel: '%%', icon: MessageSquareCode },
   ];
 
-  const modeOptions: { id: ManuscriptEditorMode; label: string; icon: typeof PenLine }[] = [
-    { id: 'write', label: 'Escrever', icon: PenLine },
-    { id: 'split', label: 'Dividido', icon: Columns },
-    { id: 'read', label: 'Leitura', icon: Eye },
+  const modeOptions: {
+    id: ManuscriptEditorMode;
+    label: string;
+    title: string;
+    icon: typeof PenLine;
+  }[] = [
+    {
+      id: 'visual',
+      label: 'Interface',
+      title: 'Modo Interface Visual (blocos literários sem código)',
+      icon: LayoutList,
+    },
+    {
+      id: 'write',
+      label: 'Markdown',
+      title: 'Modo Markdown Literário',
+      icon: PenLine,
+    },
+    {
+      id: 'code',
+      label: 'Código',
+      title: 'Modo Código-Fonte (monoespaçado com numeração de linhas e YAML)',
+      icon: Code2,
+    },
+    {
+      id: 'split',
+      label: 'Dividido',
+      title: 'Modo Painel Dividido (edição + prévia)',
+      icon: Columns,
+    },
+    {
+      id: 'read',
+      label: 'Leitura',
+      title: 'Modo Leitura Formatada',
+      icon: Eye,
+    },
   ];
 
   return (
@@ -195,13 +242,13 @@ export function ManuscriptFormattingBar({
         gap: 6,
       }}
     >
-      <div role="group" aria-label="Formatação Markdown" style={groupStyle}>
+      <div role="group" aria-label="Formatação Literária" style={groupStyle}>
         {formatButtons.map(({ cmd, label, shortLabel, icon: Icon }) => (
           <button
             key={cmd}
             type="button"
             aria-label={label}
-            title={isReadOnlyMode ? `${label} (disponível no modo Escrever/Dividido)` : label}
+            title={isReadOnlyMode ? `${label} (disponível nos modos de escrita)` : label}
             aria-disabled={isReadOnlyMode}
             onClick={() => {
               if (!isReadOnlyMode) onFormatCommand(cmd);
@@ -223,14 +270,14 @@ export function ManuscriptFormattingBar({
           type="button"
           aria-label="Localizar e substituir"
           title="Localizar e substituir (Ctrl+F / Ctrl+H)"
-          aria-disabled={isReadOnlyMode}
+          aria-disabled={isReadOnlyMode || editorMode === 'visual'}
           onClick={() => {
-            if (!isReadOnlyMode) onOpenSearch();
+            if (!isReadOnlyMode && editorMode !== 'visual') onOpenSearch();
           }}
           style={{
             ...baseBtnStyle,
-            opacity: isReadOnlyMode ? 0.45 : 1,
-            cursor: isReadOnlyMode ? 'not-allowed' : 'pointer',
+            opacity: isReadOnlyMode || editorMode === 'visual' ? 0.45 : 1,
+            cursor: isReadOnlyMode || editorMode === 'visual' ? 'not-allowed' : 'pointer',
           }}
         >
           <Search size={13} aria-hidden="true" />
@@ -239,11 +286,12 @@ export function ManuscriptFormattingBar({
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-        <div role="group" aria-label="Modo de visualização" style={groupStyle}>
-          {modeOptions.map(({ id, label, icon: Icon }) => (
+        <div role="group" aria-label="Modo de escrita e visualização" style={groupStyle}>
+          {modeOptions.map(({ id, label, title, icon: Icon }) => (
             <button
               key={id}
               type="button"
+              title={title}
               aria-pressed={editorMode === id}
               onClick={() => onChangeEditorMode(id)}
               style={getToggleStyle(editorMode === id)}
@@ -256,7 +304,32 @@ export function ManuscriptFormattingBar({
 
         <span role="separator" aria-orientation="vertical" style={separatorStyle} />
 
-        <div role="group" aria-label="Controles de foco e estúdio" style={groupStyle}>
+        <div role="group" aria-label="Controles de foco e oficina do escritor" style={groupStyle}>
+          <button
+            type="button"
+            aria-pressed={writerToolsOpen}
+            title="Oficina do Escritor (Cronômetro de Sprint, Meta da Cena, Raio-X de Ritmo e Estilo)"
+            onClick={onToggleWriterTools}
+            style={
+              sprintBadge?.active
+                ? {
+                    ...baseBtnStyle,
+                    backgroundColor: '#10b981',
+                    borderColor: '#10b981',
+                    color: '#052e16',
+                    fontWeight: 700,
+                  }
+                : getToggleStyle(writerToolsOpen)
+            }
+          >
+            <Wrench size={13} aria-hidden="true" />
+            <span>
+              {sprintBadge?.active
+                ? `Sprint ${sprintBadge.formattedTime}`
+                : 'Oficina'}
+            </span>
+          </button>
+
           <button
             type="button"
             aria-pressed={typewriterMode}

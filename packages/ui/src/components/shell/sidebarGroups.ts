@@ -47,6 +47,31 @@ export function buildSidebarGroups(
 
   const rawGroups: SidebarNavGroup[] = [
     {
+      key: 'writing',
+      label: t.sidebarGroups.writing,
+      items: [
+        { id: 'manuscript', label: t.views.manuscript, icon: BookOpen, badge: project.scenes.length },
+        { id: 'writer', label: t.views.writer, icon: Sparkles },
+      ],
+    },
+    {
+      key: 'review',
+      label: t.sidebarGroups.review,
+      items: [
+        { id: 'consistency', label: t.views.consistency, icon: ShieldAlert },
+        { id: 'critic', label: t.views.critic, icon: Feather },
+        { id: 'preview', label: t.views.preview, icon: Eye },
+        { id: 'progress', label: t.views.progress, icon: TrendingUp },
+        {
+          id: 'versions',
+          label: t.views.versions,
+          icon: GitBranch,
+          badge: pendingProposals || undefined,
+        },
+        { id: 'export', label: t.views.export, icon: Download },
+      ],
+    },
+    {
       key: 'planning',
       label: t.sidebarGroups.planning,
       items: [
@@ -75,31 +100,6 @@ export function buildSidebarGroups(
         { id: 'worlds', label: t.views.worlds, icon: Globe },
         { id: 'factions', label: t.views.factions, icon: Shield, badge: project.factions.length },
         { id: 'objects', label: t.views.objects, icon: Package, badge: project.objects.length },
-      ],
-    },
-    {
-      key: 'writing',
-      label: t.sidebarGroups.writing,
-      items: [
-        { id: 'manuscript', label: t.views.manuscript, icon: BookOpen, badge: project.scenes.length },
-        { id: 'writer', label: t.views.writer, icon: Sparkles },
-      ],
-    },
-    {
-      key: 'review',
-      label: t.sidebarGroups.review,
-      items: [
-        { id: 'consistency', label: t.views.consistency, icon: ShieldAlert },
-        { id: 'critic', label: t.views.critic, icon: Feather },
-        { id: 'preview', label: t.views.preview, icon: Eye },
-        { id: 'progress', label: t.views.progress, icon: TrendingUp },
-        {
-          id: 'versions',
-          label: t.views.versions,
-          icon: GitBranch,
-          badge: pendingProposals || undefined,
-        },
-        { id: 'export', label: t.views.export, icon: Download },
       ],
     },
   ];

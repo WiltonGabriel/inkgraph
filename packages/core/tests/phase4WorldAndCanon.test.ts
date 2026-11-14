@@ -16,6 +16,11 @@ import {
   scanProjectCanon,
 } from '../../ui/src/domain/canonRadarEngine';
 import { checkAiAvailability } from '../../ui/src/domain/aiAvailability';
+import {
+  analyzeProseStyle,
+  parseMarkdownToEditableBlocks,
+  serializeEditableBlocksToMarkdown,
+} from '../../ui/src/domain/proseStyleAnalyzer';
 
 describe('Phase 4 Engines: 1-10 Canon Score Calculator & Canon Radar Scanner', () => {
   describe('canonScoreCalculator', () => {
@@ -209,6 +214,48 @@ describe('Phase 4 Engines: 1-10 Canon Score Calculator & Canon Radar Scanner', (
         aiMode: 'eco',
       });
       expect(ecoMode.connected).toBe(false);
+    });
+  });
+
+  describe('proseStyleAnalyzer & Visual Block Editor roundtrip', () => {
+    it('computes dialogue ratio, sentence cadence, -mente adverbs, and roundtrips visual blocks to Markdown', () => {
+      const sample = [
+        '# Capítulo I: A Vigília',
+        '',
+        'O vento soprava silenciosamente e rapidamente pelas torres de pedra.',
+        '',
+        '— Você trouxe a lâmina? — perguntou Elias.',
+        '',
+        '> [!SEGREDO]',
+        '> A lâmina pertenceu ao rei exilado.',
+        '',
+        '***',
+        '',
+        '- [x] Chegar ao portão norte',
+        '- [ ] Encontrar o informante',
+      ].join('\n');
+
+      const metrics = analyzeProseStyle(sample);
+      expect(metrics.dialogueLineCount).toBe(1);
+      expect(metrics.dialogueRatioPercent).toBeGreaterThan(0);
+      expect(metrics.adverbsMente).toContain('silenciosamente');
+      expect(metrics.adverbsMente).toContain('rapidamente');
+
+      const blocks = parseMarkdownToEditableBlocks(sample);
+      expect(blocks.map((b) => b.kind)).toEqual([
+        'heading-1',
+        'paragraph',
+        'dialogue',
+        'callout-secret',
+        'divider',
+        'checklist',
+      ]);
+
+      const serialized = serializeEditableBlocksToMarkdown(blocks);
+      expect(serialized).toContain('# Capítulo I: A Vigília');
+      expect(serialized).toContain('— Você trouxe a lâmina? — perguntou Elias.');
+      expect(serialized).toContain('> [!SEGREDO]');
+      expect(serialized).toContain('- [x] Chegar ao portão norte');
     });
   });
 });

@@ -149,10 +149,19 @@ Este documento registra a auditoria completa de interface (UI), experiência de 
 
 #### 14. Manuscrito (`manuscript` — `ManuscriptView.tsx`)
 - **O que foi inspecionado e arrumado**:
-  - **Bug Crítico Corrigido**: Em `ManuscriptMarkdownPreview.tsx`, uma expressão regular com flag Unicode (`'gu'`) continha um escape inválido (`\``), gerando `SyntaxError` ao alternar para os modos **Dividido** ou **Leitura**. Corrigido e protegido com `try/catch`, garantindo funcionamento perfeito nos 3 modos (`Escrever`, `Dividido`, `Leitura`).
-  - Verificados a árvore de capítulos/cenas (*Binder*), a barra de formatação Markdown, o editor **CodeMirror 6** com realce de entidades canônicas e o **Inspetor de Cena e Cânone** na lateral direita.
+  - **Prioridade na Barra Lateral**: Os grupos **Escrita** e **Revisão** foram posicionados no topo da barra lateral, acima de **Planejamento**, colocando o **Manuscrito** no acesso imediato do escritor.
+  - **5 Modos de Escrita e Visualização (`Interface`, `Markdown`, `Código`, `Dividido`, `Leitura`)**:
+    - **Interface (`visual`)**: editor visual de blocos literários (`ManuscriptVisualBlockEditor.tsx`) sem código aparente, onde cada parágrafo, fala com travessão (`—`), título (`H1–H3`), epígrafe, quebra de cena (`✦ ✦ ✦`), nota do autor, segredo epistêmico e checklist é editado, reordenado (`↑`/`↓`), duplicado ou inserido por controles visuais com sincronização bidirecional ao Markdown.
+    - **Markdown (`write`)**: editor literário CodeMirror 6 com realce tipográfico e autocompletar `@Personagem`, `#Local`, `&Facção`, `!Objeto` e `/`.
+    - **Código (`code`)**: editor em fonte monoespaçada com numeração de linhas e cabeçalho de frontmatter YAML da cena copiável.
+    - **Dividido (`split`)** e **Leitura (`read`)**: visualização formatada lado a lado ou página cheia (com correção da regex Unicode em `ManuscriptMarkdownPreview.tsx`).
+  - **Oficina do Escritor Integrada (`ManuscriptWriterToolsDrawer.tsx` + `proseStyleAnalyzer.ts`)**:
+    - **Cronômetro de Sprint Literário (`15m`, `25m`, `45m`)** com rastreamento de palavras escritas no sprint (`+X palavras`) e velocidade (`pal/min`).
+    - **Meta da Cena ao Vivo** (`500` a `5.000` palavras) com barra de progresso e seletores rápidos de **POV** e **Status Editorial** (`Rascunho`, `Em Revisão`, `Finalizado`) no topo da cena.
+    - **Raio-X de Estilo & Ritmo**: proporção `% Diálogo vs. Narração`, média de palavras por frase, alerta de frases longas (`>28 palavras`), detecção de advérbios terminados em `-mente` e palavras repetidas (`3x+`).
+    - **Pontuação Literária Direta**: botões para travessão de diálogo (`—`), aspas tipográficas (`“ ”`), tachado (`~~`) e seção `H3`.
 - **Importância e Grau de Uso**: **Crítica / Absoluta (Uso Contínuo)**. É o coração do estúdio literário onde o autor passa a maior parte do tempo redigindo os capítulos.
-- **O que é preciso para funcionar**: **100% Offline e Local**. Todo o editor CodeMirror 6, preview lado a lado, contagem de palavras e checklist epistêmico funcionam sem qualquer dependência de nuvem ou IA.
+- **O que é preciso para funcionar**: **100% Offline e Local**. Todos os 5 modos de edição, a Oficina do Escritor, a análise de estilo e o checklist epistêmico funcionam sem qualquer dependência de nuvem ou IA.
 
 #### 15. Estúdio de Redação (`writer` — `WriterStudioView.tsx`)
 - **O que foi inspecionado e arrumado**:
