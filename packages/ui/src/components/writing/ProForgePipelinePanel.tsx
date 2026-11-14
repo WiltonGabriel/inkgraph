@@ -123,20 +123,20 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#0a0d14', overflow: 'hidden', padding: 20 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-canvas, #0b0e16)', overflow: 'hidden', padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Layers size={18} color="#a78bfa" />
-          <h2 style={{ margin: 0, fontSize: 17, color: '#f3f4f6' }}>Pipeline Editorial ProForge (8 Estágios)</h2>
+          <h2 style={{ margin: 0, fontSize: 17, color: 'var(--text-primary, #f1f5f9)' }}>Pipeline Editorial ProForge (8 Estágios)</h2>
         </div>
         <button
           onClick={() => setActiveStage('ALL')}
           style={{
             padding: '5px 10px',
-            borderRadius: 6,
-            border: activeStage === 'ALL' ? '1px solid #a78bfa' : '1px solid #1f2533',
-            backgroundColor: activeStage === 'ALL' ? '#1d1836' : '#121621',
-            color: activeStage === 'ALL' ? '#e9d5ff' : '#9ca3af',
+            borderRadius: 'var(--radius-sm, 6px)',
+            border: activeStage === 'ALL' ? '1px solid #a78bfa' : '1px solid var(--border-subtle, #263046)',
+            backgroundColor: activeStage === 'ALL' ? 'rgba(167, 139, 250, 0.16)' : 'var(--bg-surface, #111623)',
+            color: activeStage === 'ALL' ? '#a78bfa' : 'var(--text-secondary, #94a3b8)',
             fontSize: 11.5,
             fontWeight: 600,
             cursor: 'pointer',
@@ -156,10 +156,10 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
               onClick={() => setActiveStage(stage)}
               style={{
                 padding: '8px 10px',
-                borderRadius: 6,
-                border: active ? '1px solid #a78bfa' : '1px solid #1f2533',
-                backgroundColor: active ? '#1d1836' : '#121621',
-                color: active ? '#e9d5ff' : '#9ca3af',
+                borderRadius: 'var(--radius-sm, 6px)',
+                border: active ? '1px solid #a78bfa' : '1px solid var(--border-subtle, #263046)',
+                backgroundColor: active ? 'rgba(167, 139, 250, 0.16)' : 'var(--bg-surface, #111623)',
+                color: active ? '#a78bfa' : 'var(--text-secondary, #94a3b8)',
                 fontSize: 11.5,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -181,20 +181,20 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
               key={item.id}
               style={{
                 padding: 14,
-                backgroundColor: '#121621',
-                border: '1px solid #222a3a',
-                borderRadius: 8,
+                backgroundColor: 'var(--bg-surface, #111623)',
+                border: '1px solid var(--border-subtle, #263046)',
+                borderRadius: 'var(--radius-md, 8px)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>{item.stage}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa' }}>{item.stage}</span>
                 <span
                   style={{
                     fontSize: 11,
                     padding: '2px 8px',
                     borderRadius: 999,
                     backgroundColor: 'rgba(16,185,129,0.15)',
-                    color: '#34d399',
+                    color: '#10b981',
                     fontWeight: 600,
                   }}
                 >
@@ -203,13 +203,13 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #2b1d24', borderRadius: 6 }}>
-                  <div style={{ fontSize: 10.5, color: '#f87171', fontWeight: 700, marginBottom: 4 }}>Original</div>
-                  <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.5 }}>{item.original}</div>
+                <div style={{ padding: 10, backgroundColor: 'var(--bg-elevated, #171d2e)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm, 6px)' }}>
+                  <div style={{ fontSize: 10.5, color: '#ef4444', fontWeight: 700, marginBottom: 4 }}>Original</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.5 }}>{item.original}</div>
                 </div>
-                <div style={{ padding: 10, backgroundColor: '#0c0f17', border: '1px solid #1b3229', borderRadius: 6 }}>
-                  <div style={{ fontSize: 10.5, color: '#34d399', fontWeight: 700, marginBottom: 4 }}>Proposto</div>
-                  <div style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.5 }}>{item.proposed}</div>
+                <div style={{ padding: 10, backgroundColor: 'var(--bg-elevated, #171d2e)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-sm, 6px)' }}>
+                  <div style={{ fontSize: 10.5, color: '#10b981', fontWeight: 700, marginBottom: 4 }}>Proposto</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-primary, #f1f5f9)', lineHeight: 1.5 }}>{item.proposed}</div>
                 </div>
               </div>
 
@@ -236,9 +236,9 @@ export function ProForgePipelinePanel({ onApplyProposal }: ProForgePipelinePanel
                   onClick={() => handleDecision(item, 'rejected')}
                   style={{
                     padding: '5px 12px',
-                    backgroundColor: '#19202e',
-                    color: '#f87171',
-                    border: '1px solid rgba(248,113,113,0.35)',
+                    backgroundColor: 'var(--bg-elevated, #171d2e)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.35)',
                     borderRadius: 5,
                     fontSize: 11.5,
                     fontWeight: 600,

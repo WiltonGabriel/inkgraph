@@ -6,6 +6,8 @@ import {
   PanelLeftOpen,
   ChevronDown,
   ChevronRight,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { buildSidebarGroups } from './sidebarGroups';
@@ -18,9 +20,22 @@ export function Sidebar() {
     project,
     settings,
     toggleSidebarGroup,
+    notify,
     t,
   } = useProject();
   const [collapsed, setCollapsed] = useState(() => settings.sidebarDefaultCollapsed);
+  const [brandHovered, setBrandHovered] = useState(false);
+  const [brandCopied, setBrandCopied] = useState(false);
+
+  const handleCopyBrandName = () => {
+    void navigator.clipboard?.writeText('InkGraph').catch(() => undefined);
+    setBrandCopied(true);
+    notify(
+      settings.language === 'en' ? 'Name "InkGraph" copied.' : 'Nome "InkGraph" copiado.',
+      'info'
+    );
+    window.setTimeout(() => setBrandCopied(false), 1500);
+  };
 
   useEffect(() => {
     setCollapsed(settings.sidebarDefaultCollapsed);
@@ -66,7 +81,40 @@ export function Sidebar() {
         }}
       >
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            onClick={handleCopyBrandName}
+            onMouseEnter={() => setBrandHovered(true)}
+            onMouseLeave={() => setBrandHovered(false)}
+            onFocus={() => setBrandHovered(true)}
+            onBlur={() => setBrandHovered(false)}
+            title={
+              settings.language === 'en'
+                ? 'Click to copy "InkGraph"'
+                : 'Clique para copiar o nome InkGraph'
+            }
+            aria-label={
+              settings.language === 'en' ? 'Copy InkGraph name' : 'Copiar nome InkGraph'
+            }
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              background: brandHovered
+                ? 'var(--bg-elevated, var(--bg-card, #171d2e))'
+                : 'transparent',
+              border: brandHovered
+                ? '1px solid var(--border-subtle, var(--border, #263046))'
+                : '1px solid transparent',
+              borderRadius: 'var(--radius-sm, 6px)',
+              padding: '4px 7px',
+              marginLeft: -4,
+              cursor: 'pointer',
+              transition: settings.reducedMotion
+                ? 'none'
+                : 'background-color 0.15s ease, border-color 0.15s ease',
+            }}
+          >
             <span
               style={{
                 width: 8,
@@ -86,7 +134,18 @@ export function Sidebar() {
             >
               INKGRAPH
             </span>
-          </div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                opacity: brandHovered || brandCopied ? 1 : 0,
+                color: brandCopied ? '#10b981' : 'var(--text-muted, #64748b)',
+                transition: settings.reducedMotion ? 'none' : 'opacity 0.15s ease',
+              }}
+            >
+              {brandCopied ? <Check size={12} /> : <Copy size={11} />}
+            </span>
+          </button>
         )}
         <button
           type="button"

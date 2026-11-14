@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { Cpu, Layers, MessageSquare, Sparkles, Trash2, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { checkAiAvailability } from '../../domain/aiAvailability';
 import { compileFourLayerContext } from '../../domain/memoryCompiler';
+import { SubtleAiGatePopover } from '../common/SubtleAiGatePopover';
 import { CopilotChatSection } from './CopilotChatSection';
 import { CopilotInsightsSection } from './CopilotInsightsSection';
 import { CopilotMemoryInspector } from './CopilotMemoryInspector';
@@ -38,6 +40,8 @@ export function CopilotPanel() {
 
   const [activeTab, setActiveTab] = useState<CopilotTab>('chat');
   const [input, setInput] = useState('');
+  const [aiGateOpen, setAiGateOpen] = useState(false);
+  const aiStatus = checkAiAvailability(settings);
   const [messages, setMessages] = useState<CopilotChatTurn[]>([
     {
       id: 'welcome',
@@ -150,26 +154,32 @@ export function CopilotPanel() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (!aiStatus.connected) {
+                setAiGateOpen((prev) => !prev);
+                return;
+              }
               updateSettings((s) => ({
                 ...s,
                 copilotHeuristicsOnly: !s.copilotHeuristicsOnly,
-              }))
+              }));
+            }}
+            title={
+              aiStatus.connected
+                ? 'Alternar Modo Offline (Apenas Heurística)'
+                : 'Nenhuma IA conectada — operando em heurística local'
             }
-            title="Alternar Modo Offline (Apenas Heurística)"
             style={{
-              backgroundColor: settings.copilotHeuristicsOnly
+              backgroundColor: aiStatus.connected
                 ? 'color-mix(in srgb, #10b981 14%, transparent)'
-                : 'var(--bg-elevated, var(--bg-card, #171d2e))',
-              border: settings.copilotHeuristicsOnly
+                : 'rgba(245, 158, 11, 0.14)',
+              border: aiStatus.connected
                 ? '1px solid color-mix(in srgb, #10b981 36%, transparent)'
-                : '1px solid var(--border-subtle, var(--border, #263046))',
-              color: settings.copilotHeuristicsOnly
-                ? 'color-mix(in srgb, #10b981 74%, var(--text-primary, #f1f5f9))'
-                : 'var(--text-secondary, #94a3b8)',
+                : '1px solid rgba(245, 158, 11, 0.36)',
+              color: aiStatus.connected ? '#10b981' : '#f59e0b',
               borderRadius: 'var(--radius-sm, 6px)',
               padding: '3px 7px',
               fontSize: 10.5,
@@ -177,11 +187,20 @@ export function CopilotPanel() {
               display: 'flex',
               alignItems: 'center',
               gap: 4,
+              cursor: 'pointer',
             }}
           >
             <Cpu size={11} />
-            {settings.copilotHeuristicsOnly ? 'Heurística' : 'Híbrido'}
+            {aiStatus.connected ? 'IA Conectada' : 'Sem IA · Heurística'}
           </button>
+
+          <SubtleAiGatePopover
+            open={aiGateOpen}
+            onClose={() => setAiGateOpen(false)}
+            align="right"
+            title="Copiloto em Modo Heurístico Local"
+            message="Sem provedor externo conectado, o Copiloto executa apenas diagnósticos epistêmicos e sugestões determinísticas locais."
+          />
 
           <button
             type="button"

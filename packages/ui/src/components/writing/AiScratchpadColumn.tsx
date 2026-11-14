@@ -45,13 +45,13 @@ export function AiScratchpadColumn({
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#0a0d14', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-canvas, #0b0e16)', overflow: 'hidden' }}>
       {/* Top Bar: Mode Toggles & History Navigation */}
       <div
         style={{
           padding: '10px 16px',
-          borderBottom: '1px solid #1b202c',
-          backgroundColor: '#111520',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
+          backgroundColor: 'var(--bg-surface, #111623)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -60,7 +60,7 @@ export function AiScratchpadColumn({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Sparkles size={15} color="#a78bfa" />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>IA Scratchpad</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>IA Scratchpad</span>
         </div>
 
         <div style={{ display: 'flex', gap: 6 }}>
@@ -68,10 +68,10 @@ export function AiScratchpadColumn({
             onClick={() => onChangeStudioMode('fluxo')}
             style={{
               padding: '5px 10px',
-              borderRadius: 6,
-              border: '1px solid #283147',
-              backgroundColor: studioMode === 'fluxo' ? '#2563eb' : '#181e2c',
-              color: '#fff',
+              borderRadius: 'var(--radius-sm, 6px)',
+              border: '1px solid var(--border-subtle, #263046)',
+              backgroundColor: studioMode === 'fluxo' ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-elevated, #171d2e)',
+              color: studioMode === 'fluxo' ? '#fff' : 'var(--text-primary, #f1f5f9)',
               fontSize: 11.5,
               fontWeight: 600,
               cursor: 'pointer',
@@ -83,10 +83,10 @@ export function AiScratchpadColumn({
             onClick={() => onChangeStudioMode('foco')}
             style={{
               padding: '5px 10px',
-              borderRadius: 6,
-              border: '1px solid #283147',
-              backgroundColor: studioMode === 'foco' ? '#2563eb' : '#181e2c',
-              color: '#fff',
+              borderRadius: 'var(--radius-sm, 6px)',
+              border: '1px solid var(--border-subtle, #263046)',
+              backgroundColor: studioMode === 'foco' ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-elevated, #171d2e)',
+              color: studioMode === 'foco' ? '#fff' : 'var(--text-primary, #f1f5f9)',
               fontSize: 11.5,
               fontWeight: 600,
               cursor: 'pointer',
@@ -98,10 +98,10 @@ export function AiScratchpadColumn({
             onClick={() => onChangeStudioMode('proforge')}
             style={{
               padding: '5px 10px',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm, 6px)',
               border: '1px solid rgba(167,139,250,0.4)',
-              backgroundColor: studioMode === 'proforge' ? '#7c3aed' : '#181e2c',
-              color: '#fff',
+              backgroundColor: studioMode === 'proforge' ? '#7c3aed' : 'var(--bg-elevated, #171d2e)',
+              color: studioMode === 'proforge' ? '#fff' : 'var(--text-primary, #f1f5f9)',
               fontSize: 11.5,
               fontWeight: 600,
               cursor: 'pointer',
@@ -120,16 +120,16 @@ export function AiScratchpadColumn({
             onClick={() => onNavigateHistory(historyIndex - 1)}
             style={{
               padding: 4,
-              backgroundColor: '#181e2c',
-              border: '1px solid #283147',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 5,
-              color: historyIndex > 0 ? '#e5e7eb' : '#4b5563',
+              color: historyIndex > 0 ? 'var(--text-primary, #f1f5f9)' : 'var(--text-muted, #64748b)',
               cursor: historyIndex > 0 ? 'pointer' : 'default',
             }}
           >
             <ChevronLeft size={14} />
           </button>
-          <span style={{ fontSize: 11, color: '#9ca3af' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)' }}>
             {history.length > 0 ? `${historyIndex + 1}/${history.length}` : '0/0'}
           </span>
           <button
@@ -137,10 +137,10 @@ export function AiScratchpadColumn({
             onClick={() => onNavigateHistory(historyIndex + 1)}
             style={{
               padding: 4,
-              backgroundColor: '#181e2c',
-              border: '1px solid #283147',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 5,
-              color: historyIndex < history.length - 1 ? '#e5e7eb' : '#4b5563',
+              color: historyIndex < history.length - 1 ? 'var(--text-primary, #f1f5f9)' : 'var(--text-muted, #64748b)',
               cursor: historyIndex < history.length - 1 ? 'pointer' : 'default',
             }}
           >
@@ -165,7 +165,7 @@ export function AiScratchpadColumn({
           border: 'none',
           outline: 'none',
           resize: 'none',
-          color: '#e5e7eb',
+          color: 'var(--text-primary, #f1f5f9)',
           fontSize: settings.editorFontSize || 15,
           lineHeight: settings.editorLineHeight || 1.7,
           textIndent: settings.paragraphIndent ? '2em' : 0,
@@ -182,26 +182,26 @@ export function AiScratchpadColumn({
       <div
         style={{
           padding: '10px 16px',
-          borderTop: '1px solid #1b202c',
-          backgroundColor: '#0e1118',
+          borderTop: '1px solid var(--border-subtle, #263046)',
+          backgroundColor: 'var(--bg-surface, #111623)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 10,
         }}
       >
-        <span style={{ fontSize: 11.5, color: '#9ca3af' }}>
-          Destino: <strong>{activeScene?.title ?? 'Nenhuma cena'}</strong>
+        <span style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)' }}>
+          Destino: <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>{activeScene?.title ?? 'Nenhuma cena'}</strong>
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={handleAppendToScene}
             style={{
               padding: '7px 14px',
-              backgroundColor: '#2563eb',
+              backgroundColor: 'var(--accent-primary, #3b82f6)',
               color: '#fff',
               border: 'none',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm, 6px)',
               fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
@@ -216,10 +216,10 @@ export function AiScratchpadColumn({
             onClick={handleReplaceScene}
             style={{
               padding: '7px 14px',
-              backgroundColor: '#19202e',
-              color: '#f87171',
-              border: '1px solid rgba(248,113,113,0.35)',
-              borderRadius: 6,
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: 'var(--radius-sm, 6px)',
               fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',

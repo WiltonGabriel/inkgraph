@@ -77,6 +77,7 @@ inkgraph/
 ├── README.md                  # Documentação principal
 ├── SECURITY.md                # Política de segurança e proteção do cofre local
 ├── docs/
+│   ├── STUDIO_TABS_REPORT.md  # Auditoria funcional, grau de uso e requisitos de todas as 22 abas
 │   ├── USER_GUIDE.md          # Guia de uso, Markdown e referência dos 26 atalhos
 │   └── architecture/
 │       └── DECISIONS.md       # Registro de decisões arquiteturais (ADR 001)
@@ -214,6 +215,7 @@ O servidor MCP expõe 8 ferramentas via `stdio` sobre o índice SQLite FTS5 e o 
 
 ## Documentação e Padrões do Repositório
 
+- **Relatório e Guia Funcional das 22 Abas do Estúdio:** [docs/STUDIO_TABS_REPORT.md](docs/STUDIO_TABS_REPORT.md)
 - **Guia do Usuário & Atalhos:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 - **Decisões Arquiteturais (ADR 001):** [docs/architecture/DECISIONS.md](docs/architecture/DECISIONS.md)
 - **Constituição Operacional de Agentes:** [AGENTS.md](AGENTS.md)

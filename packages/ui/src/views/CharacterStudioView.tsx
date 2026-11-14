@@ -104,7 +104,14 @@ export function CharacterStudioView() {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 46px)', overflow: 'hidden' }}>
+    <div
+      style={{
+        display: 'flex',
+        height: 'calc(100vh - 46px)',
+        overflow: 'hidden',
+        backgroundColor: 'var(--bg-canvas, #0b0e16)',
+      }}
+    >
       <CharacterRosterSidebar
         characters={project.characters}
         filteredCharacters={filteredCharacters}
@@ -129,18 +136,19 @@ export function CharacterStudioView() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 12,
-            color: '#9ca3af',
+            color: 'var(--text-secondary, #94a3b8)',
           }}
         >
           <div style={{ fontSize: 14 }}>Nenhum personagem cadastrado neste projeto.</div>
           <button
+            type="button"
             onClick={handleCreateManual}
             style={{
               padding: '8px 14px',
-              backgroundColor: '#2563eb',
+              backgroundColor: 'var(--accent-primary, #3b82f6)',
               color: '#fff',
               border: 'none',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm, 6px)',
               fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
@@ -157,7 +165,7 @@ export function CharacterStudioView() {
             position: 'fixed',
             inset: 0,
             zIndex: 140,
-            backgroundColor: 'rgba(0,0,0,0.75)',
+            backgroundColor: 'rgba(0,0,0,0.68)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -166,16 +174,16 @@ export function CharacterStudioView() {
           <div
             style={{
               width: 460,
-              backgroundColor: '#121621',
-              border: '1px solid #283044',
-              borderRadius: 10,
+              backgroundColor: 'var(--bg-surface, #111623)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-lg, 12px)',
               padding: 20,
             }}
           >
-            <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#f3f4f6' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-primary, #f1f5f9)' }}>
               Gerar Personagem com IA
             </h3>
-            <p style={{ margin: '0 0 12px', fontSize: 12, color: '#9ca3af' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-secondary, #94a3b8)' }}>
               Descreva um conceito central e o estúdio criará um perfil completo com backstory, motivação, arco em 3 atos e falhas.
             </p>
             <input
@@ -184,24 +192,25 @@ export function CharacterStudioView() {
               placeholder="Ex.: Um contrabandista veterano que conhece as passagens submersas..."
               style={{
                 width: '100%',
-                backgroundColor: '#141926',
-                border: '1px solid #262f42',
-                borderRadius: 6,
+                backgroundColor: 'var(--bg-elevated, #171d2e)',
+                border: '1px solid var(--border-subtle, #263046)',
+                borderRadius: 'var(--radius-sm, 6px)',
                 padding: '8px 10px',
-                color: '#f3f4f6',
+                color: 'var(--text-primary, #f1f5f9)',
                 fontSize: 13,
                 marginBottom: 14,
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
+                type="button"
                 onClick={() => setShowAiModal(false)}
                 style={{
                   padding: '7px 12px',
                   background: 'transparent',
-                  border: '1px solid #2c3548',
-                  borderRadius: 6,
-                  color: '#9ca3af',
+                  border: '1px solid var(--border-subtle, #263046)',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  color: 'var(--text-secondary, #94a3b8)',
                   fontSize: 12,
                   cursor: 'pointer',
                 }}
@@ -209,12 +218,13 @@ export function CharacterStudioView() {
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={handleCreateWithAi}
                 style={{
                   padding: '7px 14px',
-                  backgroundColor: '#7c3aed',
+                  backgroundColor: 'var(--accent-primary, #3b82f6)',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm, 6px)',
                   color: '#fff',
                   fontSize: 12,
                   fontWeight: 600,

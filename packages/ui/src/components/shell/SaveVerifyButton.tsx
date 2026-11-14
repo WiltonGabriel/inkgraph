@@ -3,7 +3,7 @@ import { CheckCircle2, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useProject } from '../../context/ProjectContext';
 
 export function SaveVerifyButton() {
-  const { verifyAndSaveNow, lastVerifyResult, settings, t } = useProject();
+  const { verifyAndSaveNow, lastVerifyResult, settings } = useProject();
   const [verifying, setVerifying] = useState(false);
   const [justVerified, setJustVerified] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -104,45 +104,30 @@ export function SaveVerifyButton() {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
-          padding: '5px 10px',
-          borderRadius: 999,
+          justifyContent: 'center',
+          padding: '6px 8px',
+          borderRadius: 'var(--radius-sm, 6px)',
           border: `1px solid ${borderColor}`,
           backgroundColor,
           color: textColor,
-          fontSize: 11.5,
-          fontWeight: 600,
           cursor: verifying ? 'wait' : 'pointer',
-          whiteSpace: 'nowrap',
           flexShrink: 0,
           transition: settings.reducedMotion ? 'none' : 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease',
         }}
       >
         {verifying ? (
-          <>
-            <Loader2
-              size={12}
-              style={{
-                animation: settings.reducedMotion ? undefined : 'inkVerifySpin 0.75s linear infinite',
-              }}
-            />
-            <span>{isEn ? 'Verifying…' : 'Verificando…'}</span>
-          </>
+          <Loader2
+            size={14}
+            style={{
+              animation: settings.reducedMotion ? undefined : 'inkVerifySpin 0.75s linear infinite',
+            }}
+          />
         ) : hasError ? (
-          <>
-            <AlertTriangle size={12} />
-            <span>{isEn ? 'Verify' : 'Verificar'}</span>
-          </>
+          <AlertTriangle size={14} />
         ) : isVerifiedOk ? (
-          <>
-            <CheckCircle2 size={12} />
-            <span>{`${t.common.saved} ✓`}</span>
-          </>
+          <CheckCircle2 size={14} />
         ) : (
-          <>
-            <ShieldCheck size={12} />
-            <span>{t.common.saved}</span>
-          </>
+          <ShieldCheck size={14} />
         )}
       </button>
     </>

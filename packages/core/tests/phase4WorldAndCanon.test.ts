@@ -15,6 +15,7 @@ import {
   createStagingProposalFromFinding,
   scanProjectCanon,
 } from '../../ui/src/domain/canonRadarEngine';
+import { checkAiAvailability } from '../../ui/src/domain/aiAvailability';
 
 describe('Phase 4 Engines: 1-10 Canon Score Calculator & Canon Radar Scanner', () => {
   describe('canonScoreCalculator', () => {
@@ -176,6 +177,38 @@ describe('Phase 4 Engines: 1-10 Canon Score Calculator & Canon Radar Scanner', (
           (l) => l.name === 'Citadela Branca'
         )
       ).toBe(true);
+    });
+  });
+
+  describe('aiAvailability', () => {
+    it('reports disconnected by default when no API key or explicit local provider is active', () => {
+      const defaultStatus = checkAiAvailability(DEFAULT_SETTINGS);
+      expect(defaultStatus.connected).toBe(false);
+      expect(defaultStatus.reasonPt).toContain('Nenhuma IA conectada');
+
+      const withCloudKey = checkAiAvailability({
+        ...DEFAULT_SETTINGS,
+        aiProvider: 'gemini',
+        geminiApiKey: 'test-key-123',
+      });
+      expect(withCloudKey.connected).toBe(true);
+
+      const withOllama = checkAiAvailability({
+        ...DEFAULT_SETTINGS,
+        aiProvider: 'ollama',
+        aiMode: 'local',
+        ollamaUrl: 'http://localhost:11434',
+        ollamaModel: 'llama3.2:3b',
+      });
+      expect(withOllama.connected).toBe(true);
+
+      const ecoMode = checkAiAvailability({
+        ...DEFAULT_SETTINGS,
+        aiProvider: 'gemini',
+        geminiApiKey: 'test-key-123',
+        aiMode: 'eco',
+      });
+      expect(ecoMode.connected).toBe(false);
     });
   });
 });

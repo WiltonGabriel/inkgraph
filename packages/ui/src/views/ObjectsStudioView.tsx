@@ -8,10 +8,10 @@ export function ObjectsStudioView() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: 'calc(100vh - 64px)', padding: 14 }}>
       <div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', margin: 0 }}>
           Objetos e Artefatos
         </h2>
-        <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', margin: 0 }}>
           Gerenciamento de itens narrativos, artefatos, relíquias, portadores e cenas vinculadas
         </p>
       </div>

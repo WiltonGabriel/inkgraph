@@ -31,24 +31,24 @@ export function ObjectGroupsSidebar({
     <div
       style={{
         width: 245,
-        backgroundColor: '#111622',
-        border: '1px solid #242f44',
-        borderRadius: 8,
+        backgroundColor: 'var(--bg-surface, #111623)',
+        border: '1px solid var(--border-subtle, #263046)',
+        borderRadius: 'var(--radius-md, 8px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
-      <div style={{ padding: 12, borderBottom: '1px solid #242f44', backgroundColor: '#182030' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 8 }}>
-          <FolderKanban size={15} color="#6366f1" /> Grupos de Objetos
+      <div style={{ padding: 12, borderBottom: '1px solid var(--border-subtle, #263046)', backgroundColor: 'var(--bg-elevated, #171d2e)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', marginBottom: 8 }}>
+          <FolderKanban size={15} style={{ color: 'var(--accent-primary, #3b82f6)' }} /> Grupos de Objetos
         </div>
         <div style={{ display: 'flex', gap: 5 }}>
           <input
             type="color"
             value={newColor}
             onChange={(e) => setNewColor(e.target.value)}
-            style={{ width: 26, height: 28, border: 'none', cursor: 'pointer' }}
+            style={{ width: 26, height: 28, border: 'none', cursor: 'pointer', background: 'transparent' }}
           />
           <input
             placeholder="Novo grupo..."
@@ -57,12 +57,12 @@ export function ObjectGroupsSidebar({
             onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
             style={{
               flex: 1,
-              backgroundColor: '#0a0d14',
-              border: '1px solid #242f44',
+              backgroundColor: 'var(--bg-canvas, #0b0e16)',
+              border: '1px solid var(--border-subtle, #263046)',
               borderRadius: 5,
               padding: '4px 8px',
               fontSize: 11.5,
-              color: '#f1f5f9',
+              color: 'var(--text-primary, #f1f5f9)',
             }}
           />
           <button
@@ -70,7 +70,7 @@ export function ObjectGroupsSidebar({
             style={{
               padding: '4px 8px',
               borderRadius: 5,
-              backgroundColor: '#6366f1',
+              backgroundColor: 'var(--accent-primary, #3b82f6)',
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
@@ -87,10 +87,10 @@ export function ObjectGroupsSidebar({
           style={{
             textAlign: 'left',
             padding: '8px 10px',
-            borderRadius: 6,
-            backgroundColor: selectedGroupId === null ? '#182030' : 'transparent',
-            border: `1px solid ${selectedGroupId === null ? '#6366f1' : 'transparent'}`,
-            color: selectedGroupId === null ? '#fff' : '#cbd5e1',
+            borderRadius: 'var(--radius-sm, 6px)',
+            backgroundColor: selectedGroupId === null ? 'var(--bg-hover, #1f273d)' : 'transparent',
+            border: `1px solid ${selectedGroupId === null ? 'var(--accent-primary, #3b82f6)' : 'transparent'}`,
+            color: selectedGroupId === null ? 'var(--text-primary, #f1f5f9)' : 'var(--text-secondary, #94a3b8)',
             fontSize: 12,
             fontWeight: 600,
           }}
@@ -107,8 +107,8 @@ export function ObjectGroupsSidebar({
               onClick={() => onSelectGroup(active ? null : g.id)}
               style={{
                 padding: '8px 10px',
-                borderRadius: 6,
-                backgroundColor: active ? '#182030' : 'transparent',
+                borderRadius: 'var(--radius-sm, 6px)',
+                backgroundColor: active ? 'var(--bg-hover, #1f273d)' : 'transparent',
                 border: `1px solid ${active ? g.color : 'transparent'}`,
                 cursor: 'pointer',
                 display: 'flex',
@@ -116,7 +116,7 @@ export function ObjectGroupsSidebar({
                 alignItems: 'center',
               }}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 600, color: active ? '#fff' : '#cbd5e1' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 600, color: active ? 'var(--text-primary, #f1f5f9)' : 'var(--text-secondary, #94a3b8)' }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: g.color }} />
                 {g.name} ({count})
               </span>
@@ -126,7 +126,7 @@ export function ObjectGroupsSidebar({
                   if (active) onSelectGroup(null);
                   deleteObjectGroup(g.id);
                 }}
-                style={{ background: 'transparent', color: '#94a3b8', padding: 2 }}
+                style={{ background: 'transparent', color: 'var(--text-muted, #64748b)', padding: 2 }}
               >
                 <Trash2 size={12} />
               </button>

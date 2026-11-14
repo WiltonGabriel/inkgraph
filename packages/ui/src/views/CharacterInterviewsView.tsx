@@ -32,7 +32,7 @@ export function CharacterInterviewsView() {
         display: 'flex',
         height: 'calc(100vh - 46px)',
         overflow: 'hidden',
-        backgroundColor: '#0a0d14',
+        backgroundColor: 'var(--bg-canvas, #0b0e16)',
       }}
     >
       <InterviewSidebar

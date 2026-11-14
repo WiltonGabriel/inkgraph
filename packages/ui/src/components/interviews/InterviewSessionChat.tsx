@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Send, BookmarkPlus, Check, User, Bot } from 'lucide-react';
+import { Send, BookmarkPlus, Check, User, Bot, Sparkles } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import type { CharacterArchetype, CharacterInterview } from '../../types/project';
+import { checkAiAvailability } from '../../domain/aiAvailability';
+import { SubtleAiGatePopover } from '../common/SubtleAiGatePopover';
 
 const ARCHETYPE_QUESTIONS: Record<CharacterArchetype, string[]> = {
   hero: [
@@ -53,9 +55,11 @@ export function InterviewSessionChat({
   archetype,
   sessionId,
 }: InterviewSessionChatProps) {
-  const { project, upsertInterview, upsertCharacter } = useProject();
+  const { project, settings, upsertInterview, upsertCharacter } = useProject();
   const [question, setQuestion] = useState('');
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [aiGateOpen, setAiGateOpen] = useState(false);
+  const aiStatus = checkAiAvailability(settings);
 
   const character =
     project.characters.find((c) => c.id === characterId) ?? project.characters[0];
@@ -110,24 +114,62 @@ export function InterviewSessionChat({
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#0a0d14', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-canvas, #0b0e16)', overflow: 'hidden' }}>
       <div
         style={{
           padding: '12px 18px',
-          borderBottom: '1px solid #1b202c',
-          backgroundColor: '#111520',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
+          backgroundColor: 'var(--bg-surface, #111623)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 12,
         }}
       >
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#f3f4f6' }}>{character.name}</div>
-          <div style={{ fontSize: 11.5, color: '#9ca3af' }}>
-            {character.role} · Arquétipo em foco: <strong style={{ color: '#60a5fa' }}>{archetype}</strong>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>{character.name}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-secondary, #94a3b8)' }}>
+            {character.role} · Arquétipo em foco: <strong style={{ color: 'var(--accent-primary, #3b82f6)' }}>{archetype}</strong>
           </div>
         </div>
-        <span style={{ fontSize: 11, color: '#9ca3af' }}>{session?.title ?? 'Nova conversa'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (!aiStatus.connected) setAiGateOpen((prev) => !prev);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 8px',
+              borderRadius: 999,
+              border: aiStatus.connected
+                ? '1px solid rgba(16, 185, 129, 0.35)'
+                : '1px solid rgba(245, 158, 11, 0.35)',
+              backgroundColor: aiStatus.connected
+                ? 'rgba(16, 185, 129, 0.12)'
+                : 'rgba(245, 158, 11, 0.12)',
+              color: aiStatus.connected ? '#10b981' : '#f59e0b',
+              fontSize: 10.5,
+              fontWeight: 600,
+              cursor: aiStatus.connected ? 'default' : 'pointer',
+            }}
+          >
+            <Sparkles size={11} />
+            {aiStatus.connected ? 'IA Conectada' : 'Modo Offline (Voz do Dossiê)'}
+          </button>
+
+          <SubtleAiGatePopover
+            open={aiGateOpen}
+            onClose={() => setAiGateOpen(false)}
+            align="right"
+            title="Modo Offline Ativo"
+            message="Sem IA conectada, as respostas simulam a voz do personagem usando diretamente a motivação e os segredos do dossiê local."
+          />
+
+          <span style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)' }}>{session?.title ?? 'Nova conversa'}</span>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -139,15 +181,15 @@ export function InterviewSessionChat({
                 style={{
                   maxWidth: '76%',
                   padding: '10px 14px',
-                  borderRadius: 8,
-                  backgroundColor: isUser ? '#1d4ed8' : '#131824',
-                  border: isUser ? 'none' : '1px solid #222a3d',
-                  color: '#f3f4f6',
+                  borderRadius: 'var(--radius-md, 8px)',
+                  backgroundColor: isUser ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-surface, #111623)',
+                  border: isUser ? 'none' : '1px solid var(--border-subtle, #263046)',
+                  color: isUser ? '#ffffff' : 'var(--text-primary, #f1f5f9)',
                   fontSize: 13,
                   lineHeight: 1.55,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 11, color: isUser ? '#bfdbfe' : '#9ca3af', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 11, color: isUser ? 'rgba(255,255,255,0.82)' : 'var(--text-secondary, #94a3b8)', marginBottom: 4 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700 }}>
                     {isUser ? <User size={11} /> : <Bot size={11} />}
                     {isUser ? 'Autor' : character.name}
@@ -160,11 +202,11 @@ export function InterviewSessionChat({
                     <button
                       onClick={() => handleCopyToDossier(msg.id, msg.text)}
                       style={{
-                        background: '#19202e',
-                        border: '1px solid #2c3548',
+                        background: 'var(--bg-elevated, #171d2e)',
+                        border: '1px solid var(--border-subtle, #263046)',
                         borderRadius: 5,
                         padding: '3px 8px',
-                        color: copiedMsgId === msg.id ? '#34d399' : '#cbd5e1',
+                        color: copiedMsgId === msg.id ? '#10b981' : 'var(--text-secondary, #94a3b8)',
                         fontSize: 11,
                         cursor: 'pointer',
                         display: 'flex',
@@ -184,17 +226,17 @@ export function InterviewSessionChat({
       </div>
 
       {/* Suggested Archetype Questions */}
-      <div style={{ padding: '8px 18px', borderTop: '1px solid #1b202c', backgroundColor: '#0e1118', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ padding: '8px 18px', borderTop: '1px solid var(--border-subtle, #263046)', backgroundColor: 'var(--bg-surface, #111623)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {suggested.map((q, idx) => (
           <button
             key={idx}
             onClick={() => handleSendQuestion(q)}
             style={{
               padding: '5px 10px',
-              backgroundColor: '#141926',
-              border: '1px solid #252e42',
-              borderRadius: 6,
-              color: '#cbd5e1',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-sm, 6px)',
+              color: 'var(--text-primary, #f1f5f9)',
               fontSize: 11.5,
               cursor: 'pointer',
             }}
@@ -205,7 +247,7 @@ export function InterviewSessionChat({
       </div>
 
       {/* Custom Question Input */}
-      <div style={{ padding: '10px 18px', borderTop: '1px solid #1b202c', backgroundColor: '#111520', display: 'flex', gap: 8 }}>
+      <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border-subtle, #263046)', backgroundColor: 'var(--bg-surface, #111623)', display: 'flex', gap: 8 }}>
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -214,10 +256,10 @@ export function InterviewSessionChat({
           style={{
             flex: 1,
             padding: '8px 12px',
-            backgroundColor: '#0c0f17',
-            border: '1px solid #262f42',
-            borderRadius: 6,
-            color: '#fff',
+            backgroundColor: 'var(--bg-elevated, #171d2e)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-sm, 6px)',
+            color: 'var(--text-primary, #f1f5f9)',
             fontSize: 13,
             outline: 'none',
           }}
@@ -226,10 +268,10 @@ export function InterviewSessionChat({
           onClick={() => handleSendQuestion()}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#2563eb',
+            backgroundColor: 'var(--accent-primary, #3b82f6)',
             color: '#fff',
             border: 'none',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm, 6px)',
             fontSize: 12.5,
             fontWeight: 600,
             cursor: 'pointer',

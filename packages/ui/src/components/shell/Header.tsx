@@ -15,7 +15,6 @@ import { BranchMergeDiffModal } from '../publishing/BranchMergeDiffModal';
 export function Header() {
   const {
     project,
-    totalWordCount,
     setShowPortal,
     setShowCommandPalette,
     showCopilot,
@@ -69,18 +68,15 @@ export function Header() {
             border: '1px solid var(--border-subtle, var(--border, #263046))',
             color: 'var(--text-primary, #f1f5f9)',
             borderRadius: 'var(--radius-sm, 6px)',
-            padding: '5px 8px',
-            fontSize: 11.5,
-            fontWeight: 600,
+            padding: '6px 8px',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 5,
+            justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <LayoutGrid size={13} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
-          <span>{t.common.mySpace}</span>
+          <LayoutGrid size={14} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
         </button>
 
         <BreadcrumbBar />
@@ -149,25 +145,8 @@ export function Header() {
         <SaveVerifyButton />
       </div>
 
-      {/* Right: Metrics, Branch Popover & Copilot */}
+      {/* Right: Branch Popover & Copilot */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <div
-          style={{
-            fontSize: 11.5,
-            color: 'var(--text-secondary, #94a3b8)',
-            padding: '4px 8px',
-            backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
-            borderRadius: 'var(--radius-sm, 6px)',
-            border: '1px solid var(--border-subtle, var(--border, #263046))',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <strong style={{ color: 'var(--text-primary, #f1f5f9)' }}>
-            {totalWordCount.toLocaleString('pt-BR')}
-          </strong>{' '}
-          / {project.wordCountGoal.toLocaleString('pt-BR')} {t.common.words}
-        </div>
-
         <div style={{ position: 'relative' }}>
           <button
             ref={branchBtnRef}

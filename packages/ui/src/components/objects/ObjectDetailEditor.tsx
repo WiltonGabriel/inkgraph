@@ -64,17 +64,17 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '260px 1fr', gap: 12, overflow: 'hidden' }}>
       <div
         style={{
-          backgroundColor: '#111622',
-          border: '1px solid #242f44',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
         }}
       >
-        <div style={{ padding: 12, borderBottom: '1px solid #242f44', backgroundColor: '#182030', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
-            <Package size={15} color="#6366f1" /> Objetos ({filtered.length})
+        <div style={{ padding: 12, borderBottom: '1px solid var(--border-subtle, #263046)', backgroundColor: 'var(--bg-elevated, #171d2e)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
+            <Package size={15} style={{ color: 'var(--accent-primary, #3b82f6)' }} /> Objetos ({filtered.length})
           </span>
           <button
             onClick={handleCreate}
@@ -84,7 +84,7 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
               gap: 4,
               padding: '4px 9px',
               borderRadius: 5,
-              backgroundColor: '#6366f1',
+              backgroundColor: 'var(--accent-primary, #3b82f6)',
               color: '#fff',
               fontSize: 11.5,
               fontWeight: 600,
@@ -103,9 +103,9 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
                 onClick={() => setSelectedId(o.id)}
                 style={{
                   padding: '8px 10px',
-                  borderRadius: 6,
-                  backgroundColor: active ? '#182030' : 'transparent',
-                  border: `1px solid ${active ? '#6366f1' : 'transparent'}`,
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  backgroundColor: active ? 'var(--bg-hover, #1f273d)' : 'transparent',
+                  border: `1px solid ${active ? 'var(--accent-primary, #3b82f6)' : 'transparent'}`,
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -113,10 +113,10 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: active ? '#fff' : '#cbd5e1' }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: active ? 'var(--text-primary, #f1f5f9)' : 'var(--text-secondary, #94a3b8)' }}>
                     {o.name}
                   </div>
-                  <div style={{ fontSize: 10.5, color: '#94a3b8' }}>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted, #64748b)' }}>
                     {OBJECT_TYPE_LABELS[o.type]}
                   </div>
                 </div>
@@ -125,7 +125,7 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
                     e.stopPropagation();
                     deleteObject(o.id);
                   }}
-                  style={{ background: 'transparent', color: '#94a3b8', padding: 2 }}
+                  style={{ background: 'transparent', color: 'var(--text-muted, #64748b)', padding: 2 }}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -137,9 +137,9 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
 
       <div
         style={{
-          backgroundColor: '#111622',
-          border: '1px solid #242f44',
-          borderRadius: 8,
+          backgroundColor: 'var(--bg-surface, #111623)',
+          border: '1px solid var(--border-subtle, #263046)',
+          borderRadius: 'var(--radius-md, 8px)',
           padding: 16,
           overflowY: 'auto',
           display: 'flex',
@@ -247,9 +247,9 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
                         padding: '3px 9px',
                         borderRadius: 999,
                         fontSize: 11,
-                        backgroundColor: active ? '#6366f1' : '#0a0d14',
-                        border: `1px solid ${active ? '#6366f1' : '#242f44'}`,
-                        color: active ? '#fff' : '#94a3b8',
+                        backgroundColor: active ? 'var(--accent-primary, #3b82f6)' : 'var(--bg-elevated, #171d2e)',
+                        border: `1px solid ${active ? 'var(--accent-primary, #3b82f6)' : 'var(--border-subtle, #263046)'}`,
+                        color: active ? '#fff' : 'var(--text-secondary, #94a3b8)',
                       }}
                     >
                       #{s.chapterNumber} {s.title}
@@ -260,7 +260,7 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
             </div>
           </>
         ) : (
-          <div style={{ color: '#94a3b8', fontSize: 12.5 }}>Selecione ou crie um objeto.</div>
+          <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 12.5 }}>Selecione ou crie um objeto.</div>
         )}
       </div>
     </div>
@@ -270,16 +270,16 @@ export function ObjectDetailEditor({ selectedGroupId }: ObjectDetailEditorProps)
 const lbl: React.CSSProperties = {
   display: 'block',
   fontSize: 11,
-  color: '#94a3b8',
+  color: 'var(--text-secondary, #94a3b8)',
   marginBottom: 4,
 };
 
 const inp: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#0a0d14',
-  border: '1px solid #242f44',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, #171d2e)',
+  border: '1px solid var(--border-subtle, #263046)',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '6px 9px',
   fontSize: 12,
-  color: '#f1f5f9',
+  color: 'var(--text-primary, #f1f5f9)',
 };

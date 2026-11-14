@@ -14,10 +14,13 @@ import { useProject } from '../context/ProjectContext';
 import type { OutlineSection } from '../types/project';
 import type { NarrativeTemplate } from '../data/templatesCatalog';
 import { OutlineTemplateModal } from '../components/outline/OutlineTemplateModal';
+import { checkAiAvailability } from '../domain/aiAvailability';
+import { SubtleAiGatePopover } from '../components/common/SubtleAiGatePopover';
 
 export function OutlineGeneratorView() {
   const {
     project,
+    settings,
     setOutline,
     applyOutlineToManuscript,
     applyTemplateToProject,
@@ -33,8 +36,10 @@ export function OutlineGeneratorView() {
   const [includeTwist, setIncludeTwist] = useState(true);
   const [appliedBanner, setAppliedBanner] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [aiGateOpen, setAiGateOpen] = useState(false);
+  const aiStatus = checkAiAvailability(settings);
 
-  const handleGenerateOutline = () => {
+  const generateLocalOutline = () => {
     const baseIdea = prompt.trim() || 'o conflito central';
     const generated: OutlineSection[] = Array.from(
       { length: Math.max(3, Math.min(20, chapterCount)) },
@@ -70,6 +75,15 @@ export function OutlineGeneratorView() {
       }
     );
     setOutline(generated);
+    notify('Molde estrutural aplicado ao contorno.', 'info');
+  };
+
+  const handleGenerateOutlineClick = () => {
+    if (!aiStatus.connected) {
+      setAiGateOpen((prev) => !prev);
+      return;
+    }
+    generateLocalOutline();
   };
 
   const handleSelectTemplate = async (
@@ -235,26 +249,46 @@ export function OutlineGeneratorView() {
           </label>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGenerateOutline}
-          style={{
-            padding: '10px 14px',
-            backgroundColor: 'var(--accent-primary, #3b82f6)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: 'var(--radius-sm, 6px)',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          <Sparkles size={15} /> Gerar Esboço Estruturado
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={handleGenerateOutlineClick}
+            title={
+              aiStatus.connected
+                ? 'Gerar contorno assistido por IA'
+                : 'Nenhuma IA conectada — clique para configurar ou usar molde local'
+            }
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              backgroundColor: aiStatus.connected
+                ? 'var(--accent-primary, #3b82f6)'
+                : 'var(--bg-elevated, var(--bg-card, #171d2e))',
+              color: aiStatus.connected ? '#ffffff' : 'var(--text-primary, #f1f5f9)',
+              border: aiStatus.connected
+                ? 'none'
+                : '1px dashed var(--border-subtle, var(--border, #263046))',
+              borderRadius: 'var(--radius-sm, 6px)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <Sparkles size={15} style={{ color: aiStatus.connected ? '#ffffff' : '#a78bfa' }} />
+            Gerar Esboço com IA
+          </button>
+
+          <SubtleAiGatePopover
+            open={aiGateOpen}
+            onClose={() => setAiGateOpen(false)}
+            secondaryLabel="Usar Molde Local (Offline)"
+            onSecondaryAction={generateLocalOutline}
+          />
+        </div>
 
         <button
           type="button"

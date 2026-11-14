@@ -65,20 +65,20 @@ export function InterviewSidebar({
     <aside
       style={{
         width: 290,
-        backgroundColor: '#0e1118',
-        borderRight: '1px solid #1b202c',
+        backgroundColor: 'var(--bg-surface, #111623)',
+        borderRight: '1px solid var(--border-subtle, #263046)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
       }}
     >
-      <div style={{ padding: 14, borderBottom: '1px solid #1b202c', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 700, color: '#f3f4f6' }}>
-          <User size={15} color="#60a5fa" /> Entrevistado & Arquétipo
+      <div style={{ padding: 14, borderBottom: '1px solid var(--border-subtle, #263046)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)' }}>
+          <User size={15} style={{ color: 'var(--accent-primary, #3b82f6)' }} /> Entrevistado & Arquétipo
         </div>
 
         <div>
-          <label style={{ fontSize: 11, color: '#9ca3af', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: 4 }}>
             Selecionar Personagem
           </label>
           <select
@@ -87,10 +87,10 @@ export function InterviewSidebar({
             style={{
               width: '100%',
               padding: '7px 10px',
-              backgroundColor: '#141926',
-              border: '1px solid #262f42',
-              borderRadius: 6,
-              color: '#f3f4f6',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-sm, 6px)',
+              color: 'var(--text-primary, #f1f5f9)',
               fontSize: 12.5,
             }}
           >
@@ -103,7 +103,7 @@ export function InterviewSidebar({
         </div>
 
         <div>
-          <label style={{ fontSize: 11, color: '#9ca3af', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: 4 }}>
             Arquétipo Junguiano da Sessão
           </label>
           <select
@@ -112,10 +112,10 @@ export function InterviewSidebar({
             style={{
               width: '100%',
               padding: '7px 10px',
-              backgroundColor: '#141926',
-              border: '1px solid #262f42',
-              borderRadius: 6,
-              color: '#f3f4f6',
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-sm, 6px)',
+              color: 'var(--text-primary, #f1f5f9)',
               fontSize: 12,
             }}
           >
@@ -132,10 +132,10 @@ export function InterviewSidebar({
           style={{
             width: '100%',
             padding: '8px 12px',
-            backgroundColor: '#2563eb',
+            backgroundColor: 'var(--accent-primary, #3b82f6)',
             color: '#fff',
             border: 'none',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm, 6px)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
@@ -150,7 +150,7 @@ export function InterviewSidebar({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', padding: '0 4px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary, #94a3b8)', padding: '0 4px' }}>
           Sessões Salvas ({charSessions.length})
         </div>
         {charSessions.map((sess) => {
@@ -161,9 +161,9 @@ export function InterviewSidebar({
               onClick={() => onSelectSession(sess.id)}
               style={{
                 padding: '9px 10px',
-                borderRadius: 6,
-                backgroundColor: active ? '#172033' : '#121621',
-                border: active ? '1px solid #2563eb' : '1px solid #1f2533',
+                borderRadius: 'var(--radius-sm, 6px)',
+                backgroundColor: active ? 'var(--bg-hover, #1f273d)' : 'var(--bg-elevated, #171d2e)',
+                border: active ? '1px solid var(--accent-primary, #3b82f6)' : '1px solid var(--border-subtle, #263046)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -172,11 +172,11 @@ export function InterviewSidebar({
               }}
             >
               <div style={{ overflow: 'hidden', flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary, #f1f5f9)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   <MessageSquare size={11} style={{ marginRight: 5, verticalAlign: 'middle' }} />
                   {sess.title}
                 </div>
-                <div style={{ fontSize: 10.5, color: '#6b7280', marginTop: 2 }}>
+                <div style={{ fontSize: 10.5, color: 'var(--text-muted, #64748b)', marginTop: 2 }}>
                   {sess.archetype} · {sess.messages.length} msgs
                 </div>
               </div>
@@ -185,7 +185,7 @@ export function InterviewSidebar({
                   e.stopPropagation();
                   deleteInterview(sess.id);
                 }}
-                style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: 2 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted, #64748b)', cursor: 'pointer', padding: 2 }}
               >
                 <Trash2 size={12} />
               </button>

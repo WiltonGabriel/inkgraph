@@ -58,16 +58,16 @@ export function WriterContextColumn() {
     <aside
       style={{
         width: 280,
-        backgroundColor: '#0e1118',
-        borderRight: '1px solid #1b202c',
+        backgroundColor: 'var(--bg-surface, #111623)',
+        borderRight: '1px solid var(--border-subtle, #263046)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
       }}
     >
-      <div style={{ padding: 14, borderBottom: '1px solid #1b202c' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f3f4f6', marginBottom: 8 }}>
-          <BookOpen size={14} color="#60a5fa" /> Cena de Trabalho
+      <div style={{ padding: 14, borderBottom: '1px solid var(--border-subtle, #263046)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', marginBottom: 8 }}>
+          <BookOpen size={14} style={{ color: 'var(--accent-primary, #3b82f6)' }} /> Cena de Trabalho
         </div>
         <select
           value={activeScene?.id ?? ''}
@@ -75,10 +75,10 @@ export function WriterContextColumn() {
           style={{
             width: '100%',
             padding: '7px 10px',
-            backgroundColor: '#141926',
-            border: '1px solid #262f42',
-            borderRadius: 6,
-            color: '#f3f4f6',
+            backgroundColor: 'var(--bg-elevated, #171d2e)',
+            border: '1px solid var(--border-subtle, #263046)',
+            borderRadius: 'var(--radius-sm, 6px)',
+            color: 'var(--text-primary, #f1f5f9)',
             fontSize: 12.5,
             marginBottom: 10,
           }}
@@ -92,7 +92,7 @@ export function WriterContextColumn() {
 
         {activeScene && (
           <div>
-            <label style={{ fontSize: 11, color: '#9ca3af', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: 4 }}>
               Resumo da Cena
             </label>
             <textarea
@@ -101,11 +101,11 @@ export function WriterContextColumn() {
               rows={3}
               style={{
                 width: '100%',
-                backgroundColor: '#0c0f17',
-                border: '1px solid #242c3d',
-                borderRadius: 6,
+                backgroundColor: 'var(--bg-elevated, #171d2e)',
+                border: '1px solid var(--border-subtle, #263046)',
+                borderRadius: 'var(--radius-sm, 6px)',
                 padding: 8,
-                color: '#d1d5db',
+                color: 'var(--text-primary, #f1f5f9)',
                 fontSize: 11.5,
                 lineHeight: 1.45,
                 resize: 'vertical',
@@ -125,21 +125,21 @@ export function WriterContextColumn() {
             key={ctx.id}
             style={{
               padding: 10,
-              backgroundColor: '#131824',
-              border: '1px solid #1f2637',
-              borderRadius: 7,
+              backgroundColor: 'var(--bg-elevated, #171d2e)',
+              border: '1px solid var(--border-subtle, #263046)',
+              borderRadius: 'var(--radius-md, 8px)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#f3f4f6', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 {ctx.kind === 'Personagem' && <Users size={11} color="#60a5fa" />}
                 {ctx.kind === 'Facção' && <Shield size={11} color="#f87171" />}
                 {ctx.kind === 'Mundo' && <Globe size={11} color="#10b981" />}
                 {ctx.title}
               </span>
-              <span style={{ fontSize: 10, color: '#9ca3af' }}>{ctx.kind}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted, #64748b)' }}>{ctx.kind}</span>
             </div>
-            <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.45 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.45 }}>
               {ctx.snippet}
             </div>
           </div>

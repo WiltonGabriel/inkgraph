@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { CheckCircle2, Cpu, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Cpu, Eye, EyeOff } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import type { AppSettings } from '../../types/project';
+import { checkAiAvailability } from '../../domain/aiAvailability';
 import {
   THEME_VAR,
   controlInputStyle,
@@ -14,13 +15,24 @@ import {
 
 export function AiProviderSection() {
   const { draftSettings, updateDraftSetting } = useSettings();
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'ok'>('idle');
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'ok' | 'unconfigured'>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const isEn = draftSettings.language === 'en';
 
   const handleTestConnection = () => {
     setConnectionStatus('testing');
-    window.setTimeout(() => setConnectionStatus('ok'), 400);
+    setStatusMessage('');
+    window.setTimeout(() => {
+      const status = checkAiAvailability(draftSettings);
+      if (status.connected) {
+        setConnectionStatus('ok');
+        setStatusMessage(isEn ? status.reasonEn : status.reasonPt);
+      } else {
+        setConnectionStatus('unconfigured');
+        setStatusMessage(isEn ? status.reasonEn : status.reasonPt);
+      }
+    }, 300);
   };
 
   return (
@@ -156,19 +168,45 @@ export function AiProviderSection() {
 
         <button type="button" onClick={handleTestConnection} style={secondaryButtonStyle}>
           {connectionStatus === 'ok' && <CheckCircle2 size={14} color="#10b981" />}
+          {connectionStatus === 'unconfigured' && <AlertTriangle size={14} color="#f59e0b" />}
           {connectionStatus === 'testing'
             ? isEn
               ? 'Testing...'
               : 'Verificando...'
             : connectionStatus === 'ok'
               ? isEn
-                ? 'Connected'
-                : 'Conexão ativa'
-              : isEn
-                ? 'Test Connection'
-                : 'Testar Conexão'}
+                ? 'Configured'
+                : 'Configuração pronta'
+              : connectionStatus === 'unconfigured'
+                ? isEn
+                  ? 'Not connected'
+                  : 'Não conectada'
+                : isEn
+                  ? 'Test Connection'
+                  : 'Testar Conexão'}
         </button>
       </div>
+      {statusMessage && (
+        <div
+          style={{
+            marginTop: '0.35rem',
+            padding: '0.5rem 0.7rem',
+            borderRadius: 'var(--radius-sm, 6px)',
+            fontSize: '0.75rem',
+            backgroundColor:
+              connectionStatus === 'ok'
+                ? 'rgba(16, 185, 129, 0.12)'
+                : 'rgba(245, 158, 11, 0.12)',
+            border:
+              connectionStatus === 'ok'
+                ? '1px solid rgba(16, 185, 129, 0.35)'
+                : '1px solid rgba(245, 158, 11, 0.35)',
+            color: connectionStatus === 'ok' ? '#10b981' : '#f59e0b',
+          }}
+        >
+          {statusMessage}
+        </div>
+      )}
     </section>
   );
 }

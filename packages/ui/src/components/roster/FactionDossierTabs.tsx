@@ -25,8 +25,8 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
       <div
         style={{
           padding: '16px 24px',
-          backgroundColor: '#10141d',
-          borderBottom: '1px solid #1b202c',
+          backgroundColor: 'var(--bg-surface, #111623)',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -39,10 +39,10 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
             strokeWidth={4}
           />
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, color: '#f9fafb' }}>
+            <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-primary, #f1f5f9)' }}>
               {selected.name}
             </h2>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 2 }}>
               {selected.subtype} · Lema: “{selected.motto || 'Sem lema'}”
             </div>
           </div>
@@ -71,8 +71,8 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
           display: 'flex',
           gap: 4,
           padding: '0 24px',
-          backgroundColor: '#10141d',
-          borderBottom: '1px solid #1b202c',
+          backgroundColor: 'var(--bg-surface, #111623)',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
         }}
       >
         {[
@@ -90,7 +90,7 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
               borderBottom:
                 activeTab === t.id ? '2px solid #ef4444' : '2px solid transparent',
               background: 'transparent',
-              color: activeTab === t.id ? '#f87171' : '#9ca3af',
+              color: activeTab === t.id ? '#ef4444' : 'var(--text-secondary, #94a3b8)',
               fontSize: 12.5,
               fontWeight: activeTab === t.id ? 700 : 500,
               cursor: 'pointer',
@@ -200,7 +200,7 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
               />
             </div>
 
-            <h4 style={{ margin: '8px 0 0', fontSize: 13.5, color: '#f3f4f6' }}>
+            <h4 style={{ margin: '8px 0 0', fontSize: 13.5, color: 'var(--text-primary, #f1f5f9)' }}>
               Patentes & Cargos da Hierarquia
             </h4>
             {selected.ranks.map((rk) => (
@@ -208,15 +208,15 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 key={rk.id}
                 style={{
                   padding: 12,
-                  backgroundColor: '#131824',
-                  border: '1px solid #242c3d',
-                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
+                  border: '1px solid var(--border-subtle, #263046)',
+                  borderRadius: 'var(--radius-md, 8px)',
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#60a5fa', fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: 'var(--accent-primary, #3b82f6)', fontSize: 13 }}>
                   {rk.title} (Autoridade {rk.authorityLevel}/10)
                 </div>
-                <div style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
                   {rk.responsibilities}
                 </div>
               </div>
@@ -279,15 +279,15 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 key={r.id}
                 style={{
                   padding: 12,
-                  backgroundColor: '#131824',
-                  border: '1px solid #242c3d',
-                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
+                  border: '1px solid var(--border-subtle, #263046)',
+                  borderRadius: 'var(--radius-md, 8px)',
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#f3f4f6', fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', fontSize: 13 }}>
                   Alvo: {r.targetId} · [{r.type}] · Força {r.strength}/10
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
                   {r.label}
                 </div>
               </div>
@@ -297,7 +297,7 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
 
         {activeTab === 'secrets' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontSize: 12.5, color: '#9ca3af' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text-secondary, #94a3b8)' }}>
               Controle segredos institucionais mantidos por esta facção e quem os conhece.
             </div>
             {selected.epistemicSecrets.map((s) => (
@@ -305,9 +305,9 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 key={s.id}
                 style={{
                   padding: 12,
-                  backgroundColor: '#131824',
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
                   border: '1px solid rgba(245,158,11,0.35)',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md, 8px)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -315,10 +315,10 @@ export function FactionDossierTabs({ selected }: FactionDossierTabsProps) {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>
                     <Lock size={14} /> {s.secret}
                   </div>
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
                     Conhecido por: {s.knownByIds.join(', ')}
                   </div>
                 </div>
@@ -392,27 +392,27 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 11.5,
   fontWeight: 600,
-  color: '#9ca3af',
+  color: 'var(--text-secondary, #94a3b8)',
   marginBottom: 4,
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, #171d2e)',
+  border: '1px solid var(--border-subtle, #263046)',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '8px 10px',
-  color: '#f3f4f6',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 13,
 };
 
 const textareaStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, #171d2e)',
+  border: '1px solid var(--border-subtle, #263046)',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '9px 11px',
-  color: '#e5e7eb',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 13,
   lineHeight: 1.5,
   resize: 'vertical',

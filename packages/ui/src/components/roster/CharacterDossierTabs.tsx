@@ -24,8 +24,8 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
       <div
         style={{
           padding: '16px 24px',
-          backgroundColor: '#10141d',
-          borderBottom: '1px solid #1b202c',
+          backgroundColor: 'var(--bg-surface, #111623)',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -38,10 +38,10 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
             strokeWidth={4}
           />
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, color: '#f9fafb' }}>
+            <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-primary, #f1f5f9)' }}>
               Dossiê: {selected.name}
             </h2>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 2 }}>
               {selected.role} · Arquétipo: {selected.archetype} · Status: {selected.status}
             </div>
           </div>
@@ -70,8 +70,8 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
           display: 'flex',
           gap: 4,
           padding: '0 24px',
-          backgroundColor: '#10141d',
-          borderBottom: '1px solid #1b202c',
+          backgroundColor: 'var(--bg-surface, #111623)',
+          borderBottom: '1px solid var(--border-subtle, #263046)',
         }}
       >
         {[
@@ -88,9 +88,9 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
               padding: '10px 14px',
               border: 'none',
               borderBottom:
-                activeTab === t.id ? '2px solid #3b82f6' : '2px solid transparent',
+                activeTab === t.id ? '2px solid var(--accent-primary, #3b82f6)' : '2px solid transparent',
               background: 'transparent',
-              color: activeTab === t.id ? '#60a5fa' : '#9ca3af',
+              color: activeTab === t.id ? 'var(--accent-primary, #3b82f6)' : 'var(--text-secondary, #94a3b8)',
               fontSize: 12.5,
               fontWeight: activeTab === t.id ? 700 : 500,
               cursor: 'pointer',
@@ -351,15 +351,15 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
                 key={r.id}
                 style={{
                   padding: 12,
-                  backgroundColor: '#131824',
-                  border: '1px solid #242c3d',
-                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
+                  border: '1px solid var(--border-subtle, #263046)',
+                  borderRadius: 'var(--radius-md, 8px)',
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#f3f4f6', fontSize: 13 }}>
-                  Alvo: {r.targetId} · Tipo: <span style={{ color: '#60a5fa' }}>{r.type}</span> · Força: {r.strength}/10
+                <div style={{ fontWeight: 700, color: 'var(--text-primary, #f1f5f9)', fontSize: 13 }}>
+                  Alvo: {r.targetId} · Tipo: <span style={{ color: 'var(--accent-primary, #3b82f6)' }}>{r.type}</span> · Força: {r.strength}/10
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 4 }}>
                   {r.label}
                 </div>
               </div>
@@ -369,7 +369,7 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
 
         {activeTab === 'epistemic' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontSize: 12.5, color: '#9ca3af' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text-secondary, #94a3b8)' }}>
               Controle o que este personagem esconde e quem mais sabe sobre cada segredo.
             </div>
             {selected.epistemicSecrets.map((sec) => (
@@ -377,15 +377,15 @@ export function CharacterDossierTabs({ selected }: CharacterDossierTabsProps) {
                 key={sec.id}
                 style={{
                   padding: 14,
-                  backgroundColor: '#131824',
+                  backgroundColor: 'var(--bg-elevated, #171d2e)',
                   border: '1px solid rgba(245,158,11,0.35)',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md, 8px)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>
                   <Lock size={14} /> {sec.secret}
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary, #94a3b8)', marginTop: 6 }}>
                   Conhecido por: {sec.knownByIds.join(', ')}
                 </div>
               </div>
@@ -469,27 +469,27 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 11.5,
   fontWeight: 600,
-  color: '#9ca3af',
+  color: 'var(--text-secondary, #94a3b8)',
   marginBottom: 4,
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, #171d2e)',
+  border: '1px solid var(--border-subtle, #263046)',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '8px 10px',
-  color: '#f3f4f6',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 13,
 };
 
 const textareaStyle: React.CSSProperties = {
   width: '100%',
-  backgroundColor: '#141926',
-  border: '1px solid #262f42',
-  borderRadius: 6,
+  backgroundColor: 'var(--bg-elevated, #171d2e)',
+  border: '1px solid var(--border-subtle, #263046)',
+  borderRadius: 'var(--radius-sm, 6px)',
   padding: '9px 11px',
-  color: '#e5e7eb',
+  color: 'var(--text-primary, #f1f5f9)',
   fontSize: 13,
   lineHeight: 1.5,
   resize: 'vertical',
