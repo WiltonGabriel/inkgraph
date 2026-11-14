@@ -15,7 +15,7 @@ Projetado sob a filosofia de **Design Silencioso** e **Responsabilidade Única (
 
 ## Sumário
 
-- [Recursos Atuais (Fases 1 a 3)](#recursos-atuais-fases-1-a-3)
+- [Recursos Implementados (Fases 1 a 4)](#recursos-implementados-fases-1-a-4)
 - [Arquitetura do Monorepo](#arquitetura-do-monorepo)
 - [Como Começar](#como-começar)
   - [Pré-requisitos](#pré-requisitos)
@@ -30,7 +30,7 @@ Projetado sob a filosofia de **Design Silencioso** e **Responsabilidade Única (
 
 ---
 
-## Recursos Atuais (Fases 1 a 3)
+## Recursos Implementados (Fases 1 a 4)
 
 - **Meu Espaço & Cabeçalho Navegável:**
   - Catálogo multi-workspace com criação, duplicação, favoritos, arquivo e importação/exportação JSON.
@@ -52,7 +52,13 @@ Projetado sob a filosofia de **Design Silencioso** e **Responsabilidade Única (
 - **Memória em 4 Camadas & Copiloto Epistêmico (`memoryCompiler.ts`):**
   - Compilação local de contexto em 4 camadas (*1. Memória de Trabalho*, *2. Memória Episódica & Epistêmica*, *3. Memória Semântica*, *4. Síntese Contínua & Voz*), respeitando orçamento de tokens, detectando possíveis vazamentos epistêmicos na cena ativa e mantendo o envio externo bloqueado nos modos `local` e `eco`.
   - Sugestões de prosa enviadas para **Staging** com diff visual ou aplicadas ao rascunho após criação automática de snapshot de segurança.
-- **Próxima Etapa Planejada (Fase 4):** Construção Mundial em 10 pilares adaptativos com Atlas e upload de mapas em `IndexedDB`, sistema universal de notas `1–10`, Radar de Cânone completo e checagem pré-exportação. Acompanhe o detalhamento no [Guia do Usuário](docs/USER_GUIDE.md) e nos [Registros de Arquitetura](docs/architecture/DECISIONS.md).
+- **Construção Mundial em 10 Pilares Adaptativos & Atlas (`WorldbuildingStudioView.tsx`):**
+  - 10 pilares completos (*Visão Geral*, *Geografia*, *Cultura*, *Política*, *Economia*, *História*, *Locais*, *Atlas / Mapas*, *Sistemas & Leis* e *Linha do Tempo*) com sub-barra lateral retrátil em telas largas (`>= 960px`) e pílulas horizontais roláveis em janelas estreitas (`< 960px`).
+  - Upload múltiplo de mapas (`PNG`, `JPG`, `WebP`, `SVG`) e plantas locais armazenados em `IndexedDB` (`storageAdapter.ts`), filtro de camadas temáticas, pinos arrastáveis por porcentagem (`0–100%`) e rotas visuais conectando locais.
+- **Notas Universais `1–10` (`canonScoreCalculator.ts`), Radar de Cânone (`canonRadarEngine.ts`) & Pré-Exportação:**
+  - Escala universal de maturidade de `1` a `10` (`#ef4444` Esboço Inicial → `#f59e0b` Em Construção → `#3b82f6` Consistente → `#10b981` Cânone Maduro) com checklist acionável do que falta preencher em cada pilar e entidade.
+  - Varredura ao vivo via **"Escanear Tudo Agora"** (`Ctrl+Shift+R`) detectando citações `@`/`#`/`&`/`!`, nomes compostos não catalogados, vínculos pendentes de cena e alertas epistêmicos, operando nos **3 níveis de permissão** (*Observador*, *Rascunho Staging* e *Auto-Catalogar Universo* sem reescrever a prosa) com escopos granulares.
+  - Auditoria pré-exportação (`ExportPreflightCard.tsx`) resumindo cenas em rascunho, propostas em *Staging* e alertas epistêmicos antes da compilação. Acompanhe o detalhamento no [Guia do Usuário](docs/USER_GUIDE.md) e nos [Registros de Arquitetura](docs/architecture/DECISIONS.md).
 
 ---
 

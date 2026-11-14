@@ -105,3 +105,24 @@ No painel lateral **Copiloto → Memória 4 Camadas**, você inspeciona em tempo
 4. **Síntese Contínua & Voz (Procedural):** resumo das cenas anteriores na ordem de leitura, subtramas ativas e resumo de continuidade (`sessionHandoff`).
 
 Quando o modo está em `local` ou `eco` (ou apenas heurística), nenhum dado é liberado para envio externo (`cloudAllowed = false`).
+
+---
+
+## 6. Construção Mundial em 10 Pilares, Atlas & Notas `1–10`
+
+- **Layout Adaptativo:** em telas largas (`>= 960px`), os 10 pilares aparecem em barra lateral vertical recolhível ao lado do conteúdo; em janelas estreitas (`< 960px`), alternam automaticamente para pílulas horizontais roláveis com o respectivo escore `1–10`.
+- **10 Pilares:** *Visão Geral*, *Geografia* (com miniatura do mapa principal), *Cultura*, *Política*, *Economia*, *História*, *Locais* (com coordenadas, rotas e planta local opcional em `IndexedDB`), *Atlas / Mapas*, *Sistemas & Leis* e *Linha do Tempo*.
+- **Atlas Interativo:** faça upload de múltiplos mapas (`PNG`, `JPG`, `WebP`, `SVG`), marque um deles como *Principal*, filtre camadas temáticas (*Mundo*, *Geografia*, *Político*, *Rotas Comerciais*, *Sistemas*, *Planta Local*), posicione/arraste pinos de *Locais* (`0–100%`) e visualize rotas conectadas.
+- **Notas de Maturidade `1–10`:** cada pilar e entidade recebe nota automática (`1–3` vermelho, `4–6` âmbar, `7–8` azul, `9–10` esmeralda) com checklist retrátil do que falta preencher para alcançar `10/10`.
+
+---
+
+## 7. Radar de Cânone (`Ctrl+Shift+R`), 3 Níveis de IA & Checagem Pré-Exportação
+
+1. **Escanear Tudo Agora (`Ctrl+Shift+R`):** analisa cenas do manuscrito em busca de marcações inéditas (`@Personagem`, `#Local`, `&Facção`, `!Objeto`), nomes próprios compostos não catalogados, vínculos de cena ausentes e possíveis vazamentos epistêmicos.
+2. **3 Níveis de Permissão da IA (editáveis direto no Radar ou em Configurações → IA & MCP):**
+   - **Observador:** apenas destaca inconsistências e achados em modo leitura.
+   - **Rascunho / Staging (Padrão):** converte descobertas em propostas YAML+Markdown dentro da fila de *Staging* para aprovação humana.
+   - **Auto-Catalogar Universo:** cria fichas provisórias no elenco/mundo/objetos e restaura vínculos de metadados das cenas automaticamente, **sem nunca reescrever a prosa literária do autor**.
+3. **Escopos Granulares:** ative ou pause separadamente os filtros de *Entidades & Elenco*, *Mundo & Construção Mundial* e *Grafo, Cronologia & Epistemologia*.
+4. **Auditoria Pré-Exportação (`Exportar`):** exibe antes da compilação a nota geral `1–10` do projeto, total de cenas ainda em esboço/rascunho, propostas pendentes em *Staging* e alertas epistêmicos.
