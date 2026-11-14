@@ -67,6 +67,10 @@ export function buildBreadcrumbSegments({
   return list;
 }
 
+function stripRootPrefix(path: string): string {
+  return path.replace(/^InkGraph\s*\/\s*/i, '');
+}
+
 export function resolveCanonicalBreadcrumbPath(
   showPortal: boolean,
   modeLabel: string | undefined,
@@ -76,21 +80,19 @@ export function resolveCanonicalBreadcrumbPath(
   activeSubPath: string
 ): string {
   if (showPortal) {
-    return modeLabel
-      ? `InkGraph / ${homeTitle} / ${modeLabel}`
-      : `InkGraph / ${homeTitle}`;
+    return modeLabel ? `${homeTitle} / ${modeLabel}` : homeTitle;
   }
 
   const exact = BREADCRUMB_TARGETS.find(
     (item) => item.view === activeView && (item.subPath ?? '') === activeSubPath
   );
-  if (exact) return exact.canonicalPath;
+  if (exact) return stripRootPrefix(exact.canonicalPath);
 
   const base = BREADCRUMB_TARGETS.find((item) => item.view === activeView && !item.subPath);
-  if (base && activeSubPath) return `${base.canonicalPath} / ${activeSubPath}`;
-  if (base) return base.canonicalPath;
+  if (base && activeSubPath) return `${stripRootPrefix(base.canonicalPath)} / ${activeSubPath}`;
+  if (base) return stripRootPrefix(base.canonicalPath);
 
-  return ['InkGraph', viewsDict[activeView] ?? activeView, activeSubPath]
+  return [viewsDict[activeView] ?? activeView, activeSubPath]
     .filter(Boolean)
     .join(' / ');
 }

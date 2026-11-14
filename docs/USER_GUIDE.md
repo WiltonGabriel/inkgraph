@@ -8,7 +8,7 @@ Este guia reúne o funcionamento prático da navegação, controle de versões, 
 
 - **Meu Espaço (`Ctrl+Shift+H`):** gerencie múltiplos livros/workspaces, duplique projetos, aplique filtros ou importe/exporte JSON completo.
 - **Breadcrumb Editável por Triplo Clique:**
-  - A trilha no topo exibe sua localização exata (ex.: `InkGraph / Meu Espaço / Construção Mundial / Locais`).
+  - A trilha no topo exibe sua localização exata sem repetir o título do aplicativo (ex.: `As Cinzas de Vael / Construção Mundial / Locais`).
   - Clique **3 vezes seguidas** sobre a trilha para convertê-la em um campo editável estilo pastas; digite o destino (ou escolha do autocompletar) e pressione `Enter` para saltar diretamente.
   - Em janelas estreitas, os segmentos intermediários recolhem automaticamente em `...` clicável para evitar quebra de layout.
 - **Botão Salvar & Verificar (à direita da busca `Ctrl+K`):**

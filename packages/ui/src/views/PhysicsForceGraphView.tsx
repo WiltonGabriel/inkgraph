@@ -17,7 +17,7 @@ export function PhysicsForceGraphView() {
 
   const { nodes, links, allEntities } = useMemo(() => buildFilteredGraphData(project, scope), [project, scope]);
   const activeNodeId = useMemo(
-    () => (allEntities.some((e) => e.id === selectedNodeId) ? selectedNodeId : (allEntities[0]?.id ?? '')),
+    () => (allEntities.some((e) => e.id === selectedNodeId) ? selectedNodeId : ''),
     [allEntities, selectedNodeId]
   );
 
@@ -41,7 +41,12 @@ export function PhysicsForceGraphView() {
 
   return (
     <div style={rootStyle}>
-      <div style={mainPaneStyle}>
+      <div
+        style={{
+          ...mainPaneStyle,
+          borderRight: activeNodeId ? '1px solid var(--border-subtle)' : 'none',
+        }}
+      >
         <GraphToolbar
           scope={scope}
           setScope={setScope}
@@ -69,10 +74,18 @@ export function PhysicsForceGraphView() {
           <GraphTableView links={links} allEntities={allEntities} onSelectNode={setSelectedNodeId} />
         )}
       </div>
-      <GraphNodeInspector selectedNodeId={activeNodeId} setSelectedNodeId={setSelectedNodeId} allEntities={allEntities} onOpenDossier={handleOpenDossier} />
+      {activeNodeId && (
+        <GraphNodeInspector
+          selectedNodeId={activeNodeId}
+          setSelectedNodeId={setSelectedNodeId}
+          allEntities={allEntities}
+          onOpenDossier={handleOpenDossier}
+          onClose={() => setSelectedNodeId('')}
+        />
+      )}
     </div>
   );
 }
 
 const rootStyle: CSSProperties = { display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden', backgroundColor: 'var(--bg-canvas)', color: 'var(--text-primary)' };
-const mainPaneStyle: CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)', minWidth: 0, minHeight: 0 };
+const mainPaneStyle: CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 };

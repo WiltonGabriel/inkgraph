@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { BreadcrumbPathEditor } from './BreadcrumbPathEditor';
 import { BreadcrumbOverflowMenu } from './BreadcrumbOverflowMenu';
@@ -24,19 +23,15 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
     setActiveSubPath,
     navigationHistory,
     navigateToBreadcrumbPath,
-    notify,
     settings,
     t,
   } = useProject();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const dblClickTimerRef = useRef<number | null>(null);
 
   const [containerWidth, setContainerWidth] = useState(640);
   const [isEditing, setIsEditing] = useState(false);
   const [ellipsisOpen, setEllipsisOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [rootHovered, setRootHovered] = useState(false);
 
   const isEn = settings.language === 'en';
 
@@ -49,12 +44,6 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (dblClickTimerRef.current !== null) window.clearTimeout(dblClickTimerRef.current);
-    };
   }, []);
 
   useEffect(() => {
@@ -119,43 +108,13 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
   );
 
   const enterEditMode = () => {
-    if (dblClickTimerRef.current !== null) {
-      window.clearTimeout(dblClickTimerRef.current);
-      dblClickTimerRef.current = null;
-    }
     setEllipsisOpen(false);
     setIsEditing(true);
   };
 
-  const handleRootClick = (e: React.MouseEvent<HTMLSpanElement>) => {
-    if (e.detail === 3) {
-      e.preventDefault();
-      e.stopPropagation();
-      enterEditMode();
-      return;
-    }
-    if (e.detail === 2) {
-      if (dblClickTimerRef.current !== null) window.clearTimeout(dblClickTimerRef.current);
-      dblClickTimerRef.current = window.setTimeout(() => {
-        dblClickTimerRef.current = null;
-        setShowPortal(true);
-        onHomeSegmentClick?.();
-      }, 210);
-    }
-  };
-
-  const handleCopyPath = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    void navigator.clipboard?.writeText(canonicalPath);
-    setCopied(true);
-    notify(isEn ? 'Path copied to clipboard' : 'Caminho copiado', 'info');
-    window.setTimeout(() => setCopied(false), 1400);
-  };
-
-  const isNarrow = containerWidth > 0 && containerWidth < 560;
-  const totalWithRoot = 1 + segments.length;
+  const isNarrow = containerWidth > 0 && containerWidth < 460;
   const shouldCollapse =
-    (totalWithRoot > 3 && segments.length >= 3) || (isNarrow && segments.length >= 2);
+    segments.length >= 3 && (isNarrow || segments.length > 3);
   const hiddenCount = shouldCollapse
     ? isNarrow
       ? segments.length - 1
@@ -164,10 +123,15 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
   const hiddenSegments = hiddenCount > 0 ? segments.slice(0, hiddenCount) : [];
   const visibleSegments = hiddenCount > 0 ? segments.slice(hiddenCount) : segments;
 
+  const tripleClickHint = isEn
+    ? 'Triple-click to edit path directly'
+    : 'Clique 3× para editar o caminho';
+
   return (
     <nav
       ref={containerRef}
       aria-label="Caminho de navegação"
+      title={tripleClickHint}
       onClick={(e) => {
         if (e.detail === 3) {
           e.preventDefault();
@@ -201,63 +165,23 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
             overflow: 'visible',
           }}
         >
-          <div
-            onMouseEnter={() => setRootHovered(true)}
-            onMouseLeave={() => setRootHovered(false)}
-            style={rootCapsuleStyle}
-          >
-            <span
-              onClick={handleRootClick}
-              title={
-                isEn
-                  ? 'Double-click for My Space · Triple-click to edit path'
-                  : 'Clique 2× para Meu Espaço · Clique 3× para editar caminho'
-              }
-              style={rootLabelStyle}
-            >
-              InkGraph
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyPath}
-              title={isEn ? 'Copy current path' : 'Copiar caminho atual'}
-              aria-label={isEn ? 'Copy current path' : 'Copiar caminho atual'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                padding: 2,
-                borderRadius: 4,
-                color: copied ? '#10b981' : 'var(--text-muted, #64748b)',
-                opacity: rootHovered || copied ? 1 : 0.38,
-                transition: settings.reducedMotion ? 'none' : 'opacity 0.15s ease',
-              }}
-            >
-              {copied ? <Check size={11} /> : <Copy size={11} />}
-            </button>
-          </div>
-
           {hiddenSegments.length > 0 && (
-            <>
-              <span style={separatorStyle}>/</span>
-              <BreadcrumbOverflowMenu
-                hiddenSegments={hiddenSegments}
-                isOpen={ellipsisOpen}
-                isEn={isEn}
-                onToggle={() => setEllipsisOpen((prev) => !prev)}
-                onSelectSegment={(seg) => {
-                  setEllipsisOpen(false);
-                  seg.onClick?.();
-                }}
-              />
-            </>
+            <BreadcrumbOverflowMenu
+              hiddenSegments={hiddenSegments}
+              isOpen={ellipsisOpen}
+              isEn={isEn}
+              onToggle={() => setEllipsisOpen((prev) => !prev)}
+              onSelectSegment={(seg) => {
+                setEllipsisOpen(false);
+                seg.onClick?.();
+              }}
+            />
           )}
 
           {visibleSegments.map((seg, idx) => {
             const isLast = idx === visibleSegments.length - 1;
             const clickable = Boolean(seg.onClick);
+            const showDivider = idx > 0 || hiddenSegments.length > 0;
             return (
               <div
                 key={seg.id}
@@ -269,24 +193,28 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
                   flexShrink: isLast ? 1 : 2,
                 }}
               >
-                <span style={separatorStyle}>/</span>
+                {showDivider && <span style={separatorStyle}>/</span>}
                 {clickable ? (
                   <button
                     type="button"
                     onClick={(e) => {
                       if (e.detail === 3) {
+                        e.preventDefault();
                         enterEditMode();
                         return;
                       }
                       seg.onClick?.();
                     }}
-                    title={seg.label}
+                    title={`${seg.label} (${tripleClickHint})`}
                     style={segmentBtnStyle(isLast, true)}
                   >
                     {seg.label}
                   </button>
                 ) : (
-                  <span title={seg.label} style={segmentBtnStyle(isLast, false)}>
+                  <span
+                    title={`${seg.label} (${tripleClickHint})`}
+                    style={segmentBtnStyle(isLast, false)}
+                  >
                     {seg.label}
                   </span>
                 )}
@@ -298,27 +226,6 @@ export function BreadcrumbBar({ modeLabel, onHomeSegmentClick }: BreadcrumbBarPr
     </nav>
   );
 }
-
-const rootCapsuleStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  padding: '3px 7px',
-  borderRadius: 'var(--radius-sm, 6px)',
-  backgroundColor: 'var(--bg-elevated, var(--bg-card, #171d2e))',
-  border: '1px solid var(--border-subtle, var(--border, #263046))',
-  flexShrink: 0,
-};
-
-const rootLabelStyle: React.CSSProperties = {
-  fontSize: 11.5,
-  fontWeight: 700,
-  letterSpacing: '0.03em',
-  color: 'var(--text-primary, #f1f5f9)',
-  userSelect: 'text',
-  WebkitUserSelect: 'text',
-  cursor: 'pointer',
-};
 
 const separatorStyle: React.CSSProperties = {
   color: 'var(--text-muted, #64748b)',

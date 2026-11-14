@@ -19,6 +19,10 @@ function normalizeQuery(str: string): string {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
+function stripRootPrefix(path: string): string {
+  return path.replace(/^InkGraph\s*\/\s*/i, '');
+}
+
 export function BreadcrumbPathEditor({
   initialPath,
   navigationHistory,
@@ -47,25 +51,27 @@ export function BreadcrumbPathEditor({
     const combined: SuggestionItem[] = [];
 
     for (const hist of navigationHistory) {
-      if (seen.has(hist)) continue;
-      if (isUnmodified || normalizeQuery(hist).includes(stripped) || normalizeQuery(hist).includes(lastToken)) {
-        seen.add(hist);
-        combined.push({ path: hist, source: 'recent' });
+      const displayHist = stripRootPrefix(hist);
+      if (seen.has(displayHist)) continue;
+      if (isUnmodified || normalizeQuery(displayHist).includes(stripped) || normalizeQuery(displayHist).includes(lastToken)) {
+        seen.add(displayHist);
+        combined.push({ path: displayHist, source: 'recent' });
       }
     }
 
     for (const target of BREADCRUMB_TARGETS) {
-      if (seen.has(target.canonicalPath)) continue;
-      const matchCanon = normalizeQuery(target.canonicalPath).includes(stripped);
+      const displayPath = stripRootPrefix(target.canonicalPath);
+      if (seen.has(displayPath)) continue;
+      const matchCanon = normalizeQuery(displayPath).includes(stripped);
       const matchAlias = target.aliases.some((alias) => {
         const normAlias = normalizeQuery(alias);
         return normAlias.includes(stripped) || (lastToken.length > 0 && normAlias.includes(lastToken));
       });
 
       if (isUnmodified || matchCanon || matchAlias) {
-        seen.add(target.canonicalPath);
+        seen.add(displayPath);
         combined.push({
-          path: target.canonicalPath,
+          path: displayPath,
           source: 'target',
           hint: target.aliases[0],
         });
@@ -130,7 +136,7 @@ export function BreadcrumbPathEditor({
             }
           }}
           aria-label="Navegar por caminho de pasta"
-          placeholder="InkGraph / Planejamento / Painel"
+          placeholder="Planejamento / Painel"
           style={{
             flex: 1,
             minWidth: 0,

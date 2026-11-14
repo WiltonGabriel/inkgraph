@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useMemo, useCallback, type CSSProperties } from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { buildThemeCssVars } from '../../domain/themes';
 import type { RelationshipType } from '../../types/project';
@@ -185,7 +185,12 @@ export function GraphCanvas2D({
     return () => window.removeEventListener('inkgraph:shortcut', onShortcut);
   }, []);
 
-  const neighborhood = useMemo(() => computeOneHopNeighborhood(links, hoveredNodeId), [links, hoveredNodeId]);
+  const focusNodeId = hoveredNodeId ?? (selectedNodeId || null);
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null),
+    [nodes, selectedNodeId]
+  );
+  const neighborhood = useMemo(() => computeOneHopNeighborhood(links, focusNodeId), [links, focusNodeId]);
   const dimAlpha = Math.max(0.05, Math.min(0.85, settings.graphDimIntensity ?? 0.14));
 
   const renderGridPre = useCallback(
@@ -218,12 +223,12 @@ export function GraphCanvas2D({
       const x = n.x ?? 0;
       const y = n.y ?? 0;
       const isSelected = n.id === selectedNodeId;
-      const hasHover = hoveredNodeId !== null;
-      const isCenter = hoveredNodeId === n.id;
-      const isNeighbor = hasHover && neighborhood.neighborNodeIds.has(n.id);
+      const hasFocus = focusNodeId !== null;
+      const isCenter = focusNodeId === n.id;
+      const isNeighbor = hasFocus && neighborhood.neighborNodeIds.has(n.id);
       const r = n.kind === 'faction' ? 9 : 7;
       ctx.save();
-      ctx.globalAlpha = !hasHover || isCenter || isNeighbor ? 1 : dimAlpha;
+      ctx.globalAlpha = !hasFocus || isCenter || isNeighbor ? 1 : dimAlpha;
       if (isCenter || isNeighbor || isSelected) {
         ctx.beginPath();
         ctx.arc(x, y, r + (isCenter ? 6 : 4.5), 0, 2 * Math.PI, false);
@@ -262,7 +267,7 @@ export function GraphCanvas2D({
       drawOutlinedText(ctx, n.name, x, y + r + 3, colors.bgCanvas, colors.textPrimary, 3, globalScale);
       ctx.restore();
     },
-    [selectedNodeId, hoveredNodeId, neighborhood, dimAlpha, colors]
+    [selectedNodeId, focusNodeId, neighborhood, dimAlpha, colors]
   );
 
   const paintLinkLabel = useCallback(
@@ -272,16 +277,16 @@ export function GraphCanvas2D({
       const end = l.target as GraphNode;
       if (typeof start !== 'object' || typeof end !== 'object' || !start || !end) return;
       if (start.x === undefined || start.y === undefined || end.x === undefined || end.y === undefined) return;
-      const hasHover = hoveredNodeId !== null;
-      const isIncident = !hasHover || neighborhood.incidentLinkIds.has(l.id);
+      const hasFocus = focusNodeId !== null;
+      const isIncident = !hasFocus || neighborhood.incidentLinkIds.has(l.id);
       ctx.save();
       ctx.globalAlpha = isIncident ? 1 : dimAlpha;
       ctx.font = `${Math.max(8, 10 / globalScale)}px Inter, sans-serif`;
       ctx.textAlign = 'center';
-      drawOutlinedText(ctx, l.label, (start.x + end.x) / 2, (start.y + end.y) / 2 - 3, colors.bgCanvas, isIncident && hasHover ? colors.textPrimary : colors.textSecondary, 2.5, globalScale);
+      drawOutlinedText(ctx, l.label, (start.x + end.x) / 2, (start.y + end.y) / 2 - 3, colors.bgCanvas, isIncident && hasFocus ? colors.textPrimary : colors.textSecondary, 2.5, globalScale);
       ctx.restore();
     },
-    [hoveredNodeId, neighborhood, dimAlpha, colors]
+    [focusNodeId, neighborhood, dimAlpha, colors]
   );
 
   const cameraActions = [
@@ -306,15 +311,16 @@ export function GraphCanvas2D({
         linkWidth={(link) => {
           const l = link as GraphLink;
           const base = Math.max(1.5, (l.strength || 5) * 0.35);
-          return hoveredNodeId && neighborhood.incidentLinkIds.has(l.id) ? base + 0.8 : base;
+          return focusNodeId && neighborhood.incidentLinkIds.has(l.id) ? base + 0.8 : base;
         }}
         linkColor={(link) => {
           const l = link as GraphLink;
-          return getThemeEdgeColor(l.type, isLightLike, !hoveredNodeId || neighborhood.incidentLinkIds.has(l.id) ? 1 : dimAlpha);
+          return getThemeEdgeColor(l.type, isLightLike, !focusNodeId || neighborhood.incidentLinkIds.has(l.id) ? 1 : dimAlpha);
         }}
         linkDirectionalArrowLength={5}
         linkDirectionalArrowRelPos={1}
         onNodeHover={(node) => setHoveredNodeId(node ? String((node as GraphNode).id) : null)}
+        onBackgroundClick={() => onSelectNode('')}
         onNodeDragEnd={(node) => {
           const gNode = node as GraphNode;
           if (gNode.x === undefined || gNode.y === undefined) return;
@@ -346,6 +352,51 @@ export function GraphCanvas2D({
         linkCanvasObjectMode={() => 'after'}
         linkCanvasObject={paintLinkLabel}
       />
+
+      {selectedNode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 14,
+            left: 14,
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--accent-primary)',
+            borderRadius: 'var(--radius-md, 8px)',
+            boxShadow: 'var(--card-shadow)',
+            padding: '5px 8px 5px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 11.5,
+            color: 'var(--text-primary)',
+          }}
+        >
+          <span>
+            Em foco: <strong>{selectedNode.name}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() => onSelectNode('')}
+            title="Limpar seleção e foco"
+            aria-label="Limpar seleção e foco"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: 'var(--radius-sm, 6px)',
+              border: '1px solid var(--border-subtle)',
+              backgroundColor: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            <X size={12} aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       <div style={{ ...floatingCardStyle, left: 14, padding: '8px 12px', flexWrap: 'wrap', gap: 12, fontSize: 11, color: 'var(--text-secondary)' }}>
         {LEGEND_ITEMS.map(({ label, color, shape }) => (

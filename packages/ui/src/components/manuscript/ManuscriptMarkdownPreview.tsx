@@ -25,19 +25,31 @@ function escapeRegExp(value: string): string {
 
 function buildMentionRegex(project: ProjectData): RegExp {
   const tags: string[] = [];
-  for (const c of project.characters) tags.push(`@${c.name}`);
-  for (const w of project.worlds) {
-    for (const l of w.locations) tags.push(`#${l.name}`);
+  for (const c of project.characters) {
+    if (c.name?.trim()) tags.push(`@${c.name.trim()}`);
   }
-  for (const f of project.factions) tags.push(`&${f.name}`);
-  for (const o of project.objects) tags.push(`!${o.name}`);
+  for (const w of project.worlds) {
+    for (const l of w.locations) {
+      if (l.name?.trim()) tags.push(`#${l.name.trim()}`);
+    }
+  }
+  for (const f of project.factions) {
+    if (f.name?.trim()) tags.push(`&${f.name.trim()}`);
+  }
+  for (const o of project.objects) {
+    if (o.name?.trim()) tags.push(`!${o.name.trim()}`);
+  }
 
-  tags.sort((a, b) => b.length - a.length);
-  const entityAlternation = tags.length > 0 ? `${tags.map(escapeRegExp).join('|')}|` : '';
-  return new RegExp(
-    `(\\*\\*[^*\\n]+\\*\\*|\\*[^*\\n]+\\*|\\\`[^\\\`\\n]+\\\`|${entityAlternation}[@#&!][\\p{L}\\p{N}_-]+)`,
-    'gu'
-  );
+  const uniqueTags = Array.from(new Set(tags)).sort((a, b) => b.length - a.length);
+  const entityAlternation =
+    uniqueTags.length > 0 ? `${uniqueTags.map(escapeRegExp).join('|')}|` : '';
+  const basePattern = `(\\*\\*[^*\\n]+\\*\\*|\\*[^*\\n]+\\*|\`[^\`\\n]+\`|${entityAlternation}[@#&!][\\p{L}\\p{N}_-]+)`;
+
+  try {
+    return new RegExp(basePattern, 'gu');
+  } catch {
+    return /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`|[@#&!][\p{L}\p{N}_-]+)/gu;
+  }
 }
 
 function renderInlineProse(

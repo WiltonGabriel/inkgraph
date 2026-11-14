@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import {
   calculateCharacterCompleteness,
@@ -21,6 +21,7 @@ interface GraphNodeInspectorProps {
   setSelectedNodeId: (id: string) => void;
   allEntities: GraphNode[];
   onOpenDossier?: (node: GraphNode) => void;
+  onClose?: () => void;
 }
 
 type InspectorTabId = 'formulation' | 'deep' | 'relations' | 'epistemic';
@@ -35,6 +36,7 @@ export function GraphNodeInspector({
   setSelectedNodeId,
   allEntities,
   onOpenDossier,
+  onClose,
 }: GraphNodeInspectorProps) {
   const { project, upsertCharacter, upsertFaction, upsertWorld, upsertObject } = useProject();
   const [inspectorTab, setInspectorTab] = useState<InspectorTabId>('formulation');
@@ -181,29 +183,52 @@ export function GraphNodeInspector({
             >
               Dossiê & Formulação no Grafo
             </label>
-            {onOpenDossier && currentNode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {onOpenDossier && currentNode && (
+                <button
+                  type="button"
+                  onClick={() => onOpenDossier(currentNode)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 7px',
+                    minHeight: 24,
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 10.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ExternalLink size={11} aria-hidden="true" />
+                  Abrir Dossiê
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => onOpenDossier(currentNode)}
+                onClick={() => (onClose ? onClose() : setSelectedNodeId(''))}
+                title="Fechar dossiê e limpar foco"
+                aria-label="Fechar dossiê e limpar foco"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 7px',
-                  minHeight: 24,
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
                   borderRadius: 'var(--radius-sm, 6px)',
                   backgroundColor: 'var(--bg-elevated)',
                   border: '1px solid var(--border-subtle)',
                   color: 'var(--text-secondary)',
-                  fontSize: 10.5,
-                  fontWeight: 600,
                   cursor: 'pointer',
+                  padding: 0,
                 }}
               >
-                <ExternalLink size={11} aria-hidden="true" />
-                Abrir Dossiê
+                <X size={13} aria-hidden="true" />
               </button>
-            )}
+            </div>
           </div>
 
           <select

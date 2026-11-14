@@ -30,7 +30,7 @@ Todos os cálculos críticos e regras de negócio ficam isolados da camada de vi
 - `entityDirectory.ts`: visão unificada de entidades, vizinhança de vínculos, resolução por alias e exclusão em cascata sem órfãos (`cascadeDeleteEntity`).
 - `stagingResolver.ts`: aplicação de decisões de aprovação ou rejeição (`applyStagingDecision`) para propostas de *Staging*.
 - `shortcutManager.ts`: catálogo dos 26 atalhos personalizáveis, captura de teclado, normalização e detecção de conflitos em tempo real.
-- `breadcrumbResolver.ts`: interpretação e geração de caminhos editáveis (`InkGraph / ...`) e histórico recente de navegação.
+- `breadcrumbResolver.ts`: interpretação e geração de caminhos editáveis por triplo clique (`Planejamento / Painel`, `Mundo / Geografia`, etc.) e histórico recente de navegação.
 - `themes.ts`: definição das paletas Dual-Mode, fontes tipográficas, cantos, superfícies e geração de tokens CSS.
 - `gitEngine.ts`: algoritmo LCS de diff linha a linha (`computeLineDiff`) e palavra por palavra (`computeWordDiff`), isolamento de estado de ramificações (`createBranchFromActive`, `checkoutBranchState`), diff de workspace (`computeWorkspaceBranchDiff`), mesclagem com resolução de conflitos (`mergeBranchIntoActive`) e restauração segura de snapshots (`restoreSnapshotWithAutoBackup`).
 - `memoryCompiler.ts`: compilação em 4 camadas (*Memória de Trabalho*, *Memória Episódica & Epistêmica*, *Memória Semântica*, *Síntese Contínua & Voz*), estimativa e recorte por orçamento de tokens (`budgetTokens`), detecção de vazamentos de segredos na prosa (`epistemicAlerts`) e portão `cloudAllowed`.
