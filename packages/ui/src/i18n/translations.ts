@@ -57,9 +57,10 @@ export interface AppDictionary {
     generateStructureBtn: string;
   };
   sidebarGroups: {
-    writing: string;
     planning: string;
+    charactersNetwork: string;
     universe: string;
+    writing: string;
     review: string;
   };
   views: Record<ViewId, string>;
@@ -136,10 +137,11 @@ export const DICTIONARIES: Record<AppLocale, AppDictionary> = {
       generateStructureBtn: 'Criar Estrutura',
     },
     sidebarGroups: {
-      writing: 'Escrita',
       planning: 'Planejamento',
-      universe: 'Universo & Lore',
-      review: 'Revisão & Saída',
+      charactersNetwork: 'Personagens & Conexões',
+      universe: 'Mundo & Lore',
+      writing: 'Escrita & Revisão',
+      review: 'Revisão & Publicação',
     },
     views: {
       dashboard: 'Painel',
@@ -148,13 +150,15 @@ export const DICTIONARIES: Record<AppLocale, AppDictionary> = {
       templates: 'Modelos',
       outline: 'Gerador de Contorno',
       plotboard: 'Quadro de Cenas',
+      timeline: 'Linha do Tempo',
       scenario: 'Cenário / Roteiro',
+      'canon-radar': 'Radar de Cânone',
       characters: 'Personagens',
       interviews: 'Entrevistas',
       factions: 'Facções',
       worlds: 'Construção Mundial',
       graph: 'Grafo de Relações',
-      objects: 'Objetos de História',
+      objects: 'Objetos',
       mindmap: 'Mapas Mentais',
       consistency: 'Consistência',
       critic: 'Crítico Literário',
@@ -177,7 +181,7 @@ export const DICTIONARIES: Record<AppLocale, AppDictionary> = {
         shortcuts: 'Atalhos de Teclado',
         notifications: 'Avisos & Metas',
         storage: 'Armazenamento & Backup',
-        about: 'Sobre & Sistema',
+        about: 'Sobre',
       },
     },
   },
@@ -236,9 +240,10 @@ export const DICTIONARIES: Record<AppLocale, AppDictionary> = {
       generateStructureBtn: 'Create Structure',
     },
     sidebarGroups: {
-      writing: 'Writing',
       planning: 'Planning',
-      universe: 'Universe & Lore',
+      charactersNetwork: 'Characters & Connections',
+      universe: 'World & Lore',
+      writing: 'Writing',
       review: 'Review & Output',
     },
     views: {
@@ -248,7 +253,9 @@ export const DICTIONARIES: Record<AppLocale, AppDictionary> = {
       templates: 'Templates',
       outline: 'Outline Generator',
       plotboard: 'Scene Board',
+      timeline: 'Timeline',
       scenario: 'Scenario / Script',
+      'canon-radar': 'Canon Radar',
       characters: 'Characters',
       interviews: 'Interviews',
       factions: 'Factions',

@@ -5,7 +5,9 @@ export type ViewId =
   | 'templates'
   | 'outline'
   | 'plotboard'
+  | 'timeline'
   | 'scenario'
+  | 'canon-radar'
   | 'characters'
   | 'interviews'
   | 'worlds'
@@ -130,19 +132,30 @@ export interface Faction {
   epistemicSecrets: EpistemicSecret[];
 }
 
+export type CanonStatus = 'canon' | 'provisional' | 'draft';
+
 export interface WorldLocation {
   id: string;
   worldId: string;
   name: string;
+  aliases?: string[];
   type: 'city' | 'fortress' | 'village' | 'ruin' | 'temple' | 'region' | 'station' | 'other';
+  status?: CanonStatus;
+  folderPath?: string;
   controlledByFactionId?: string;
   population?: string;
   climateOrAtmosphere: string;
   description: string;
   strategicValue: string;
   coordinates: { x: number; y: number }; // 0-100 % on map canvas
+  mapAssetId?: string;
+  blueprintAssetId?: string;
   connectedLocationIds: string[];
   notes: string;
+  tags?: string[];
+  memberOf?: string[];
+  relationships?: EntityRelationship[];
+  epistemicSecrets?: EpistemicSecret[];
 }
 
 export interface WorldTimelineEvent {
@@ -162,7 +175,10 @@ export interface RuleSystem {
   id: string;
   worldId: string;
   name: string;
+  aliases?: string[];
   subtype: string; // e.g., Sistema de Magia, Cyberware, Código Jurídico, Viagem Espacial, Economia
+  status?: CanonStatus;
+  folderPath?: string;
   coreSource: string;
   fundamentalRules: string[];
   costsAndToll: string;
@@ -170,6 +186,38 @@ export interface RuleSystem {
   socialTaboos: string;
   knownPractitionerIds: string[];
   notes: string;
+  tags?: string[];
+  memberOf?: string[];
+  relationships?: EntityRelationship[];
+  epistemicSecrets?: EpistemicSecret[];
+}
+
+export interface WorldPoliticsProfile {
+  governmentForms: string;
+  legalCodeAndPunishments: string;
+  successionRules: string;
+  treatiesAndAlliances: string;
+  instabilityZones: string;
+}
+
+export interface WorldEconomyProfile {
+  currenciesAndExchange: string;
+  exportsAndImports: string;
+  tradeRoutes: string;
+  guildsBanksAndTaxes: string;
+  scarcityAndBlackMarket: string;
+}
+
+export interface WorldMapAssetMeta {
+  id: string;
+  worldId: string;
+  name: string;
+  category: 'world' | 'geography' | 'political' | 'trade' | 'systems' | 'blueprint';
+  mimeType: string;
+  width?: number;
+  height?: number;
+  isPrimary?: boolean;
+  createdAt: string;
 }
 
 export interface World {
@@ -182,10 +230,14 @@ export interface World {
   history: string;
   magicOrTechSummary: string;
   politicsSummary: string;
+  politics?: WorldPoliticsProfile;
+  economySummary?: string;
+  economy?: WorldEconomyProfile;
   notes: string;
   locations: WorldLocation[];
   timeline: WorldTimelineEvent[];
   systems: RuleSystem[];
+  maps?: WorldMapAssetMeta[];
 }
 
 export type StoryObjectType =
@@ -207,7 +259,10 @@ export interface ObjectGroup {
 export interface StoryObject {
   id: string;
   name: string;
+  aliases?: string[];
   type: StoryObjectType;
+  canonStatus?: CanonStatus;
+  folderPath?: string;
   groupId?: string;
   ownerCharacterId?: string;
   factionId?: string;
@@ -219,6 +274,10 @@ export interface StoryObject {
   linkedCharacterIds: string[];
   linkedSceneIds: string[];
   notes: string;
+  tags?: string[];
+  memberOf?: string[];
+  relationships?: EntityRelationship[];
+  epistemicSecrets?: EpistemicSecret[];
 }
 
 export interface SceneComment {
@@ -403,41 +462,103 @@ export interface CompileProfile {
   imprint: string;
 }
 
+export type ThemeBrightness = 'light' | 'dark' | 'sepia' | 'system';
+export type ThemePaletteId =
+  | 'slate'
+  | 'obsidian'
+  | 'paper'
+  | 'forest'
+  | 'amethyst'
+  | 'sunset';
+export type UiFontFamily = 'sans' | 'serif' | 'mono' | 'humanist';
+export type CornerStyle = 'sharp' | 'subtle' | 'rounded';
+export type SurfaceStyle = 'bordered' | 'elevated' | 'minimal';
+export type SidebarIndicatorStyle = 'pill' | 'bar' | 'dot';
+export type StatusColorSet = 'default' | 'vibrant' | 'muted' | 'colorblind';
+export type CanonAiPermission = 'observer' | 'staging' | 'auto';
+
 export interface KeyboardShortcutMap {
+  // Navegação & Painéis
   commandPalette: string;
-  openHome: string;
-  openSettings: string;
+  toggleSidebar: string;
   toggleCopilot: string;
   toggleZenMode: string;
-  quickSnapshot: string;
-  focusManuscript: string;
+  openHome: string;
+  openSettings: string;
+  openHelp: string;
+
+  // Pulos Rápidos de Visão
+  focusDashboard: string;
+  focusOutline: string;
+  focusTimeline: string;
+  focusPlotBoard: string;
+  focusCanonRadar: string;
+  focusCharacters: string;
   focusGraph: string;
+  focusMindMap: string;
+  focusWorld: string;
+  focusFactions: string;
+  focusObjects: string;
+  focusManuscript: string;
+  focusReview: string;
+
+  // Escrita & Editor Markdown
+  cycleEditorMode: string;
+  toggleSceneInspector: string;
+  quickNewScene: string;
+  quickSnapshot: string;
+
+  // Grafo, Mapa Mental & Cânone
+  fitGraphOrMap: string;
+  scanCanonNow: string;
 }
 
 export interface AppSettings {
   // 1. Geral & Inicialização
   language: 'pt-BR' | 'en';
   startupBehavior: 'home' | 'last-workspace';
+  startupRestoreLastViewAndScene: boolean;
   defaultOpeningView: ViewId;
+  writingDayRolloverHour: number;
+  dateFormat: 'DD/MM/YYYY' | 'YYYY-MM-DD' | 'MM/DD/YYYY';
   autosaveIntervalSeconds: number;
   confirmDestructiveActions: boolean;
 
   // 2. Aparência & Interface
   theme: 'dark' | 'light' | 'sepia';
+  themeBrightness: ThemeBrightness;
+  themePalette: ThemePaletteId;
   uiDensity: 'compact' | 'standard' | 'comfortable';
+  uiFont: UiFontFamily;
+  uiScale: number;
+  cornerRadius: CornerStyle;
+  surfaceStyle: SurfaceStyle;
+  sidebarIndicator: SidebarIndicatorStyle;
   accentColor: string;
+  statusColorSet: StatusColorSet;
   sidebarDefaultCollapsed: boolean;
+  sidebarCollapsedGroups: Record<string, boolean>;
+  hiddenSidebarViews: ViewId[];
   copilotPosition: 'right' | 'left';
+  graphGridEnabled: boolean;
+  graphDimIntensity: number;
+  enableAnimations: boolean;
+  lowPowerMode: boolean;
   highContrast: boolean;
   largeText: boolean;
   reducedMotion: boolean;
 
   // 3. Editor Padrão
+  markdownEditorDefaultMode: 'write' | 'split' | 'read';
   editorFont: 'serif' | 'sans' | 'mono';
   editorFontSize: number;
   editorLineHeight: number;
+  editorParagraphSpacingPx: number;
+  editorTextAlign: 'left' | 'justify';
   editorMaxWidthCh: number;
   paragraphIndent: boolean;
+  editorSmartTypography: boolean;
+  enableMarkdownLivePreview: boolean;
   zenMode: boolean;
   focusMode: boolean;
   typewriterMode: boolean;
@@ -445,7 +566,7 @@ export interface AppSettings {
   showWordCountFooter: boolean;
   showReadingTimeEstimate: boolean;
 
-  // 4. Inteligência Artificial & MCP
+  // 4. Inteligência Artificial, Memória & MCP
   aiMode: 'cloud' | 'local' | 'hybrid' | 'eco';
   aiProvider: 'gemini' | 'ollama' | 'openai' | 'mcp';
   geminiApiKey: string;
@@ -457,6 +578,12 @@ export interface AppSettings {
   aiMaxTokens: number;
   copilotEnabled: boolean;
   copilotHeuristicsOnly: boolean;
+  enableMemoryCompiler: boolean;
+  enableEpistemicTracking: boolean;
+  canonAiPermission: CanonAiPermission;
+  canonScopeEntities: boolean;
+  canonScopeWorld: boolean;
+  canonScopeGraphTimeline: boolean;
 
   // 5. Atalhos de Teclado
   shortcuts: KeyboardShortcutMap;

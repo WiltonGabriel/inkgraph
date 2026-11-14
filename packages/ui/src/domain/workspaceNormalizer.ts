@@ -51,9 +51,27 @@ export function normalizeWorkspaceData(raw: unknown): ProjectData | null {
 
   const normalizedWorlds = safeArray(obj.worlds, base.worlds).map((w) => ({
     ...w,
-    locations: Array.isArray(w?.locations) ? w.locations : [],
+    economySummary: typeof w?.economySummary === 'string' ? w.economySummary : '',
+    locations: Array.isArray(w?.locations)
+      ? w.locations.map((loc) => ({
+          ...loc,
+          aliases: Array.isArray(loc?.aliases) ? loc.aliases : [],
+          tags: Array.isArray(loc?.tags) ? loc.tags : [],
+          relationships: Array.isArray(loc?.relationships) ? loc.relationships : [],
+          epistemicSecrets: Array.isArray(loc?.epistemicSecrets) ? loc.epistemicSecrets : [],
+        }))
+      : [],
     timeline: Array.isArray(w?.timeline) ? w.timeline : [],
-    systems: Array.isArray(w?.systems) ? w.systems : [],
+    systems: Array.isArray(w?.systems)
+      ? w.systems.map((sys) => ({
+          ...sys,
+          aliases: Array.isArray(sys?.aliases) ? sys.aliases : [],
+          tags: Array.isArray(sys?.tags) ? sys.tags : [],
+          relationships: Array.isArray(sys?.relationships) ? sys.relationships : [],
+          epistemicSecrets: Array.isArray(sys?.epistemicSecrets) ? sys.epistemicSecrets : [],
+        }))
+      : [],
+    maps: Array.isArray(w?.maps) ? w.maps : [],
   }));
 
   const normalizedBranches = safeArray(obj.branches, base.branches);
@@ -100,6 +118,10 @@ export function normalizeWorkspaceData(raw: unknown): ProjectData | null {
     worlds: normalizedWorlds.length > 0 ? normalizedWorlds : base.worlds,
     objects: safeArray(obj.objects, base.objects).map((o) => ({
       ...o,
+      aliases: Array.isArray(o?.aliases) ? o.aliases : [],
+      tags: Array.isArray(o?.tags) ? o.tags : [],
+      relationships: Array.isArray(o?.relationships) ? o.relationships : [],
+      epistemicSecrets: Array.isArray(o?.epistemicSecrets) ? o.epistemicSecrets : [],
       linkedCharacterIds: Array.isArray(o?.linkedCharacterIds) ? o.linkedCharacterIds : [],
       linkedSceneIds: Array.isArray(o?.linkedSceneIds) ? o.linkedSceneIds : [],
     })),

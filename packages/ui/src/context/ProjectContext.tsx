@@ -1,9 +1,11 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   useEffect,
   useMemo,
+  useRef,
   type ReactNode,
 } from 'react';
 import type {
@@ -29,11 +31,24 @@ import { countWords } from '../types/project';
 import {
   createDemoProjectData,
   createBlankProjectData,
-  DEFAULT_SETTINGS,
   type NarrativeTemplate,
 } from '../data/initialProjectData';
 import { normalizeWorkspaceData } from '../domain/workspaceNormalizer';
 import { getDictionary, type AppDictionary } from '../i18n/translations';
+import { SettingsProvider, useSettings } from './SettingsContext';
+import {
+  loadCatalogFromStorage,
+  loadActiveWorkspaceIdFromStorage,
+  scheduleCatalogSave,
+  flushCatalogSave,
+  verifyAndReloadStorage,
+  type StorageVerificationResult,
+} from '../domain/storageAdapter';
+import { cascadeDeleteEntity } from '../domain/entityDirectory';
+import { applyStagingDecision } from '../domain/stagingResolver';
+import { resolveBreadcrumbPathInput } from '../domain/breadcrumbResolver';
+import type { ConfirmDialogOptions } from '../components/common/ConfirmDialog';
+import type { SilentToastItem } from '../components/common/SilentToast';
 
 interface ProjectContextValue {
   project: ProjectData;
@@ -43,6 +58,11 @@ interface ProjectContextValue {
   t: AppDictionary;
   activeView: ViewId;
   setActiveView: (v: ViewId) => void;
+  activeSubPath: string;
+  setActiveSubPath: (sub: string) => void;
+  navigationHistory: string[];
+  navigateToBreadcrumbPath: (rawPath: string) => boolean;
+  toggleSidebarGroup: (groupKey: string) => void;
   showPortal: boolean;
   setShowPortal: (v: boolean) => void;
   showCommandPalette: boolean;
@@ -52,6 +72,14 @@ interface ProjectContextValue {
   activeSceneId: string;
   setActiveSceneId: (id: string) => void;
   totalWordCount: number;
+  verifyAndSaveNow: () => Promise<StorageVerificationResult>;
+  lastVerifyResult: StorageVerificationResult | null;
+  confirmState: { open: boolean; options: ConfirmDialogOptions | null };
+  requestConfirm: (options: ConfirmDialogOptions) => Promise<boolean>;
+  resolveConfirm: (accepted: boolean) => void;
+  toasts: SilentToastItem[];
+  notify: (message: string, tone?: 'success' | 'info' | 'warning') => void;
+  dismissToast: (id: string) => void;
   updateProject: (updater: (prev: ProjectData) => ProjectData) => void;
   updateSettings: (updater: (prev: AppSettings) => AppSettings) => void;
   resetSettingsToDefault: () => void;
@@ -108,81 +136,22 @@ interface ProjectContextValue {
   recordWritingSession: (wordsDelta: number, minutesDelta: number) => void;
 }
 
-const STORAGE_KEY_CATALOG = 'inkgraph_workspaces_catalog_v3';
-const STORAGE_KEY_ACTIVE_ID = 'inkgraph_active_workspace_id_v3';
-const STORAGE_KEY_LEGACY_PROJECT = 'inkgraph_project_v2';
-const STORAGE_KEY_SETTINGS = 'inkgraph_settings_v2';
-
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
-function loadInitialSettings(): AppSettings {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<AppSettings>;
-      return {
-        ...DEFAULT_SETTINGS,
-        ...parsed,
-        shortcuts: {
-          ...DEFAULT_SETTINGS.shortcuts,
-          ...(parsed.shortcuts ?? {}),
-        },
-      };
-    }
-  } catch {
-    // Fallback
-  }
-  return DEFAULT_SETTINGS;
-}
+function ProjectProviderInner({ children }: { children: ReactNode }) {
+  const {
+    draftSettings: settings,
+    committedSettings,
+    commitSettingsUpdater,
+    commitImmediateSetting,
+    resetDraftToDefaults,
+    saveSettings,
+  } = useSettings();
 
-function loadInitialWorkspaces(): ProjectData[] {
-  try {
-    const savedCatalog = localStorage.getItem(STORAGE_KEY_CATALOG);
-    if (savedCatalog) {
-      const parsed = JSON.parse(savedCatalog);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const normalized = parsed
-          .map((item) => normalizeWorkspaceData(item))
-          .filter((item): item is ProjectData => item !== null);
-        if (normalized.length > 0) {
-          return normalized;
-        }
-      }
-    }
-    const legacySingle = localStorage.getItem(STORAGE_KEY_LEGACY_PROJECT);
-    if (legacySingle) {
-      const normalizedSingle = normalizeWorkspaceData(JSON.parse(legacySingle));
-      if (normalizedSingle) {
-        return [{ ...normalizedSingle, isFavorite: true, folderOrTag: 'Principal' }];
-      }
-    }
-  } catch {
-    // Fallback
-  }
-  const demo = createDemoProjectData();
-  return [
-    {
-      ...demo,
-      isFavorite: true,
-      folderOrTag: 'Série Principal',
-      accentColor: '#3b82f6',
-      lastOpenedAt: new Date().toISOString(),
-    },
-  ];
-}
-
-export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(loadInitialSettings);
-  const [workspaces, setWorkspaces] = useState<ProjectData[]>(loadInitialWorkspaces);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
-    try {
-      const savedId = localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
-      if (savedId) return savedId;
-    } catch {
-      // ignore
-    }
-    return '';
-  });
+  const [workspaces, setWorkspaces] = useState<ProjectData[]>(loadCatalogFromStorage);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(
+    loadActiveWorkspaceIdFromStorage
+  );
 
   const project = useMemo<ProjectData>(() => {
     return (
@@ -192,9 +161,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   }, [workspaces, activeWorkspaceId]);
 
-  const [activeView, setActiveView] = useState<ViewId>(
+  const [activeView, setActiveViewState] = useState<ViewId>(
     () => settings.defaultOpeningView || 'dashboard'
   );
+  const [activeSubPath, setActiveSubPath] = useState<string>('');
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [showPortal, setShowPortal] = useState<boolean>(
     () => settings.startupBehavior === 'home'
   );
@@ -202,6 +173,98 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [showCopilot, setShowCopilot] = useState<boolean>(false);
   const [activeSceneId, setActiveSceneId] = useState<string>(
     () => project.scenes[0]?.id ?? ''
+  );
+  const [lastVerifyResult, setLastVerifyResult] = useState<StorageVerificationResult | null>(
+    null
+  );
+
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    options: ConfirmDialogOptions | null;
+  }>({ open: false, options: null });
+  const confirmResolverRef = useRef<((accepted: boolean) => void) | null>(null);
+
+  const [toasts, setToasts] = useState<SilentToastItem[]>([]);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const notify = useCallback(
+    (message: string, tone: 'success' | 'info' | 'warning' = 'info') => {
+      if (settings.quietNotifications && tone === 'info') {
+        // Still surface concise feedback when explicitly requested; keep stack compact
+      }
+      const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      setToasts((prev) => [...prev.slice(-2), { id, message, tone }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((item) => item.id !== id));
+      }, 3600);
+    },
+    [settings.quietNotifications]
+  );
+
+  const requestConfirm = useCallback((options: ConfirmDialogOptions): Promise<boolean> => {
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(false);
+    }
+    setConfirmState({ open: true, options });
+    return new Promise<boolean>((resolve) => {
+      confirmResolverRef.current = resolve;
+    });
+  }, []);
+
+  const resolveConfirm = useCallback((accepted: boolean) => {
+    setConfirmState({ open: false, options: null });
+    const resolver = confirmResolverRef.current;
+    confirmResolverRef.current = null;
+    resolver?.(accepted);
+  }, []);
+
+  const setActiveView = useCallback((v: ViewId) => {
+    setActiveViewState(v);
+    setActiveSubPath('');
+  }, []);
+
+  const recordBreadcrumbHistory = useCallback((canonical: string) => {
+    setNavigationHistory((prev) => [
+      canonical,
+      ...prev.filter((item) => item !== canonical),
+    ].slice(0, 12));
+  }, []);
+
+  const navigateToBreadcrumbPath = useCallback(
+    (rawPath: string): boolean => {
+      const target = resolveBreadcrumbPathInput(rawPath);
+      if (!target) {
+        notify(`Caminho não encontrado: "${rawPath}"`, 'warning');
+        return false;
+      }
+      recordBreadcrumbHistory(target.canonicalPath);
+      if (target.openHome) {
+        setShowPortal(true);
+        setActiveSubPath(target.subPath ?? '');
+        return true;
+      }
+      if (target.view) {
+        setShowPortal(false);
+        setActiveViewState(target.view);
+        setActiveSubPath(target.subPath ?? '');
+        return true;
+      }
+      return false;
+    },
+    [notify, recordBreadcrumbHistory]
+  );
+
+  const toggleSidebarGroup = useCallback(
+    (groupKey: string) => {
+      commitImmediateSetting('sidebarCollapsedGroups', {
+        ...settings.sidebarCollapsedGroups,
+        [groupKey]: !settings.sidebarCollapsedGroups[groupKey],
+      });
+    },
+    [commitImmediateSetting, settings.sidebarCollapsedGroups]
   );
 
   // Sync activeSceneId when switching workspaces
@@ -211,23 +274,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [project, activeSceneId]);
 
+  // Debounced persistence via storageAdapter (350ms) + synchronous flush before unload
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_CATALOG, JSON.stringify(workspaces));
-      localStorage.setItem(STORAGE_KEY_LEGACY_PROJECT, JSON.stringify(project));
-      localStorage.setItem(STORAGE_KEY_ACTIVE_ID, project.id);
-    } catch {
-      // Ignore storage quota errors
-    }
-  }, [workspaces, project]);
+    scheduleCatalogSave(workspaces, project.id, 350);
+  }, [workspaces, project.id]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
-    } catch {
-      // Ignore
+    const onBeforeUnload = () => {
+      flushCatalogSave();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      flushCatalogSave();
+    };
+  }, []);
+
+  const verifyAndSaveNow = useCallback(async (): Promise<StorageVerificationResult> => {
+    const result = verifyAndReloadStorage(workspaces, project.id, committedSettings);
+    setLastVerifyResult(result);
+    if (!result.ok && result.error) {
+      notify(result.error, 'warning');
     }
-  }, [settings]);
+    return result;
+  }, [workspaces, project.id, committedSettings, notify]);
 
   const t = useMemo(() => getDictionary(settings.language), [settings.language]);
 
@@ -248,11 +318,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSettings = (updater: (prev: AppSettings) => AppSettings) => {
-    setSettings((prev) => updater(prev));
+    commitSettingsUpdater(updater);
   };
 
   const resetSettingsToDefault = () => {
-    setSettings(DEFAULT_SETTINGS);
+    resetDraftToDefaults();
+    saveSettings();
   };
 
   const switchWorkspace = (workspaceId: string, targetView?: ViewId) => {
@@ -342,25 +413,36 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteWorkspace = (workspaceId: string) => {
-    if (
-      settings.confirmDestructiveActions &&
-      typeof window !== 'undefined' &&
-      !window.confirm('Tem certeza que deseja excluir este workspace?')
-    ) {
+    const target = workspaces.find((w) => w.id === workspaceId);
+    const executeDelete = () => {
+      setWorkspaces((prev) => {
+        const remaining = prev.filter((w) => w.id !== workspaceId);
+        if (remaining.length === 0) {
+          const fallback = createBlankProjectData('Workspace Inicial');
+          setActiveWorkspaceId(fallback.id);
+          return [fallback];
+        }
+        if (activeWorkspaceId === workspaceId) {
+          setActiveWorkspaceId(remaining[0].id);
+        }
+        return remaining;
+      });
+      notify('Workspace removido do catálogo local.', 'info');
+    };
+
+    if (settings.confirmDestructiveActions) {
+      void requestConfirm({
+        title: 'Excluir Workspace',
+        message: `Tem certeza que deseja excluir "${target?.title ?? 'este workspace'}"? Esta ação remove o projeto da listagem local.`,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      }).then((accepted) => {
+        if (accepted) executeDelete();
+      });
       return;
     }
-    setWorkspaces((prev) => {
-      const remaining = prev.filter((w) => w.id !== workspaceId);
-      if (remaining.length === 0) {
-        const fallback = createBlankProjectData('Workspace Inicial');
-        setActiveWorkspaceId(fallback.id);
-        return [fallback];
-      }
-      if (activeWorkspaceId === workspaceId) {
-        setActiveWorkspaceId(remaining[0].id);
-      }
-      return remaining;
-    });
+    executeDelete();
   };
 
   const toggleFavoriteWorkspace = (workspaceId: string) => {
@@ -394,7 +476,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setWorkspaces(normalized);
         setActiveWorkspaceId(normalized[0].id);
         if (parsed.settings && typeof parsed.settings === 'object') {
-          setSettings((prev) => ({ ...prev, ...parsed.settings }));
+          commitSettingsUpdater((prev) => ({ ...prev, ...parsed.settings }));
         }
         return true;
       }
@@ -518,17 +600,24 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCharacter = (id: string) => {
-    if (
-      settings.confirmDestructiveActions &&
-      typeof window !== 'undefined' &&
-      !window.confirm('Tem certeza que deseja excluir este personagem?')
-    ) {
+    const targetName = project.characters.find((c) => c.id === id)?.name;
+    const execute = () => {
+      updateProject((prev) => cascadeDeleteEntity(prev, 'character', id));
+      notify('Personagem e vínculos removidos com segurança.', 'info');
+    };
+    if (settings.confirmDestructiveActions) {
+      void requestConfirm({
+        title: 'Excluir Personagem',
+        message: `Excluir "${targetName ?? 'este personagem'}" e remover referências órfãs em cenas, facções e mapas mentais?`,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      }).then((ok) => {
+        if (ok) execute();
+      });
       return;
     }
-    updateProject((prev) => ({
-      ...prev,
-      characters: prev.characters.filter((c) => c.id !== id),
-    }));
+    execute();
   };
 
   const upsertFaction = (faction: Faction) => {
@@ -544,17 +633,24 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteFaction = (id: string) => {
-    if (
-      settings.confirmDestructiveActions &&
-      typeof window !== 'undefined' &&
-      !window.confirm('Tem certeza que deseja excluir esta facção?')
-    ) {
+    const targetName = project.factions.find((f) => f.id === id)?.name;
+    const execute = () => {
+      updateProject((prev) => cascadeDeleteEntity(prev, 'faction', id));
+      notify('Facção e vínculos removidos.', 'info');
+    };
+    if (settings.confirmDestructiveActions) {
+      void requestConfirm({
+        title: 'Excluir Facção',
+        message: `Tem certeza que deseja excluir "${targetName ?? 'esta facção'}"? Vínculos em personagens e locais serão limpos.`,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      }).then((ok) => {
+        if (ok) execute();
+      });
       return;
     }
-    updateProject((prev) => ({
-      ...prev,
-      factions: prev.factions.filter((f) => f.id !== id),
-    }));
+    execute();
   };
 
   const upsertWorld = (world: World) => {
@@ -582,10 +678,24 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteObject = (id: string) => {
-    updateProject((prev) => ({
-      ...prev,
-      objects: prev.objects.filter((o) => o.id !== id),
-    }));
+    const targetName = project.objects.find((o) => o.id === id)?.name;
+    const execute = () => {
+      updateProject((prev) => cascadeDeleteEntity(prev, 'object', id));
+      notify('Objeto removido do catálogo e cenas.', 'info');
+    };
+    if (settings.confirmDestructiveActions) {
+      void requestConfirm({
+        title: 'Excluir Objeto',
+        message: `Deseja excluir "${targetName ?? 'este objeto'}"? Referências em cenas e relações serão limpas.`,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      }).then((ok) => {
+        if (ok) execute();
+      });
+      return;
+    }
+    execute();
   };
 
   const upsertObjectGroup = (group: ObjectGroup) => {
@@ -623,20 +733,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteScene = (id: string) => {
-    if (
-      settings.confirmDestructiveActions &&
-      typeof window !== 'undefined' &&
-      !window.confirm('Tem certeza que deseja excluir esta cena?')
-    ) {
+    const targetTitle = project.scenes.find((s) => s.id === id)?.title;
+    const execute = () => {
+      updateProject((prev) => ({
+        ...prev,
+        scenes: prev.scenes.filter((s) => s.id !== id),
+        plotConnections: prev.plotConnections.filter(
+          (c) => c.fromSceneId !== id && c.toSceneId !== id
+        ),
+      }));
+      notify('Cena excluída.', 'info');
+    };
+    if (settings.confirmDestructiveActions) {
+      void requestConfirm({
+        title: 'Excluir Cena',
+        message: `Tem certeza que deseja excluir "${targetTitle ?? 'esta cena'}"? Conexões de enredo ligadas a ela serão removidas.`,
+        confirmLabel: 'Excluir Cena',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      }).then((ok) => {
+        if (ok) execute();
+      });
       return;
     }
-    updateProject((prev) => ({
-      ...prev,
-      scenes: prev.scenes.filter((s) => s.id !== id),
-      plotConnections: prev.plotConnections.filter(
-        (c) => c.fromSceneId !== id && c.toSceneId !== id
-      ),
-    }));
+    execute();
   };
 
   const setOutline = (sections: OutlineSection[]) => {
@@ -850,259 +970,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     id: string,
     decision: 'approved' | 'rejected'
   ) => {
-    updateProject((prev) => {
-      const target = prev.stagingProposals.find((p) => p.id === id);
-      if (!target) return prev;
-
-      let nextCharacters = prev.characters;
-      let nextFactions = prev.factions;
-      let nextWorlds = prev.worlds;
-      let nextObjects = prev.objects;
-      let nextScenes = prev.scenes;
-
-      if (decision === 'approved') {
-        const fm = target.proposedFrontmatter ?? {};
-        const proposedId = String(fm.id || `${target.entityType}_${Date.now()}`);
-        const proposedTags = Array.isArray(fm.tags)
-          ? fm.tags.map(String)
-          : ['canonizado'];
-        const proposedAliases = Array.isArray(fm.aliases)
-          ? fm.aliases.map(String)
-          : [];
-
-        if (target.entityType === 'character') {
-          const existing = prev.characters.find(
-            (c) => c.id === proposedId || c.name.toLowerCase() === target.entityName.toLowerCase()
-          );
-          if (target.action === 'update' && existing) {
-            nextCharacters = prev.characters.map((c) =>
-              c.id === existing.id
-                ? {
-                    ...c,
-                    status: 'canon',
-                    backstory: target.rationale || c.backstory,
-                    notes: target.proposedMarkdown || c.notes,
-                    tags: Array.from(new Set([...c.tags, ...proposedTags])),
-                  }
-                : c
-            );
-          } else if (!existing) {
-            const newChar: Character = {
-              id: proposedId,
-              name: target.entityName,
-              aliases: proposedAliases,
-              role: String(fm.subtype || 'Personagem Canonizado'),
-              archetype: 'ally',
-              status: 'canon',
-              avatarColor: '#a855f7',
-              appearance: '',
-              backstory: target.rationale,
-              motivation: '',
-              personalityTraits: '',
-              flaws: '',
-              want: '',
-              need: '',
-              lieBelieved: '',
-              ghost: '',
-              arcAct1: '',
-              arcAct2: '',
-              arcAct3: '',
-              characterArc: '',
-              notes: target.proposedMarkdown,
-              tags: proposedTags,
-              relationships: [],
-              epistemicSecrets: [],
-            };
-            nextCharacters = [...prev.characters, newChar];
-          }
-        } else if (target.entityType === 'faction') {
-          const existing = prev.factions.find(
-            (f) => f.id === proposedId || f.name.toLowerCase() === target.entityName.toLowerCase()
-          );
-          if (target.action === 'update' && existing) {
-            nextFactions = prev.factions.map((f) =>
-              f.id === existing.id
-                ? {
-                    ...f,
-                    status: 'canon',
-                    doctrine: target.proposedMarkdown || f.doctrine,
-                    notes: target.rationale || f.notes,
-                    tags: Array.from(new Set([...f.tags, ...proposedTags])),
-                  }
-                : f
-            );
-          } else if (!existing) {
-            const newFac: Faction = {
-              id: proposedId,
-              name: target.entityName,
-              aliases: proposedAliases,
-              subtype: String(fm.subtype || 'Organização'),
-              motto: '',
-              color: '#a855f7',
-              status: 'canon',
-              publicAgenda: target.rationale,
-              secretAgenda: '',
-              doctrine: target.proposedMarkdown,
-              history: '',
-              resourcesAndPower: '',
-              internalConflicts: '',
-              notes: '',
-              ranks: [],
-              controlledLocationIds: [],
-              tags: proposedTags,
-              relationships: [],
-              epistemicSecrets: [],
-            };
-            nextFactions = [...prev.factions, newFac];
-          }
-        } else if (target.entityType === 'location' && prev.worlds.length > 0) {
-          const firstWorld = prev.worlds[0];
-          const existing = firstWorld.locations.find(
-            (l) => l.id === proposedId || l.name.toLowerCase() === target.entityName.toLowerCase()
-          );
-          const updatedLocations =
-            target.action === 'update' && existing
-              ? firstWorld.locations.map((l) =>
-                  l.id === existing.id
-                    ? { ...l, description: target.proposedMarkdown || l.description, notes: target.rationale || l.notes }
-                    : l
-                )
-              : existing
-                ? firstWorld.locations
-                : [
-                    ...firstWorld.locations,
-                    {
-                      id: proposedId,
-                      worldId: firstWorld.id,
-                      name: target.entityName,
-                      type: 'city' as const,
-                      climateOrAtmosphere: 'Padrão',
-                      description: target.proposedMarkdown,
-                      strategicValue: target.rationale,
-                      coordinates: { x: 50, y: 50 },
-                      connectedLocationIds: [],
-                      notes: '',
-                    },
-                  ];
-          nextWorlds = [
-            { ...firstWorld, locations: updatedLocations },
-            ...prev.worlds.slice(1),
-          ];
-        } else if (target.entityType === 'system' && prev.worlds.length > 0) {
-          const firstWorld = prev.worlds[0];
-          const existing = firstWorld.systems.find(
-            (s) => s.id === proposedId || s.name.toLowerCase() === target.entityName.toLowerCase()
-          );
-          const updatedSystems =
-            target.action === 'update' && existing
-              ? firstWorld.systems.map((s) =>
-                  s.id === existing.id
-                    ? { ...s, notes: target.proposedMarkdown || s.notes, costsAndToll: target.rationale || s.costsAndToll }
-                    : s
-                )
-              : existing
-                ? firstWorld.systems
-                : [
-                    ...firstWorld.systems,
-                    {
-                      id: proposedId,
-                      worldId: firstWorld.id,
-                      name: target.entityName,
-                      subtype: String(fm.subtype || 'Sistema de Regras'),
-                      coreSource: target.rationale,
-                      fundamentalRules: [target.proposedMarkdown],
-                      costsAndToll: '',
-                      hardLimits: [],
-                      socialTaboos: '',
-                      knownPractitionerIds: [],
-                      notes: target.proposedMarkdown,
-                    },
-                  ];
-          nextWorlds = [
-            { ...firstWorld, systems: updatedSystems },
-            ...prev.worlds.slice(1),
-          ];
-        } else if (target.entityType === 'item') {
-          const existing = prev.objects.find(
-            (o) => o.id === proposedId || o.name.toLowerCase() === target.entityName.toLowerCase()
-          );
-          if (target.action === 'update' && existing) {
-            nextObjects = prev.objects.map((o) =>
-              o.id === existing.id
-                ? { ...o, description: target.proposedMarkdown || o.description, notes: target.rationale || o.notes }
-                : o
-            );
-          } else if (!existing) {
-            nextObjects = [
-              ...prev.objects,
-              {
-                id: proposedId,
-                name: target.entityName,
-                type: 'artifact',
-                status: 'Ativo',
-                description: target.proposedMarkdown,
-                significance: target.rationale,
-                rulesOrCapabilities: '',
-                linkedCharacterIds: [],
-                linkedSceneIds: [],
-                notes: '',
-              },
-            ];
-          }
-        } else if (target.entityType === 'scene') {
-          const existing = prev.scenes.find(
-            (s) => s.id === proposedId || s.title.toLowerCase() === target.entityName.toLowerCase()
-          );
-          if (target.action === 'update' && existing) {
-            nextScenes = prev.scenes.map((s) =>
-              s.id === existing.id
-                ? {
-                    ...s,
-                    content: target.proposedMarkdown || s.content,
-                    notes: target.rationale || s.notes,
-                    lastEditedAt: new Date().toISOString(),
-                  }
-                : s
-            );
-          } else if (!existing) {
-            nextScenes = [
-              ...prev.scenes,
-              {
-                id: proposedId,
-                chapterNumber: prev.scenes.length + 1,
-                title: target.entityName,
-                summary: target.rationale,
-                content: target.proposedMarkdown,
-                act: 2,
-                status: 'draft',
-                tension: 60,
-                subplotIds: [],
-                characterIds: [],
-                objectIds: [],
-                secretsRevealed: [],
-                notes: target.rationale,
-                position: { x: 140 + prev.scenes.length * 220, y: 140 },
-                comments: [],
-                revisions: [],
-                lastEditedAt: new Date().toISOString(),
-              },
-            ];
-          }
-        }
-      }
-
-      return {
-        ...prev,
-        characters: nextCharacters,
-        factions: nextFactions,
-        worlds: nextWorlds,
-        objects: nextObjects,
-        scenes: nextScenes,
-        stagingProposals: prev.stagingProposals.map((p) =>
-          p.id === id ? { ...p, status: decision } : p
-        ),
-      };
-    });
+    updateProject((prev) => applyStagingDecision(prev, id, decision));
   };
 
   const recordWritingSession = (wordsDelta: number, minutesDelta: number) => {
@@ -1141,6 +1009,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         t,
         activeView,
         setActiveView,
+        activeSubPath,
+        setActiveSubPath,
+        navigationHistory,
+        navigateToBreadcrumbPath,
+        toggleSidebarGroup,
         showPortal,
         setShowPortal,
         showCommandPalette,
@@ -1150,6 +1023,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         activeSceneId,
         setActiveSceneId,
         totalWordCount,
+        verifyAndSaveNow,
+        lastVerifyResult,
+        confirmState,
+        requestConfirm,
+        resolveConfirm,
+        toasts,
+        notify,
+        dismissToast,
         updateProject,
         updateSettings,
         resetSettingsToDefault,
@@ -1199,6 +1080,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </ProjectContext.Provider>
+  );
+}
+
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  return (
+    <SettingsProvider>
+      <ProjectProviderInner>{children}</ProjectProviderInner>
+    </SettingsProvider>
   );
 }
 
