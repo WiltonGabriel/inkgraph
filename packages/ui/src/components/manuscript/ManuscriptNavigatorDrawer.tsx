@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Folder, Search, X } from 'lucide-react';
+import { BookOpen, Folder, PanelLeftClose, Search, X } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import type { BinderItem, Scene } from '../../types/project';
 import { NavigatorBinderList } from './NavigatorBinderList';
@@ -8,11 +8,13 @@ import { NavigatorSceneList } from './NavigatorSceneList';
 interface ManuscriptNavigatorDrawerProps {
   pinnedBinderId: string | null;
   onPinBinderItem: (id: string | null) => void;
+  onClose?: () => void;
 }
 
 export function ManuscriptNavigatorDrawer({
   pinnedBinderId,
   onPinBinderItem,
+  onClose,
 }: ManuscriptNavigatorDrawerProps) {
   const {
     project,
@@ -139,6 +141,29 @@ export function ManuscriptNavigatorDrawer({
         >
           <Folder size={13} aria-hidden="true" /> Fichário
         </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            title="Minimizar painel de capítulos"
+            aria-label="Minimizar painel de capítulos"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <PanelLeftClose size={14} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)' }}>

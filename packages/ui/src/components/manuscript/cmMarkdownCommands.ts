@@ -1,3 +1,4 @@
+import { redo, selectAll, undo } from '@codemirror/commands';
 import { openSearchPanel } from '@codemirror/search';
 import type { EditorView } from '@codemirror/view';
 
@@ -5,11 +6,13 @@ export type MarkdownFormatCommand =
   | 'h1'
   | 'h2'
   | 'h3'
+  | 'normal'
   | 'bold'
   | 'italic'
   | 'strikethrough'
-  | 'dialogue'
-  | 'quotes'
+  | 'inlineCode'
+  | 'bulletList'
+  | 'orderedList'
   | 'epigraph'
   | 'checklist'
   | 'divider'
@@ -17,7 +20,17 @@ export type MarkdownFormatCommand =
   | 'secretCallout'
   | 'comment';
 
-/** Wraps/unwraps the current selection with Markdown delimiters (e.g. **, *, %%). */
+export type ActiveBlockStyle = 'normal' | 'h1' | 'h2' | 'h3' | 'quote';
+
+export interface CursorMarkdownState {
+  blockStyle: ActiveBlockStyle;
+  bold: boolean;
+  italic: boolean;
+  strikethrough: boolean;
+  inlineCode: boolean;
+}
+
+/** Wraps/unwraps the current selection with Markdown delimiters (e.g. **, *, ~~, `). */
 export function toggleWrapSelection(
   view: EditorView,
   prefix: string,
@@ -42,6 +55,24 @@ export function toggleWrapSelection(
     return true;
   }
 
+  // Also check immediately surrounding delimiters when user highlights inner text
+  const before = state.sliceDoc(Math.max(0, range.from - prefix.length), range.from);
+  const after = state.sliceDoc(range.to, Math.min(state.doc.length, range.to + suffix.length));
+  if (before === prefix && after === suffix && selected.length > 0) {
+    view.dispatch({
+      changes: [
+        { from: range.from - prefix.length, to: range.from, insert: '' },
+        { from: range.to, to: range.to + suffix.length, insert: '' },
+      ],
+      selection: {
+        anchor: range.from - prefix.length,
+        head: range.to - prefix.length,
+      },
+    });
+    view.focus();
+    return true;
+  }
+
   const inner = selected || placeholderText;
   const inserted = `${prefix}${inner}${suffix}`;
   view.dispatch({
@@ -55,7 +86,31 @@ export function toggleWrapSelection(
   return true;
 }
 
-/** Toggles a line-level Markdown prefix (# , ## , > , - [ ] ) on the active line. */
+/** Sets or clears a block-level style (Texto normal, H1, H2, H3, Citação) on the active line. */
+export function setBlockStyle(view: EditorView | null, style: ActiveBlockStyle): boolean {
+  if (!view) return false;
+  const { state } = view;
+  const line = state.doc.lineAt(state.selection.main.head);
+  const match = line.text.match(/^(#{1,3}\s+|>\s?)/);
+  const existingLen = match ? match[1].length : 0;
+
+  const prefixMap: Record<ActiveBlockStyle, string> = {
+    normal: '',
+    h1: '# ',
+    h2: '## ',
+    h3: '### ',
+    quote: '> ',
+  };
+  const nextPrefix = prefixMap[style];
+
+  view.dispatch({
+    changes: { from: line.from, to: line.from + existingLen, insert: nextPrefix },
+  });
+  view.focus();
+  return true;
+}
+
+/** Toggles a line-level Markdown prefix (# , ## , > , - [ ] , - , 1. ) on the active line. */
 export function toggleLinePrefix(view: EditorView, prefix: string): boolean {
   const { state } = view;
   const line = state.doc.lineAt(state.selection.main.head);
@@ -104,6 +159,68 @@ export function insertBlockSnippet(view: EditorView, snippet: string): boolean {
   return true;
 }
 
+/** Inserts inline text (such as @Personagem or #Local) at the current cursor position. */
+export function insertInlineText(view: EditorView | null, text: string): boolean {
+  if (!view) return false;
+  const { state } = view;
+  const range = state.selection.main;
+  const beforeChar = range.from > 0 ? state.sliceDoc(range.from - 1, range.from) : '';
+  const needsLeadingSpace = beforeChar !== '' && !/[\s(\[{—–]/.test(beforeChar);
+  const payload = `${needsLeadingSpace ? ' ' : ''}${text} `;
+
+  view.dispatch({
+    changes: { from: range.from, to: range.to, insert: payload },
+    selection: { anchor: range.from + payload.length },
+  });
+  view.focus();
+  return true;
+}
+
+/** Detects active Markdown block style & inline formatting at the cursor for Docs toolbar sync. */
+export function inspectCursorMarkdownState(view: EditorView | null): CursorMarkdownState {
+  if (!view) {
+    return {
+      blockStyle: 'normal',
+      bold: false,
+      italic: false,
+      strikethrough: false,
+      inlineCode: false,
+    };
+  }
+
+  const { state } = view;
+  const pos = state.selection.main.head;
+  const line = state.doc.lineAt(pos);
+  const text = line.text;
+
+  let blockStyle: ActiveBlockStyle = 'normal';
+  if (/^###\s+/.test(text)) blockStyle = 'h3';
+  else if (/^##\s+/.test(text)) blockStyle = 'h2';
+  else if (/^#\s+/.test(text)) blockStyle = 'h1';
+  else if (/^>\s?/.test(text)) blockStyle = 'quote';
+
+  const rel = pos - line.from;
+  const isInsideRegex = (regex: RegExp): boolean => {
+    regex.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      const start = m.index + (m[1]?.length ?? 0);
+      const token = m[2] ?? m[0];
+      const end = start + token.length;
+      if (rel >= start && rel <= end) return true;
+    }
+    return false;
+  };
+
+  return {
+    blockStyle,
+    bold: isInsideRegex(/()(\*\*[^*\n]+\*\*)/g),
+    italic: isInsideRegex(/(^|[^*])(\*[^*\n]+\*)(?!\*)/g),
+    strikethrough: isInsideRegex(/()(~~[^~\n]+~~)/g),
+    inlineCode: isInsideRegex(/()(`[^`\n]+`)/g),
+  };
+}
+
 /** Executes a named Markdown formatting command on the active CodeMirror EditorView. */
 export function runMarkdownFormatCommand(
   view: EditorView | null,
@@ -112,14 +229,17 @@ export function runMarkdownFormatCommand(
   if (!view) return;
 
   switch (command) {
+    case 'normal':
+      setBlockStyle(view, 'normal');
+      break;
     case 'h1':
-      toggleLinePrefix(view, '# ');
+      setBlockStyle(view, 'h1');
       break;
     case 'h2':
-      toggleLinePrefix(view, '## ');
+      setBlockStyle(view, 'h2');
       break;
     case 'h3':
-      toggleLinePrefix(view, '### ');
+      setBlockStyle(view, 'h3');
       break;
     case 'bold':
       toggleWrapSelection(view, '**', '**', 'texto em negrito');
@@ -128,13 +248,16 @@ export function runMarkdownFormatCommand(
       toggleWrapSelection(view, '*', '*', 'texto em itálico');
       break;
     case 'strikethrough':
-      toggleWrapSelection(view, '~~', '~~', 'trecho cortado');
+      toggleWrapSelection(view, '~~', '~~', 'texto tachado');
       break;
-    case 'dialogue':
-      toggleLinePrefix(view, '— ');
+    case 'inlineCode':
+      toggleWrapSelection(view, '`', '`', 'código');
       break;
-    case 'quotes':
-      toggleWrapSelection(view, '“', '”', 'fala ou destaque');
+    case 'bulletList':
+      toggleLinePrefix(view, '- ');
+      break;
+    case 'orderedList':
+      toggleLinePrefix(view, '1. ');
       break;
     case 'epigraph':
       toggleLinePrefix(view, '> ');
@@ -155,6 +278,24 @@ export function runMarkdownFormatCommand(
       toggleWrapSelection(view, '%% ', ' %%', 'nota do autor');
       break;
   }
+}
+
+export function undoEditor(view: EditorView | null): void {
+  if (!view) return;
+  undo(view);
+  view.focus();
+}
+
+export function redoEditor(view: EditorView | null): void {
+  if (!view) return;
+  redo(view);
+  view.focus();
+}
+
+export function selectAllEditor(view: EditorView | null): void {
+  if (!view) return;
+  selectAll(view);
+  view.focus();
 }
 
 /** Opens the localized CodeMirror Find & Replace panel and focuses it. */

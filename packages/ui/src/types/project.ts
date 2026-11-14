@@ -550,7 +550,7 @@ export interface AppSettings {
   reducedMotion: boolean;
 
   // 3. Editor Padrão
-  markdownEditorDefaultMode: 'visual' | 'write' | 'code' | 'split' | 'read';
+  markdownEditorDefaultMode: 'write' | 'markdown' | 'split' | 'read';
   editorFont: 'serif' | 'sans' | 'mono';
   editorFontSize: number;
   editorLineHeight: number;

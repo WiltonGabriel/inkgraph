@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { WelcomePortal } from './components/shell/WelcomePortal';
 import { CommandPalette } from './components/shell/CommandPalette';
@@ -188,7 +188,13 @@ function StudioWorkspace() {
         setShowCopilot(!showCopilot);
       } else if (matchesShortcut(ev, sc.toggleZenMode)) {
         ev.preventDefault();
-        updateSettings((prev) => ({ ...prev, zenMode: !prev.zenMode }));
+        const nextZen = !settings.zenMode;
+        updateSettings((prev) => ({ ...prev, zenMode: nextZen }));
+        if (nextZen && activeView === 'manuscript') {
+          void document.documentElement.requestFullscreen?.().catch(() => undefined);
+        } else if (!nextZen && document.fullscreenElement) {
+          void document.exitFullscreen?.().catch(() => undefined);
+        }
       } else if (matchesShortcut(ev, sc.openHome)) {
         ev.preventDefault();
         setShowPortal(!showPortal);
@@ -328,6 +334,24 @@ function StudioWorkspace() {
           : '0.5rem',
   };
 
+  const isManuscriptFullscreen =
+    settings.zenMode && activeView === 'manuscript' && !showPortal;
+  const wasNativeFullscreenRef = useRef(false);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      if (active) {
+        wasNativeFullscreenRef.current = true;
+      } else if (wasNativeFullscreenRef.current) {
+        wasNativeFullscreenRef.current = false;
+        updateSettings((prev) => (prev.zenMode ? { ...prev, zenMode: false } : prev));
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [updateSettings]);
+
   return (
     <div
       style={rootStyle}
@@ -340,7 +364,7 @@ function StudioWorkspace() {
       {showPortal && <WelcomePortal />}
       {showCommandPalette && <CommandPalette />}
 
-      <Sidebar />
+      {!isManuscriptFullscreen && <Sidebar />}
 
       <div
         style={{
@@ -351,12 +375,13 @@ function StudioWorkspace() {
           height: '100%',
         }}
       >
-        <Header />
+        {!isManuscriptFullscreen && <Header />}
 
         <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
-          {showCopilot && settings.copilotEnabled && settings.copilotPosition === 'left' && (
-            <CopilotPanel />
-          )}
+          {!isManuscriptFullscreen &&
+            showCopilot &&
+            settings.copilotEnabled &&
+            settings.copilotPosition === 'left' && <CopilotPanel />}
 
           <main style={{ flex: 1, minWidth: 0, height: '100%', overflow: 'auto' }}>
             <Suspense
@@ -402,9 +427,10 @@ function StudioWorkspace() {
             </Suspense>
           </main>
 
-          {showCopilot && settings.copilotEnabled && settings.copilotPosition !== 'left' && (
-            <CopilotPanel />
-          )}
+          {!isManuscriptFullscreen &&
+            showCopilot &&
+            settings.copilotEnabled &&
+            settings.copilotPosition !== 'left' && <CopilotPanel />}
         </div>
       </div>
 

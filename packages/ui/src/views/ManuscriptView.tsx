@@ -8,6 +8,9 @@ import { SceneInspectorDrawer } from '../components/manuscript/SceneInspectorDra
 export function ManuscriptView() {
   const { settings } = useProject();
   const [pinnedBinderId, setPinnedBinderId] = useState<string | null>(null);
+  const [showNavigator, setShowNavigator] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 900 : true
+  );
   const [showInspector, setShowInspector] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   );
@@ -35,14 +38,15 @@ export function ManuscriptView() {
         color: 'var(--text-primary)',
       }}
     >
-      {!settings.zenMode && (
+      {!settings.zenMode && showNavigator && (
         <ManuscriptNavigatorDrawer
           pinnedBinderId={pinnedBinderId}
           onPinBinderItem={setPinnedBinderId}
+          onClose={() => setShowNavigator(false)}
         />
       )}
 
-      {pinnedBinderId && (
+      {!settings.zenMode && pinnedBinderId && (
         <ResearchSplitPane
           binderItemId={pinnedBinderId}
           onClose={() => setPinnedBinderId(null)}
@@ -50,8 +54,12 @@ export function ManuscriptView() {
       )}
 
       <ManuscriptEditorCenter
-        inspectorOpen={showInspector}
+        navigatorOpen={!settings.zenMode && showNavigator}
+        onToggleNavigator={() => setShowNavigator((prev) => !prev)}
+        inspectorOpen={!settings.zenMode && showInspector}
         onToggleInspector={() => setShowInspector((prev) => !prev)}
+        hasPinnedBinder={Boolean(pinnedBinderId)}
+        onClearPinnedBinder={() => setPinnedBinderId(null)}
       />
 
       {!settings.zenMode && showInspector && (

@@ -10,6 +10,7 @@ interface ManuscriptMarkdownPreviewProps {
   content: string;
   project: ProjectData;
   settings: AppSettings;
+  finalProduct?: boolean;
   onToggleChecklistLine?: (lineIndex: number) => void;
 }
 
@@ -43,19 +44,20 @@ function buildMentionRegex(project: ProjectData): RegExp {
   const uniqueTags = Array.from(new Set(tags)).sort((a, b) => b.length - a.length);
   const entityAlternation =
     uniqueTags.length > 0 ? `${uniqueTags.map(escapeRegExp).join('|')}|` : '';
-  const basePattern = `(\\*\\*[^*\\n]+\\*\\*|\\*[^*\\n]+\\*|\`[^\`\\n]+\`|${entityAlternation}[@#&!][\\p{L}\\p{N}_-]+)`;
+  const basePattern = `(\\*\\*[^*\\n]+\\*\\*|\\*[^*\\n]+\\*|~~[^~\\n]+~~|\`[^\`\\n]+\`|${entityAlternation}[@#&!][\\p{L}\\p{N}_-]+)`;
 
   try {
     return new RegExp(basePattern, 'gu');
   } catch {
-    return /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`|[@#&!][\p{L}\p{N}_-]+)/gu;
+    return /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|~~[^~\n]+~~|`[^`\n]+`|[@#&!][\p{L}\p{N}_-]+)/gu;
   }
 }
 
 function renderInlineProse(
   rawText: string,
   mentionRegex: RegExp,
-  smartTypography: boolean
+  smartTypography: boolean,
+  finalProduct: boolean
 ): ReactNode[] {
   const text = formatSmartTypography(rawText, smartTypography);
   const nodes: ReactNode[] = [];
@@ -75,6 +77,8 @@ function renderInlineProse(
       nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
     } else if (token.startsWith('*') && token.endsWith('*')) {
       nodes.push(<em key={key}>{token.slice(1, -1)}</em>);
+    } else if (token.startsWith('~~') && token.endsWith('~~')) {
+      nodes.push(<del key={key}>{token.slice(2, -2)}</del>);
     } else if (token.startsWith('`') && token.endsWith('`')) {
       nodes.push(
         <code
@@ -91,6 +95,8 @@ function renderInlineProse(
           {token.slice(1, -1)}
         </code>
       );
+    } else if (finalProduct) {
+      nodes.push(token.slice(1));
     } else {
       const prefix = token[0];
       const badgeStyles: Record<string, { color: string; bg: string }> = {
@@ -129,9 +135,16 @@ export function ManuscriptMarkdownPreview({
   content,
   project,
   settings,
+  finalProduct = true,
   onToggleChecklistLine,
 }: ManuscriptMarkdownPreviewProps) {
-  const blocks = useMemo(() => parseManuscriptMarkdown(content), [content]);
+  const blocks = useMemo(() => {
+    const parsed = parseManuscriptMarkdown(content);
+    if (!finalProduct) return parsed;
+    return parsed.filter(
+      (b) => b.kind !== 'callout' && b.kind !== 'directive' && b.kind !== 'checklist'
+    );
+  }, [content, finalProduct]);
   const mentionRegex = useMemo(() => buildMentionRegex(project), [project]);
   const smart = settings.editorSmartTypography;
   const maxWidth = settings.zenMode ? '760px' : `${settings.editorMaxWidthCh || 74}ch`;
@@ -175,7 +188,7 @@ export function ManuscriptMarkdownPreview({
                     textWrap: 'balance',
                   }}
                 >
-                  {renderInlineProse(block.text, mentionRegex, smart)}
+                  {renderInlineProse(block.text, mentionRegex, smart, finalProduct)}
                 </Tag>
               );
             }
@@ -237,7 +250,7 @@ export function ManuscriptMarkdownPreview({
                   </div>
                   {block.lines.map((line, lIdx) => (
                     <p key={lIdx} style={{ margin: '2px 0', color: 'var(--text-secondary)' }}>
-                      {renderInlineProse(line, mentionRegex, smart)}
+                      {renderInlineProse(line, mentionRegex, smart, finalProduct)}
                     </p>
                   ))}
                 </aside>
@@ -258,7 +271,7 @@ export function ManuscriptMarkdownPreview({
                 >
                   {block.lines.map((line, lIdx) => (
                     <p key={lIdx} style={{ margin: '2px 0', textWrap: 'pretty' }}>
-                      {renderInlineProse(line, mentionRegex, smart)}
+                      {renderInlineProse(line, mentionRegex, smart, finalProduct)}
                     </p>
                   ))}
                 </blockquote>
@@ -294,7 +307,7 @@ export function ManuscriptMarkdownPreview({
                           color: item.checked ? 'var(--text-muted)' : 'var(--text-primary)',
                         }}
                       >
-                        {renderInlineProse(item.text, mentionRegex, smart)}
+                        {renderInlineProse(item.text, mentionRegex, smart, finalProduct)}
                       </span>
                     </li>
                   ))}
@@ -314,7 +327,7 @@ export function ManuscriptMarkdownPreview({
                 >
                   {block.items.map((item, itemIdx) => (
                     <li key={itemIdx} style={{ marginBottom: 4, textWrap: 'pretty' }}>
-                      {renderInlineProse(item, mentionRegex, smart)}
+                      {renderInlineProse(item, mentionRegex, smart, finalProduct)}
                     </li>
                   ))}
                 </ListTag>
@@ -357,7 +370,7 @@ export function ManuscriptMarkdownPreview({
                   textWrap: 'pretty',
                 }}
               >
-                {renderInlineProse(block.text, mentionRegex, smart)}
+                {renderInlineProse(block.text, mentionRegex, smart, finalProduct)}
               </p>
             );
           })

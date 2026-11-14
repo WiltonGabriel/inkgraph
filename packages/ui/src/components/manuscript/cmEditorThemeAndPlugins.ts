@@ -166,6 +166,24 @@ export function buildInkGraphEditorTheme(
       '.cm-ink-italic': {
         fontStyle: 'italic',
       },
+      '.cm-ink-strike': {
+        textDecoration: 'line-through',
+        color: 'var(--text-muted)',
+      },
+      '.cm-ink-inline-code': {
+        fontFamily: EDITOR_FONT_STACKS.mono,
+        fontSize: '0.88em',
+        backgroundColor: 'var(--bg-elevated)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: '4px',
+        padding: '0 4px',
+      },
+      '.cm-ink-md-marker': {
+        color: 'var(--accent-primary)',
+        opacity: '0.72',
+        fontFamily: EDITOR_FONT_STACKS.mono,
+        fontSize: '0.88em',
+      },
       '.cm-ink-comment': {
         color: 'var(--text-muted)',
         fontFamily: EDITOR_FONT_STACKS.mono,

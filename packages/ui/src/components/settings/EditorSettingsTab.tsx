@@ -51,20 +51,8 @@ export function EditorSettingsTab() {
     {
       key: 'zenMode',
       label: isEn
-        ? 'Default Zen Mode (hide sidebars)'
-        : 'Modo Zen padrão (ocultar barras laterais)',
-    },
-    {
-      key: 'focusMode',
-      label: isEn
-        ? 'Paragraph Focus (dim inactive lines)'
-        : 'Foco de Parágrafo (atenuar linhas inativas)',
-    },
-    {
-      key: 'typewriterMode',
-      label: isEn
-        ? 'Typewriter scrolling (keep cursor centered)'
-        : 'Rolagem Máquina de Escrever (cursor centralizado)',
+        ? 'Default Fullscreen mode (hide sidebars)'
+        : 'Tela cheia padrão (ocultar barras laterais)',
     },
     {
       key: 'spellcheck',
@@ -107,7 +95,13 @@ export function EditorSettingsTab() {
             </span>
             <select
               id="ink-ed-mode"
-              value={draftSettings.markdownEditorDefaultMode}
+              value={
+                (draftSettings.markdownEditorDefaultMode as string) === 'code'
+                  ? 'markdown'
+                  : (draftSettings.markdownEditorDefaultMode as string) === 'visual'
+                  ? 'write'
+                  : draftSettings.markdownEditorDefaultMode
+              }
               onChange={(e) =>
                 updateDraftSetting(
                   'markdownEditorDefaultMode',
@@ -116,13 +110,18 @@ export function EditorSettingsTab() {
               }
               style={controlInputStyle}
             >
-              <option value="visual">
-                {isEn ? 'Visual Interface (Blocks)' : 'Interface Visual (Blocos sem Código)'}
+              <option value="write">
+                {isEn ? 'Document (Visual Markdown)' : 'Documento (Markdown Visual)'}
               </option>
-              <option value="write">{isEn ? 'Markdown (Prose)' : 'Markdown Literário'}</option>
-              <option value="code">{isEn ? 'Source Code + YAML' : 'Código-Fonte + YAML'}</option>
-              <option value="split">{isEn ? 'Split (Editor + Preview)' : 'Dividido (Editor + Leitura)'}</option>
-              <option value="read">{isEn ? 'Formatted Reading' : 'Leitura Formatada'}</option>
+              <option value="markdown">
+                {isEn ? 'Markdown (Source)' : 'Markdown (Código)'}
+              </option>
+              <option value="split">
+                {isEn ? 'Split (Editor + Reader)' : 'Dividido (Editor + Leitura)'}
+              </option>
+              <option value="read">
+                {isEn ? 'Reader (Final Book)' : 'Leitura (Produto Final)'}
+              </option>
             </select>
           </label>
 
